@@ -77,6 +77,14 @@ en meteen in de app zitten, zonder terminal.
 Dit vereist dat `install.sh` al uitgevoerd is — de snelkoppeling gebruikt
 dezelfde virtualenv.
 
+### Stoppen
+
+`Ctrl+C` in het terminalvenster van de server (op Linux), of, makkelijker
+als dat venster geminimaliseerd is: de knop **"Applicatie afsluiten"** op
+het tabblad **"Systeem"** van het beheerscherm (enkel voor rol admin). Dat
+sluit de server netjes af — geen `kill -9` of het venster gewoon
+wegklikken nodig.
+
 ## Eerste admin aanmaken
 
 Medewerkers (met hun pincode) worden normaal aangemaakt via het
@@ -176,6 +184,7 @@ backend/
     hardware/       # hekje- en kussen-sensor-abstracties (dummy-implementaties)
     api/             # FastAPI-routes
   tests/             # unit- en integratietests
+  run.py             # serverlauncher (start.sh/start-app.bat/systemd draaien dit)
   seed.py            # demo-seed (testbandjes + demo-admin/-supervisor)
   create_admin.py    # eerste admin aanmaken
   config.yaml

@@ -16,7 +16,8 @@ if not exist ".venv\Scripts\activate.bat" (
 
 call ".venv\Scripts\activate.bat"
 
-start "Toelatingssysteem - server (dit venster niet sluiten)" /min cmd /c "python -m uvicorn asgi:app --host 127.0.0.1 --port 8000"
+set TOELATING_HOST=127.0.0.1
+start "Toelatingssysteem - server (dit venster niet sluiten)" /min cmd /c "python run.py"
 
 REM Even wachten tot de server opgestart is voor de browser opent.
 timeout /t 2 /nobreak >nul

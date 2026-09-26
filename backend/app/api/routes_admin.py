@@ -3,7 +3,7 @@ from __future__ import annotations
 
 from datetime import date
 
-from fastapi import APIRouter, Depends, Response
+from fastapi import APIRouter, Depends, HTTPException, Request, Response
 from sqlalchemy.orm import Session
 
 from app.config import Settings
@@ -156,3 +156,27 @@ def purge_logs(
 ) -> dict:
     count = log_service.purge_old_events(db, settings.log_retention_days)
     return {"verwijderd": count}
+
+
+@router.post("/shutdown")
+def shutdown_application(
+    request: Request,
+    db: Session = Depends(get_db),
+    employee: EmployeeModel = Depends(require_role("admin")),
+) -> dict:
+    """Sluit de server netjes af (zelfde effect als Ctrl+C): zet uvicorn's
+    eigen `should_exit`-vlag in plaats van een OS-signaal te sturen, want dat
+    laatste geeft op Windows geen nette shutdown van de FastAPI-lifespan.
+    Vereist dat de server via `run.py` gestart is (zie backend/run.py) —
+    anders bestaat deze verwijzing niet.
+    """
+    server = getattr(request.app.state, "uvicorn_server", None)
+    if server is None:
+        raise HTTPException(
+            status_code=503,
+            detail="Kan niet afsluiten: de server is niet gestart via run.py.",
+        )
+    log_event(db, event_type="SYSTEEM_AFSLUITEN", source="admin", employee_id=employee.id)
+    db.commit()
+    server.should_exit = True
+    return {"ok": True}

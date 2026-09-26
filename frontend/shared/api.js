@@ -90,6 +90,8 @@ export const api = {
   employees: () => request("GET", "/api/admin/employees"),
   createEmployee: (name, pincode, role) => request("POST", "/api/admin/employees", { name, pincode, role }),
   updateEmployee: (id, fields) => request("PATCH", `/api/admin/employees/${id}`, fields),
+
+  shutdown: () => request("POST", "/api/admin/shutdown"),
 };
 
 /** Polls /api/health and calls onStatusChange(true|false) whenever connectivity flips. */

@@ -32,6 +32,7 @@ const els = {
     logs: document.getElementById("tab-logs"),
     rapport: document.getElementById("tab-rapport"),
     medewerkers: document.getElementById("tab-medewerkers"),
+    systeem: document.getElementById("tab-systeem"),
   },
 
   wristbandLookupForm: document.getElementById("wristband-lookup-form"),
@@ -69,6 +70,9 @@ const els = {
   newEmployeeRole: document.getElementById("new-employee-role"),
   createEmployeeMessage: document.getElementById("create-employee-message"),
   employeesTableBody: document.querySelector("#employees-table tbody"),
+
+  shutdownBtn: document.getElementById("shutdown-btn"),
+  shutdownMessage: document.getElementById("shutdown-message"),
 };
 
 let currentEmployee = null;
@@ -106,9 +110,11 @@ function showAdmin(employee) {
   els.adminView.classList.remove("hidden");
   els.userLabel.textContent = `${employee.name} (${employee.role})`;
 
-  const medewerkersTab = els.tabButtons.find((b) => b.dataset.tab === "medewerkers");
-  medewerkersTab.classList.toggle("hidden", employee.role !== "admin");
-  if (employee.role !== "admin" && activeTab === "medewerkers") {
+  for (const tab of ["medewerkers", "systeem"]) {
+    const btn = els.tabButtons.find((b) => b.dataset.tab === tab);
+    btn.classList.toggle("hidden", employee.role !== "admin");
+  }
+  if (employee.role !== "admin" && (activeTab === "medewerkers" || activeTab === "systeem")) {
     switchTab("bandje");
   }
 
@@ -400,6 +406,30 @@ els.createEmployeeForm.addEventListener("submit", async (event) => {
 
 // Load the employee list the first time the tab is opened.
 document.querySelector('.tab-btn[data-tab="medewerkers"]').addEventListener("click", loadEmployees, { once: false });
+
+// ---- Systeem tab ----------------------------------------------------------
+
+els.shutdownBtn.addEventListener("click", async () => {
+  const confirmed = confirm(
+    "Weet je zeker dat je de applicatie wil afsluiten? Het host- en " +
+      "beheerscherm werken dan niet meer tot de server manueel herstart wordt."
+  );
+  if (!confirmed) return;
+
+  els.shutdownBtn.disabled = true;
+  try {
+    await api.shutdown();
+    els.shutdownMessage.textContent = "Server wordt afgesloten…";
+    els.shutdownMessage.className = "message success";
+    els.shutdownMessage.classList.remove("hidden");
+  } catch (err) {
+    if (err instanceof ApiError && err.status === 401) return handleUnauthorized();
+    els.shutdownMessage.textContent = err instanceof ApiError ? err.message : "Fout bij afsluiten.";
+    els.shutdownMessage.className = "message error";
+    els.shutdownMessage.classList.remove("hidden");
+    els.shutdownBtn.disabled = false;
+  }
+});
 
 // ---- Bootstrap --------------------------------------------------------
 

@@ -40,9 +40,18 @@ en de gemiddelde tijd tussen twee sprongen bij de testsprong die dag.
 - **Nieuwe pincode**: vervangt de pincode van een medewerker (bv. na een
   vermoeden van misbruik).
 
+## Tabblad "Systeem" (enkel zichtbaar voor rol admin)
+
+**Applicatie afsluiten** sluit de server netjes af (zelfde als Ctrl+C in
+het serverscherm): het host- en beheerscherm werken vanaf dan niet meer,
+tot de server manueel herstart wordt (bureaubladsnelkoppeling of
+`./start.sh`). Vraagt eerst een bevestiging. Gebruik dit bij het einde van
+de dag of voor onderhoud — niet zomaar tussendoor, want er is geen
+scherm meer om opnieuw op te starten zonder fysieke toegang tot de server.
+
 Rol **supervisor** kan bandjes opzoeken en status wijzigen (tabblad
 "Bandje"), logs bekijken en het dagoverzicht raadplegen, maar geen
-medewerkers beheren.
+medewerkers beheren of de applicatie afsluiten.
 
 ## Verbindingsproblemen
 

@@ -97,6 +97,20 @@ html, body {
   font-size: 1rem;
 }
 
+.btn-danger {
+  background: var(--kleur-rood);
+  color: white;
+  padding: 0.75rem 1.5rem;
+  border-radius: 0.5rem;
+  font-size: 1.1rem;
+  font-weight: 700;
+  margin-top: 0.5rem;
+}
+
+.btn-danger:active {
+  background: #7a1712;
+}
+
 .btn-link {
   text-decoration: none;
   display: inline-block;
