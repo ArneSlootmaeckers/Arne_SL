@@ -8,6 +8,7 @@ from __future__ import annotations
 
 import asyncio
 import contextlib
+import logging
 from pathlib import Path
 
 from fastapi import FastAPI, Request
@@ -29,7 +30,10 @@ from app.services.errors import (
     WrongResolutionPathError,
 )
 from app.services.log_service import purge_old_events
+from app.services.maintenance_service import create_backup, purge_old_backups
 from app.services.scan_service import reap_expired_pending_scans
+
+logger = logging.getLogger("maintenance")
 
 _ERROR_STATUS_CODES: dict[type[DomainServiceError], int] = {
     ScanRejectedError: 409,
@@ -61,6 +65,32 @@ async def _reap_expired_scans_periodically(app: FastAPI) -> None:
             db.close()
 
 
+async def _run_maintenance_periodically(app: FastAPI, settings: Settings) -> None:
+    """Purges old logs and takes a database back-up, immediately at startup
+    and then every `maintenance_interval_hours`. A failed backup/purge is
+    logged but never crashes this loop — there's always a next attempt.
+    """
+    backup_dir = Path(settings.backup_dir)
+    interval_seconds = settings.maintenance_interval_hours * 3600
+
+    while True:
+        db = app.state.session_factory()
+        try:
+            await asyncio.to_thread(purge_old_events, db, settings.log_retention_days)
+        except Exception:
+            logger.exception("Opruimen van oude logs is mislukt")
+        finally:
+            db.close()
+
+        try:
+            await asyncio.to_thread(create_backup, settings.database_path, backup_dir)
+            await asyncio.to_thread(purge_old_backups, backup_dir, settings.backup_retention_days)
+        except Exception:
+            logger.exception("Automatische back-up is mislukt")
+
+        await asyncio.sleep(interval_seconds)
+
+
 def create_app(settings: Settings | None = None) -> FastAPI:
     settings = settings or load_settings()
 
@@ -70,19 +100,17 @@ def create_app(settings: Settings | None = None) -> FastAPI:
         app.state.session_factory = create_session_factory(settings.database_url)
         app.state.gate_controller = create_gate_controller(settings.gate_controller)
 
-        db = app.state.session_factory()
-        try:
-            purge_old_events(db, settings.log_retention_days)
-        finally:
-            db.close()
-
         reaper_task = asyncio.create_task(_reap_expired_scans_periodically(app))
+        maintenance_task = asyncio.create_task(_run_maintenance_periodically(app, settings))
         try:
             yield
         finally:
             reaper_task.cancel()
+            maintenance_task.cancel()
             with contextlib.suppress(asyncio.CancelledError):
                 await reaper_task
+            with contextlib.suppress(asyncio.CancelledError):
+                await maintenance_task
 
     app = FastAPI(title="Toelatingssysteem veiligheidssprong", lifespan=lifespan)
 

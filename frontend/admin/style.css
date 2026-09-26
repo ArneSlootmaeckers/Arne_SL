@@ -97,6 +97,17 @@ html, body {
   font-size: 1rem;
 }
 
+.btn-link {
+  text-decoration: none;
+  display: inline-block;
+}
+
+.login-back-link {
+  position: fixed;
+  top: 1rem;
+  left: 1rem;
+}
+
 .tabs {
   display: flex;
   gap: 0.25rem;

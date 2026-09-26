@@ -43,6 +43,14 @@ dus bewaard bij een herbouw van de container). Pas `backend/config.yaml` aan
 en herstart de container (`docker compose restart`) om configuratie te
 wijzigen — dat bestand wordt read-only in de container gemount.
 
+> De Dockerfile-paden zijn geverifieerd door de exacte mapstructuur van de
+> container (`/app/backend`, `/app/frontend`, `/app/data`) lokaal na te
+> bouwen en de server daarin te draaien — alle routes, de statische
+> bestanden en de automatische back-up werkten daarin correct. Een
+> volledige `docker build` zelf is niet uitgevoerd in de ontwikkelomgeving
+> waarin dit project gebouwd is (geen toegang tot de Docker-daemon daar);
+> test dit dus zeker even bij je eerste installatie.
+
 ### Optie B — installatiescript zonder Docker
 
 ```bash
@@ -146,6 +154,9 @@ Alle instelbare waarden staan in één bestand, `backend/config.yaml`:
 | `cushion_sensor_enabled` | Uitbreidingspunt "kussen vrij"-sensor (buiten scope) | `false` |
 | `gate_controller` | Implementatie voor het hekje (enkel `dummy` beschikbaar) | `dummy` |
 | `database_path` | Locatie van het SQLite-bestand | `../data/toelating.db` |
+| `maintenance_interval_hours` | Hoe vaak logs opgeruimd en een back-up gemaakt wordt | `24` |
+| `backup_dir` | Map voor automatische back-ups | `../data/backups` |
+| `backup_retention_days` | Bewaartermijn van automatische back-ups | `30` |
 
 Herstart de server na een wijziging.
 
@@ -165,16 +176,20 @@ meerdere bezoekers simuleert.
 
 ## Back-up maken van de database
 
-De database is één SQLite-bestand (`data/toelating.db`), maar draait in
-WAL-modus — een gewone `cp` terwijl de server draait kan een inconsistente
-kopie geven. Gebruik daarom het ingebouwde back-upcommando van SQLite, dat
-wél veilig is terwijl de server actief blijft draaien:
+**Dit gebeurt automatisch.** De server maakt zelf een back-up in
+`data/backups/` — meteen bij het opstarten, en daarna elke
+`maintenance_interval_hours` (standaard elke 24 uur), via SQLite's eigen
+back-up-API. Dat is veilig terwijl de server blijft draaien (de database
+staat in WAL-modus; een gewone `cp` zou een inconsistente kopie kunnen
+geven). Oudere back-ups worden na `backup_retention_days` automatisch
+opgeruimd.
+
+Wil je op elk moment ook zelf, meteen een back-up maken (bv. vlak voor een
+update)? Gebruik hetzelfde ingebouwde commando van SQLite:
 
 ```bash
-sqlite3 data/toelating.db ".backup data/backup-$(date +%Y%m%d-%H%M%S).db"
+sqlite3 data/toelating.db ".backup data/backups/backup-$(date +%Y%m%d-%H%M%S).db"
 ```
-
-Zet dit desgewenst in een cronjob voor dagelijkse back-ups.
 
 ## Mappenstructuur
 

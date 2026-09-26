@@ -21,6 +21,9 @@ class Settings:
     cushion_sensor_enabled: bool
     gate_controller: str
     database_path: str
+    maintenance_interval_hours: int
+    backup_dir: str
+    backup_retention_days: int
 
     @property
     def tz(self) -> ZoneInfo:

@@ -29,6 +29,9 @@ def test_settings(tmp_path: Path) -> Settings:
         cushion_sensor_enabled=False,
         gate_controller="dummy",
         database_path=str(tmp_path / "test.db"),
+        maintenance_interval_hours=24,
+        backup_dir=str(tmp_path / "backups"),
+        backup_retention_days=30,
     )
 
 

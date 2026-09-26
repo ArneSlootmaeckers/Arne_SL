@@ -6,6 +6,13 @@ scan_timeout_seconds: 60
 session_inactivity_timeout_seconds: 120
 # Hoeveel dagen logs bewaard blijven voor de opruimfunctie ze verwijdert.
 log_retention_days: 365
+# Hoe vaak (uren) de server automatisch oude logs opruimt en een back-up
+# van de database maakt. Draait ook meteen één keer bij het opstarten.
+maintenance_interval_hours: 24
+# Map waarin de automatische back-ups terechtkomen (relatief t.o.v. backend/).
+backup_dir: "../data/backups"
+# Hoeveel dagen automatische back-ups bewaard blijven voor ze opgeruimd worden.
+backup_retention_days: 30
 # Hoe vaak (seconden) de schermen de serververbinding en status pollen.
 polling_interval_seconds: 3
 # Uitbreidingspunt "kussen vrij"-sensor (buiten scope): nu altijd uit.

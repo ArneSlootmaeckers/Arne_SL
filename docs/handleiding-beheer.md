@@ -3,7 +3,8 @@
 Bereikbaar via de knop **"Profiel"** rechtsboven op het hostscherm, of
 rechtstreeks op `/admin/`. Log in met je persoonlijke pincode. Na
 **2 minuten inactiviteit** log je automatisch uit — sla je werk dus niet
-te lang op.
+te lang op. Met **"← Hostscherm"** linksboven ga je op elk moment terug
+naar het hostscherm.
 
 ## Tabblad "Bandje"
 
