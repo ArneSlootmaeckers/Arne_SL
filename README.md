@@ -34,6 +34,9 @@ statuslogica in hoofdstuk 2 van de opdracht (of
 ./install.sh
 ```
 
+Op Windows zonder bash/WSL: rechtsklik `install.ps1` → **"Uitvoeren met
+PowerShell"** (zelfde resultaat, geen bash nodig).
+
 Dit maakt een virtualenv aan in `backend/.venv` en installeert de
 dependencies. Werkt op elke machine met Python 3.12+, inclusief een
 Raspberry Pi.
@@ -188,6 +191,33 @@ update)? Gebruik hetzelfde ingebouwde commando van SQLite:
 sqlite3 data/toelating.db ".backup data/backups/backup-$(date +%Y%m%d-%H%M%S).db"
 ```
 
+## Migreren naar een andere pc
+
+1. **Sluit de server af** op de oude pc (knop **"Applicatie afsluiten"**
+   op tabblad "Systeem" van het beheerscherm, of Ctrl+C) — kopiëren
+   terwijl de database open staat kan een inconsistente kopie geven.
+2. **Kopieer de volledige projectmap** naar de nieuwe pc (USB-stick,
+   netwerkschijf, OneDrive/cloudschijf — wat je toepasselijk vindt), maar
+   **sla `backend\.venv` over**: die virtualenv bevat absolute paden naar
+   de Python-installatie van de oude pc en werkt niet zomaar op een
+   andere machine. Neem je op zich niets meer mee behalve die map, dan is
+   dit vanzelf al zo (`.venv` staat niet in git, dus ook niet in een zip
+   via `git archive`).
+   - **Bestaande gegevens (bandjes, logs, medewerkers) meenemen?** Kopieer
+     dan ook de map `data/` mee.
+   - **Liever een schone start** op de nieuwe pc (bv. omdat de oude pc
+     enkel voor testen diende)? Sla `data/` dan net zo goed over — die
+     wordt vanzelf opnieuw aangemaakt.
+3. **Op de nieuwe pc**: zorg dat Python 3.12+ geïnstalleerd is, en voer de
+   installatie opnieuw uit (`./install.sh`, of op Windows `install.ps1`)
+   — dit bouwt een verse virtualenv specifiek voor die machine.
+4. **Geen eigen `data/` meegenomen?** Maak dan een eerste admin aan (zie
+   hierboven) voor je kan inloggen op het beheerscherm.
+5. **Windows-bureaubladsnelkoppeling**: voer
+   `maak-bureaubladsnelkoppeling.ps1` opnieuw uit op de nieuwe pc (een
+   snelkoppeling verwijst naar een absoluut pad, dus die van de oude pc
+   werkt niet als je hem gewoon meekopieert).
+
 ## Mappenstructuur
 
 ```
@@ -210,6 +240,9 @@ docs/
   handleiding-host.md
   handleiding-beheer.md
 data/      # SQLite-bestand + back-ups (niet in git)
+install.sh                          # installatie (Linux/macOS/WSL)
+install.ps1                         # installatie (Windows, geen bash nodig)
+start.sh                            # server starten (Linux/macOS/WSL)
 start-app.bat                       # startpunt van de snelkoppeling, roept start-app.ps1 aan
 start-app.ps1                       # server + browser starten, browser mee afsluiten (Windows)
 maak-bureaubladsnelkoppeling.ps1    # bureaubladicoon aanmaken (eenmalig, Windows)
