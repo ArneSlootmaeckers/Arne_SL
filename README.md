@@ -30,16 +30,19 @@ statuslogica in hoofdstuk 2 van de opdracht (of
 
 ## Installatie
 
+**Windows**: rechtsklik `setup.ps1` → **"Uitvoeren met PowerShell"**. Dit
+ene script controleert Python, maakt een virtualenv aan in `backend\.venv`,
+installeert de dependencies, én zet meteen de bureaubladsnelkoppeling
+klaar — verder niets anders uit te voeren.
+
+**Linux/macOS/Raspberry Pi**:
+
 ```bash
 ./install.sh
 ```
 
-Op Windows zonder bash/WSL: rechtsklik `install.ps1` → **"Uitvoeren met
-PowerShell"** (zelfde resultaat, geen bash nodig).
-
 Dit maakt een virtualenv aan in `backend/.venv` en installeert de
-dependencies. Werkt op elke machine met Python 3.12+, inclusief een
-Raspberry Pi.
+dependencies.
 
 Voor een permanente installatie op een Linux-server kan
 `deploy/toelatingssysteem.service` als systemd-service gebruikt worden:
@@ -68,20 +71,16 @@ rechtsboven op het hostscherm.
 ### Bureaubladsnelkoppeling (Windows)
 
 Voor gebruik op de tablet/pc zelf (niet als aparte server): dubbelklikken
-en meteen in de app zitten, zonder terminal.
+en meteen in de app zitten, zonder terminal. `setup.ps1` (zie
+"Installatie" hierboven) zet deze automatisch klaar — er is dus niets
+apart voor nodig.
 
-1. Eenmalig: rechtsklik `maak-bureaubladsnelkoppeling.ps1` → **"Uitvoeren
-   met PowerShell"**. Dit zet een snelkoppeling "Toelatingssysteem" op het
-   bureaublad, met het Sparkx-logo als icoon.
-2. Vanaf dan: dubbelklik die snelkoppeling om de server te starten (in een
-   apart, geminimaliseerd venster) en meteen het hostscherm te openen — in
-   een kiosk-achtig, volledig schermvullend browservenster zonder
-   adresbalk/tabbladen (via Chrome of Edge's `--app`- en
-   `--start-fullscreen`-modus, als een van beide geïnstalleerd is; anders
-   in een gewone browsertab).
-
-Dit vereist dat `install.sh` al uitgevoerd is — de snelkoppeling gebruikt
-dezelfde virtualenv.
+Dubbelklik de snelkoppeling "Toelatingssysteem" op het bureaublad om de
+server te starten (in een apart, geminimaliseerd venster) en meteen het
+hostscherm te openen — in een kiosk-achtig, volledig schermvullend
+browservenster zonder adresbalk/tabbladen (via Chrome of Edge's `--app`-
+en `--start-fullscreen`-modus, als een van beide geïnstalleerd is; anders
+in een gewone browsertab).
 
 ### Stoppen
 
@@ -209,14 +208,11 @@ sqlite3 data/toelating.db ".backup data/backups/backup-$(date +%Y%m%d-%H%M%S).db
      enkel voor testen diende)? Sla `data/` dan net zo goed over — die
      wordt vanzelf opnieuw aangemaakt.
 3. **Op de nieuwe pc**: zorg dat Python 3.12+ geïnstalleerd is, en voer de
-   installatie opnieuw uit (`./install.sh`, of op Windows `install.ps1`)
-   — dit bouwt een verse virtualenv specifiek voor die machine.
+   installatie opnieuw uit — op Windows `setup.ps1` (bouwt meteen ook de
+   bureaubladsnelkoppeling, want die van de oude pc verwijst naar een pad
+   dat op de nieuwe pc niet bestaat), op Linux/macOS `./install.sh`.
 4. **Geen eigen `data/` meegenomen?** Maak dan een eerste admin aan (zie
    hierboven) voor je kan inloggen op het beheerscherm.
-5. **Windows-bureaubladsnelkoppeling**: voer
-   `maak-bureaubladsnelkoppeling.ps1` opnieuw uit op de nieuwe pc (een
-   snelkoppeling verwijst naar een absoluut pad, dus die van de oude pc
-   werkt niet als je hem gewoon meekopieert).
 
 ## Mappenstructuur
 
@@ -241,11 +237,10 @@ docs/
   handleiding-beheer.md
 data/      # SQLite-bestand + back-ups (niet in git)
 install.sh                          # installatie (Linux/macOS/WSL)
-install.ps1                         # installatie (Windows, geen bash nodig)
+setup.ps1                           # installatie + bureaubladsnelkoppeling (Windows, één script)
 start.sh                            # server starten (Linux/macOS/WSL)
 start-app.bat                       # startpunt van de snelkoppeling, roept start-app.ps1 aan
 start-app.ps1                       # server + browser starten, browser mee afsluiten (Windows)
-maak-bureaubladsnelkoppeling.ps1    # bureaubladicoon aanmaken (eenmalig, Windows)
 ```
 
 ## Uitbreidingspunten

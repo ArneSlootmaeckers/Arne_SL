@@ -1,8 +1,6 @@
 @echo off
-REM Start de server en opent meteen de app in de browser.
-REM Bedoeld om te koppelen aan een bureaubladsnelkoppeling — zie
-REM maak-bureaubladsnelkoppeling.ps1 om die snelkoppeling met het
-REM Sparkx-icoon aan te maken.
+REM Start de server en opent meteen de app in de browser. Dit is het
+REM doelwit van de bureaubladsnelkoppeling die setup.ps1 aanmaakt.
 REM
 REM De eigenlijke logica (server starten, browser starten, en die browser
 REM weer mee afsluiten zodra de server stopt) staat in start-app.ps1 --
@@ -15,7 +13,7 @@ cd /d "%~dp0"
 
 if not exist "backend\.venv\Scripts\python.exe" (
     echo Geen virtuele omgeving gevonden in backend\.venv.
-    echo Voer eerst install.sh uit ^(of volg de installatiestappen in README.md^).
+    echo Voer eerst setup.ps1 uit ^(rechtsklik -^> Uitvoeren met PowerShell^).
     pause
     exit /b 1
 )
