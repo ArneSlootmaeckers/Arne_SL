@@ -53,6 +53,23 @@ html, body {
   line-height: 1.1;
 }
 
+.timeout-bar-track {
+  width: 100%;
+  max-width: 60rem;
+  height: 0.75rem;
+  background: var(--kleur-achtergrond-diep);
+  border-radius: 0.5rem;
+  overflow: hidden;
+  margin-bottom: 2rem;
+}
+
+.timeout-bar {
+  height: 100%;
+  width: 100%;
+  background: var(--sparkx-gradient);
+  transition: width 0.1s linear;
+}
+
 .actions {
   display: flex;
   gap: 1.5rem;

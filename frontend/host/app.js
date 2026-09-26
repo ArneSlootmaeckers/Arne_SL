@@ -28,6 +28,8 @@ const els = {
   statusBanner: document.getElementById("status-banner"),
   statusText: document.getElementById("status-text"),
   verdictActions: document.getElementById("verdict-actions"),
+  finalResultBarTrack: document.getElementById("final-result-bar-track"),
+  finalResultBar: document.getElementById("final-result-bar"),
   cancelActions: document.getElementById("cancel-actions"),
   btnGroen: document.getElementById("btn-groen"),
   btnRood: document.getElementById("btn-rood"),
@@ -87,25 +89,49 @@ async function autoAcknowledgePractice() {
   }
 }
 
+/** Zichtbare, leeglopende balk voor de eindresultaten GESLAAGD/NIET_GESLAAGD:
+ * na `durationMs` roept dit `onExpire` op (auto-bevestiging of gewoon terug
+ * naar "wacht op scan"). */
+function startFinalResultCountdown(durationMs, onExpire) {
+  clearTimers();
+  els.finalResultBarTrack.classList.remove("hidden");
+  const expiresAt = Date.now() + durationMs;
+
+  function tick() {
+    const remainingMs = expiresAt - Date.now();
+    if (remainingMs <= 0) {
+      clearInterval(countdownInterval);
+      countdownInterval = null;
+      els.finalResultBar.style.width = "0%";
+      onExpire();
+      return;
+    }
+    els.finalResultBar.style.width = `${Math.max(0, (remainingMs / durationMs) * 100)}%`;
+  }
+  els.finalResultBar.style.width = "100%";
+  countdownInterval = setInterval(tick, 100);
+}
+
 function renderScanResult(body) {
   els.wristbandId.textContent = body.wristband_id;
   applyStatusBanner(body.status);
 
+  const hasPendingAction = body.requires_verdict || body.requires_practice_ack;
   els.verdictActions.classList.toggle("hidden", !body.requires_verdict);
-  els.cancelActions.classList.toggle("hidden", !body.requires_verdict);
+  els.cancelActions.classList.toggle("hidden", !hasPendingAction);
+  els.finalResultBarTrack.classList.toggle("hidden", body.requires_verdict);
 
   els.waitingView.classList.add("hidden");
   els.resultView.classList.remove("hidden");
 
-  clearTimers();
   if (body.requires_verdict) {
     watchVerdictExpiry(body.expires_at);
   } else if (body.requires_practice_ack) {
     // GESLAAGD: bevoegd personeel hoeft niets te doen, dit sluit zichzelf af.
-    returnTimeout = setTimeout(autoAcknowledgePractice, FINAL_RESULT_DISPLAY_MS);
+    startFinalResultCountdown(FINAL_RESULT_DISPLAY_MS, autoAcknowledgePractice);
   } else {
     // NIET_GESLAAGD: niets om af te ronden, gewoon tonen en dan terug.
-    returnTimeout = setTimeout(showWaiting, FINAL_RESULT_DISPLAY_MS);
+    startFinalResultCountdown(FINAL_RESULT_DISPLAY_MS, showWaiting);
   }
 }
 
@@ -131,8 +157,13 @@ async function handleVerdict(verdict) {
     applyStatusBanner(result.status);
     els.verdictActions.classList.add("hidden");
     els.cancelActions.classList.add("hidden");
-    const delay = FINAL_STATUSES.has(result.status) ? FINAL_RESULT_DISPLAY_MS : CONFIRMATION_DISPLAY_MS;
-    returnTimeout = setTimeout(showWaiting, delay);
+    if (FINAL_STATUSES.has(result.status)) {
+      startFinalResultCountdown(FINAL_RESULT_DISPLAY_MS, showWaiting);
+    } else {
+      // HERKANSING: geen eindresultaat, gewoon kort bevestigen en verder.
+      els.finalResultBarTrack.classList.add("hidden");
+      returnTimeout = setTimeout(showWaiting, CONFIRMATION_DISPLAY_MS);
+    }
   } catch (err) {
     showRejectedToast(err instanceof ApiError ? err.message : "Er ging iets mis.");
     showWaiting();
