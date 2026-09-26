@@ -1,0 +1,154 @@
+<!doctype html>
+<html lang="nl">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Beheer — Toelatingssysteem</title>
+  <link rel="stylesheet" href="../shared/style-base.css" />
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+  <div id="connection-banner" class="connection-banner hidden">Geen verbinding met de server</div>
+
+  <div id="login-view" class="view">
+    <form id="login-form" class="login-form">
+      <h1>Aanmelden</h1>
+      <input id="pincode-input" type="password" inputmode="numeric" autocomplete="off" placeholder="Pincode" />
+      <button type="submit">Inloggen</button>
+      <p id="login-error" class="error hidden"></p>
+    </form>
+  </div>
+
+  <div id="admin-view" class="view hidden">
+    <header class="admin-header">
+      <div class="admin-header-title">Beheer — Toelatingssysteem</div>
+      <div class="admin-header-user">
+        <span id="user-label"></span>
+        <button id="logout-btn" class="btn-secondary">Uitloggen</button>
+      </div>
+    </header>
+
+    <nav class="tabs">
+      <button class="tab-btn active" data-tab="bandje">Bandje</button>
+      <button class="tab-btn" data-tab="logs">Logs</button>
+      <button class="tab-btn" data-tab="rapport">Dagoverzicht</button>
+      <button class="tab-btn admin-only hidden" data-tab="medewerkers">Medewerkers</button>
+    </nav>
+
+    <main class="tab-content">
+      <!-- Bandje -->
+      <section id="tab-bandje" class="tab-panel">
+        <form id="wristband-lookup-form" class="inline-form">
+          <input id="wristband-input" type="text" placeholder="Bandje-ID (scan of typ)" autocomplete="off" />
+          <button type="submit">Bekijk</button>
+        </form>
+
+        <div id="wristband-result" class="hidden">
+          <div class="card">
+            <div class="card-title">Status van <span id="wristband-result-id"></span></div>
+            <div id="wristband-status-badge" class="status-badge"></div>
+          </div>
+
+          <div class="card">
+            <div class="card-title">Status handmatig zetten</div>
+            <form id="override-form" class="stacked-form">
+              <select id="override-status">
+                <option value="NOG_NIET_GESPRONGEN">NOG_NIET_GESPRONGEN</option>
+                <option value="HERKANSING">HERKANSING</option>
+                <option value="GESLAAGD">GESLAAGD</option>
+                <option value="NIET_GESLAAGD">NIET_GESLAAGD</option>
+              </select>
+              <input id="override-reason" type="text" placeholder="Reden (optioneel)" />
+              <button type="submit">Toepassen</button>
+            </form>
+            <p id="override-message" class="message hidden"></p>
+          </div>
+
+          <div class="card">
+            <div class="card-title">Geschiedenis vandaag</div>
+            <table class="data-table" id="wristband-history-table">
+              <thead>
+                <tr><th>Tijdstip</th><th>Type</th><th>Bron</th><th>Detail</th></tr>
+              </thead>
+              <tbody></tbody>
+            </table>
+          </div>
+        </div>
+      </section>
+
+      <!-- Logs -->
+      <section id="tab-logs" class="tab-panel hidden">
+        <form id="logs-filter-form" class="inline-form wrap">
+          <input id="logs-filter-date" type="date" />
+          <input id="logs-filter-wristband" type="text" placeholder="Bandje-ID" />
+          <input id="logs-filter-employee" type="number" placeholder="Medewerker-ID" />
+          <select id="logs-filter-type">
+            <option value="">Alle types</option>
+            <option value="SCAN">SCAN</option>
+            <option value="OORDEEL">OORDEEL</option>
+            <option value="OEFENSPRONG">OEFENSPRONG</option>
+            <option value="TIME_OUT">TIME_OUT</option>
+            <option value="TOEGANG_HOOG_PLATFORM">TOEGANG_HOOG_PLATFORM</option>
+            <option value="HANDMATIGE_WIJZIGING">HANDMATIGE_WIJZIGING</option>
+            <option value="INLOGGEN">INLOGGEN</option>
+            <option value="INLOGGEN_MISLUKT">INLOGGEN_MISLUKT</option>
+            <option value="UITLOGGEN">UITLOGGEN</option>
+          </select>
+          <button type="submit">Zoek</button>
+          <button type="button" id="export-csv-btn" class="btn-secondary">Exporteer CSV</button>
+        </form>
+
+        <table class="data-table" id="logs-table">
+          <thead>
+            <tr><th>Tijdstip</th><th>Type</th><th>Bandje</th><th>Bron</th><th>Medewerker</th><th>Detail</th></tr>
+          </thead>
+          <tbody></tbody>
+        </table>
+      </section>
+
+      <!-- Dagoverzicht -->
+      <section id="tab-rapport" class="tab-panel hidden">
+        <form id="report-form" class="inline-form">
+          <input id="report-date" type="date" />
+          <button type="submit">Toon</button>
+        </form>
+
+        <div id="report-stats" class="stat-grid hidden">
+          <div class="stat-tile"><div class="stat-value" id="stat-totaal"></div><div class="stat-label">Testsprongen</div></div>
+          <div class="stat-tile"><div class="stat-value" id="stat-geslaagd"></div><div class="stat-label">Geslaagd</div></div>
+          <div class="stat-tile"><div class="stat-value" id="stat-herkansing"></div><div class="stat-label">Herkansing</div></div>
+          <div class="stat-tile"><div class="stat-value" id="stat-niet-geslaagd"></div><div class="stat-label">Niet geslaagd</div></div>
+          <div class="stat-tile"><div class="stat-value" id="stat-oefensprongen"></div><div class="stat-label">Oefensprongen</div></div>
+          <div class="stat-tile"><div class="stat-value" id="stat-gemiddelde"></div><div class="stat-label">Gem. tijd tussen sprongen</div></div>
+        </div>
+      </section>
+
+      <!-- Medewerkers -->
+      <section id="tab-medewerkers" class="tab-panel hidden">
+        <div class="card">
+          <div class="card-title">Nieuwe medewerker</div>
+          <form id="create-employee-form" class="inline-form wrap">
+            <input id="new-employee-name" type="text" placeholder="Naam" required />
+            <input id="new-employee-pincode" type="text" inputmode="numeric" placeholder="Pincode" required />
+            <select id="new-employee-role">
+              <option value="supervisor">supervisor</option>
+              <option value="admin">admin</option>
+            </select>
+            <button type="submit">Aanmaken</button>
+          </form>
+          <p id="create-employee-message" class="message hidden"></p>
+        </div>
+
+        <table class="data-table" id="employees-table">
+          <thead>
+            <tr><th>Naam</th><th>Rol</th><th>Actief</th><th>Acties</th></tr>
+          </thead>
+          <tbody></tbody>
+        </table>
+      </section>
+    </main>
+  </div>
+
+  <script type="module" src="app.js"></script>
+</body>
+</html>

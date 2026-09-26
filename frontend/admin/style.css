@@ -1,0 +1,221 @@
+html, body {
+  width: 100%;
+  min-height: 100%;
+  overflow: auto;
+  user-select: text;
+}
+
+.view {
+  min-height: 100vh;
+}
+
+.login-form {
+  max-width: 24rem;
+  margin: 15vh auto;
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+  padding: 2rem;
+  text-align: center;
+}
+
+.login-form input,
+.login-form button {
+  font-size: 1.5rem;
+  padding: 1rem;
+  border-radius: 0.75rem;
+  border: none;
+}
+
+.login-form button {
+  background: var(--kleur-groen);
+  color: white;
+  font-weight: bold;
+}
+
+.error {
+  color: #ff8a80;
+  font-weight: bold;
+}
+
+.message {
+  font-weight: bold;
+  margin-top: 0.5rem;
+}
+
+.message.error {
+  color: #ff8a80;
+}
+
+.message.success {
+  color: #8de08d;
+}
+
+.admin-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 1rem 1.5rem;
+  background: #1a1a1a;
+  border-bottom: 1px solid #333;
+}
+
+.admin-header-title {
+  font-size: 1.3rem;
+  font-weight: bold;
+}
+
+.admin-header-user {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+}
+
+.btn-secondary {
+  background: #444;
+  color: white;
+  padding: 0.6rem 1.2rem;
+  border-radius: 0.5rem;
+  font-size: 1rem;
+}
+
+.tabs {
+  display: flex;
+  gap: 0.25rem;
+  padding: 0.75rem 1.5rem 0;
+  background: #161616;
+  flex-wrap: wrap;
+}
+
+.tab-btn {
+  background: #222;
+  color: #ccc;
+  padding: 0.75rem 1.5rem;
+  border-radius: 0.5rem 0.5rem 0 0;
+  font-size: 1.05rem;
+}
+
+.tab-btn.active {
+  background: #2a2a2a;
+  color: white;
+  font-weight: bold;
+}
+
+.tab-content {
+  padding: 1.5rem;
+  background: #2a2a2a;
+  min-height: calc(100vh - 8rem);
+}
+
+.tab-panel.hidden {
+  display: none;
+}
+
+.inline-form {
+  display: flex;
+  gap: 0.75rem;
+  margin-bottom: 1.5rem;
+  align-items: center;
+}
+
+.inline-form.wrap {
+  flex-wrap: wrap;
+}
+
+.inline-form input,
+.inline-form select,
+.stacked-form input,
+.stacked-form select {
+  font-size: 1rem;
+  padding: 0.6rem;
+  border-radius: 0.5rem;
+  border: none;
+}
+
+.inline-form button,
+.stacked-form button {
+  font-size: 1rem;
+  padding: 0.6rem 1.2rem;
+  border-radius: 0.5rem;
+  background: var(--kleur-groen);
+  color: white;
+  font-weight: bold;
+}
+
+.stacked-form {
+  display: flex;
+  gap: 0.75rem;
+  flex-wrap: wrap;
+  align-items: center;
+}
+
+.card {
+  background: #1e1e1e;
+  border-radius: 1rem;
+  padding: 1.25rem;
+  margin-bottom: 1.25rem;
+  max-width: 50rem;
+}
+
+.card-title {
+  font-weight: bold;
+  font-size: 1.1rem;
+  margin-bottom: 0.75rem;
+  color: #ffcc66;
+}
+
+.status-badge {
+  display: inline-block;
+  padding: 0.75rem 1.5rem;
+  border-radius: 0.75rem;
+  font-size: 1.5rem;
+  font-weight: 900;
+}
+
+.data-table {
+  width: 100%;
+  border-collapse: collapse;
+  max-width: 70rem;
+}
+
+.data-table th,
+.data-table td {
+  text-align: left;
+  padding: 0.5rem 0.75rem;
+  border-bottom: 1px solid #3a3a3a;
+  font-size: 0.9rem;
+}
+
+.data-table th {
+  color: #aaaaaa;
+  font-weight: 600;
+}
+
+.stat-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(10rem, 1fr));
+  gap: 1rem;
+  max-width: 60rem;
+}
+
+.stat-tile {
+  background: #1e1e1e;
+  border-radius: 1rem;
+  padding: 1.5rem;
+  text-align: center;
+}
+
+.stat-value {
+  font-size: 2.2rem;
+  font-weight: 900;
+  color: var(--kleur-groen);
+}
+
+.stat-label {
+  color: #aaaaaa;
+  margin-top: 0.5rem;
+}
+
+.hidden {
+  display: none !important;
+}
