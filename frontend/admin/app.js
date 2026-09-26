@@ -419,9 +419,13 @@ els.shutdownBtn.addEventListener("click", async () => {
   els.shutdownBtn.disabled = true;
   try {
     await api.shutdown();
-    els.shutdownMessage.textContent = "Server wordt afgesloten…";
+    els.shutdownMessage.textContent = "Server wordt afgesloten… Je kan dit venster nu sluiten.";
     els.shutdownMessage.className = "message success";
     els.shutdownMessage.classList.remove("hidden");
+    // Best effort: browsers alleen laten scripts een tabblad sluiten dat
+    // zelf via script geopend is (start-app.bat opent via de OS, niet via
+    // script) — dit werkt dus niet overal, vandaar ook de boodschap hierboven.
+    setTimeout(() => window.close(), 400);
   } catch (err) {
     if (err instanceof ApiError && err.status === 401) return handleUnauthorized();
     els.shutdownMessage.textContent = err instanceof ApiError ? err.message : "Fout bij afsluiten.";
