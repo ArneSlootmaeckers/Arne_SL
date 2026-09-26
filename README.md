@@ -71,8 +71,10 @@ en meteen in de app zitten, zonder terminal.
    met PowerShell"**. Dit zet een snelkoppeling "Toelatingssysteem" op het
    bureaublad, met het Sparkx-logo als icoon.
 2. Vanaf dan: dubbelklik die snelkoppeling om de server te starten (in een
-   apart, geminimaliseerd venster) en meteen het hostscherm te openen in de
-   browser.
+   apart, geminimaliseerd venster) en meteen het hostscherm te openen — in
+   een kiosk-achtig browservenster zonder adresbalk/tabbladen (via Chrome
+   of Edge's `--app`-modus, als een van beide geïnstalleerd is; anders in
+   een gewone browsertab).
 
 Dit vereist dat `install.sh` al uitgevoerd is — de snelkoppeling gebruikt
 dezelfde virtualenv.
@@ -83,7 +85,9 @@ dezelfde virtualenv.
 als dat venster geminimaliseerd is: de knop **"Applicatie afsluiten"** op
 het tabblad **"Systeem"** van het beheerscherm (enkel voor rol admin). Dat
 sluit de server netjes af — geen `kill -9` of het venster gewoon
-wegklikken nodig.
+wegklikken nodig. Of het browservenster daarbij ook zelf sluit hangt af
+van de browser/versie; lukt dat niet, dan blijft het venster gewoon open
+met een boodschap dat het manueel gesloten mag worden.
 
 ## Eerste admin aanmaken
 
