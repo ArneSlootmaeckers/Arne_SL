@@ -8,9 +8,11 @@ from __future__ import annotations
 
 import asyncio
 import contextlib
+from pathlib import Path
 
 from fastapi import FastAPI, Request
-from fastapi.responses import JSONResponse
+from fastapi.responses import JSONResponse, RedirectResponse
+from fastapi.staticfiles import StaticFiles
 
 from app.config import Settings, load_settings
 from app.database import create_session_factory
@@ -41,6 +43,7 @@ _ERROR_STATUS_CODES: dict[type[DomainServiceError], int] = {
 }
 
 _REAPER_INTERVAL_SECONDS = 5.0
+_FRONTEND_DIR = Path(__file__).resolve().parent.parent.parent / "frontend"
 
 
 async def _reap_expired_scans_periodically(app: FastAPI) -> None:
@@ -103,5 +106,18 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     app.include_router(gate_router)
     app.include_router(auth_router)
     app.include_router(admin_router)
+
+    # Each screen is a plain static site; mount whichever ones exist yet
+    # (gate/admin are added in later phases) plus the assets they share.
+    if (_FRONTEND_DIR / "shared").is_dir():
+        app.mount("/shared", StaticFiles(directory=_FRONTEND_DIR / "shared"), name="shared")
+    for screen in ("host", "gate", "admin"):
+        screen_dir = _FRONTEND_DIR / screen
+        if screen_dir.is_dir():
+            app.mount(f"/{screen}", StaticFiles(directory=screen_dir, html=True), name=screen)
+
+    @app.get("/")
+    def root() -> RedirectResponse:
+        return RedirectResponse(url="/host/")
 
     return app

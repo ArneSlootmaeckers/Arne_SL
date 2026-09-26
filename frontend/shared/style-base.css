@@ -1,0 +1,82 @@
+/* Base styles shared by all screens: high contrast, large text, usable in
+ * bright sunlight and with gloves on a tablet. */
+
+:root {
+  --kleur-groen: #1b7d1b;
+  --kleur-groen-donker: #0f5c0f;
+  --kleur-oranje: #b56600;
+  --kleur-rood: #b3221c;
+  --kleur-grijs: #3a3a3a;
+  --kleur-achtergrond: #101010;
+  --kleur-tekst: #ffffff;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html,
+body {
+  margin: 0;
+  padding: 0;
+  height: 100%;
+  background: var(--kleur-achtergrond);
+  color: var(--kleur-tekst);
+  font-family: "Segoe UI", Arial, sans-serif;
+  -webkit-user-select: none;
+  user-select: none;
+  overflow: hidden;
+}
+
+button {
+  font-family: inherit;
+  cursor: pointer;
+  border: none;
+  border-radius: 1rem;
+}
+
+.hidden {
+  display: none !important;
+}
+
+.connection-banner {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  z-index: 100;
+  background: var(--kleur-rood);
+  color: white;
+  text-align: center;
+  font-size: clamp(1rem, 3vw, 1.6rem);
+  font-weight: bold;
+  padding: 0.75rem;
+}
+
+.toast {
+  position: fixed;
+  top: 1rem;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 200;
+  background: var(--kleur-oranje);
+  color: white;
+  font-size: clamp(1.2rem, 3.5vw, 2rem);
+  font-weight: bold;
+  padding: 1rem 2rem;
+  border-radius: 1rem;
+  text-align: center;
+  box-shadow: 0 0.5rem 1.5rem rgba(0, 0, 0, 0.5);
+}
+
+.status-groen {
+  background: var(--kleur-groen);
+}
+
+.status-oranje {
+  background: var(--kleur-oranje);
+}
+
+.status-rood {
+  background: var(--kleur-rood);
+}

@@ -1,0 +1,174 @@
+html, body {
+  width: 100%;
+  height: 100%;
+}
+
+#app {
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.view {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  padding: 2rem;
+}
+
+.waiting-title {
+  font-size: clamp(2.5rem, 8vw, 6rem);
+  margin: 0;
+}
+
+.waiting-hint {
+  font-size: clamp(1.2rem, 4vw, 2.5rem);
+  color: #aaaaaa;
+}
+
+.wristband-id {
+  font-size: clamp(1.5rem, 5vw, 3rem);
+  font-family: "Courier New", monospace;
+  letter-spacing: 0.1em;
+  margin-bottom: 1rem;
+  color: #cccccc;
+}
+
+.status-banner {
+  width: 100%;
+  max-width: 60rem;
+  border-radius: 1.5rem;
+  padding: 2.5rem 1.5rem;
+  margin-bottom: 1.5rem;
+}
+
+.status-text {
+  font-size: clamp(2.2rem, 8vw, 5rem);
+  font-weight: 900;
+  line-height: 1.1;
+}
+
+.timeout-bar-track {
+  width: 100%;
+  max-width: 60rem;
+  height: 0.75rem;
+  background: #2a2a2a;
+  border-radius: 0.5rem;
+  overflow: hidden;
+  margin-bottom: 2rem;
+}
+
+.timeout-bar {
+  height: 100%;
+  width: 100%;
+  background: #666666;
+  transition: width 0.2s linear;
+}
+
+.actions {
+  display: flex;
+  gap: 1.5rem;
+  width: 100%;
+  max-width: 60rem;
+  justify-content: center;
+}
+
+.btn {
+  flex: 1 1 30%;
+  min-width: 26%;
+  font-size: clamp(2rem, 6vw, 4rem);
+  font-weight: 900;
+  padding: 2.5rem 1rem;
+  color: white;
+}
+
+.btn-groen {
+  background: var(--kleur-groen);
+}
+
+.btn-groen:active {
+  background: var(--kleur-groen-donker);
+}
+
+.btn-rood {
+  background: var(--kleur-rood);
+}
+
+.btn-rood:active {
+  background: #7a1712;
+}
+
+.btn-full {
+  flex: 1 1 100%;
+}
+
+#sim-panel:empty {
+  display: none;
+}
+
+/* The simulation panel is fixed to the bottom of the screen (dev/demo only),
+ * so reserve space for it in the main view — otherwise it overlaps and
+ * intercepts clicks on the bottom-most action button. */
+body.sim-mode #app {
+  padding-bottom: 11rem;
+}
+
+.sim-panel {
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  max-height: 40vh;
+  overflow-y: auto;
+  background: rgba(0, 0, 0, 0.85);
+  border-top: 2px solid #444;
+  padding: 0.75rem 1rem;
+  font-size: 1rem;
+  z-index: 50;
+}
+
+.sim-panel-title {
+  font-weight: bold;
+  margin-bottom: 0.5rem;
+  color: #ffcc66;
+}
+
+.sim-panel-quickpicks {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  margin-bottom: 0.5rem;
+}
+
+.sim-panel-btn {
+  background: #333;
+  color: white;
+  padding: 0.5rem 1rem;
+  border-radius: 0.5rem;
+  font-size: 1rem;
+}
+
+.sim-panel-form {
+  display: flex;
+  gap: 0.5rem;
+}
+
+.sim-panel-form input {
+  flex: 1;
+  padding: 0.5rem;
+  font-size: 1rem;
+  border-radius: 0.5rem;
+  border: none;
+}
+
+.sim-panel-form button {
+  padding: 0.5rem 1rem;
+  background: #555;
+  color: white;
+  border-radius: 0.5rem;
+}

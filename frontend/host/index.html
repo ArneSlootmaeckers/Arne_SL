@@ -1,0 +1,47 @@
+<!doctype html>
+<html lang="nl">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no" />
+  <title>Hostscherm — Startplatform</title>
+  <link rel="stylesheet" href="../shared/style-base.css" />
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+  <div id="connection-banner" class="connection-banner hidden">
+    Geen verbinding met de server – niet laten springen
+  </div>
+  <div id="rejected-toast" class="toast hidden"></div>
+
+  <main id="app">
+    <section id="waiting-view" class="view">
+      <h1 class="waiting-title">Scan het bandje</h1>
+      <p class="waiting-hint">Wacht op een scan…</p>
+    </section>
+
+    <section id="result-view" class="view hidden">
+      <div class="wristband-id" id="wristband-id"></div>
+      <div class="status-banner" id="status-banner">
+        <div class="status-text" id="status-text"></div>
+      </div>
+
+      <div class="timeout-bar-track">
+        <div class="timeout-bar" id="timeout-bar"></div>
+      </div>
+
+      <div class="actions" id="verdict-actions">
+        <button id="btn-rood" class="btn btn-rood">ROOD</button>
+        <button id="btn-groen" class="btn btn-groen">GROEN</button>
+      </div>
+
+      <div class="actions" id="practice-actions">
+        <button id="btn-practice-ack" class="btn btn-groen btn-full">Oefensprong klaar</button>
+      </div>
+    </section>
+  </main>
+
+  <div id="sim-panel"></div>
+
+  <script type="module" src="app.js"></script>
+</body>
+</html>
