@@ -81,13 +81,20 @@ dezelfde virtualenv.
 
 ### Stoppen
 
-`Ctrl+C` in het terminalvenster van de server (op Linux), of, makkelijker
-als dat venster geminimaliseerd is: de knop **"Applicatie afsluiten"** op
-het tabblad **"Systeem"** van het beheerscherm (enkel voor rol admin). Dat
-sluit de server netjes af — geen `kill -9` of het venster gewoon
-wegklikken nodig. Of het browservenster daarbij ook zelf sluit hangt af
-van de browser/versie; lukt dat niet, dan blijft het venster gewoon open
-met een boodschap dat het manueel gesloten mag worden.
+`Ctrl+C` in het terminalvenster van de server (op Linux), of de knop
+**"Applicatie afsluiten"** op het tabblad **"Systeem"** van het
+beheerscherm (enkel voor rol admin). Dat sluit de server netjes af —
+geen `kill -9` of een venster gewoon wegklikken nodig.
+
+Via de bureaubladsnelkoppeling (`start-app.bat`/`start-app.ps1`) sluit het
+browservenster daarbij ook automatisch mee: het script onthoudt welk
+browserproces het gestart is (in een eigen, geïsoleerd profiel) en sluit
+dat proces actief af zodra de server stopt — dit hangt niet af van of de
+pagina zelf haar venster mag sluiten (browsers staan dat normaal niet toe
+voor een venster dat niet via een script geopend is). Werkt enkel als
+Chrome of Edge geïnstalleerd is; is geen van beide gevonden, dan opent de
+snelkoppeling een gewone browsertab die na het afsluiten handmatig
+gesloten moet worden.
 
 ## Eerste admin aanmaken
 
@@ -200,7 +207,8 @@ docs/
   handleiding-host.md
   handleiding-beheer.md
 data/      # SQLite-bestand + back-ups (niet in git)
-start-app.bat                       # server starten + browser openen (Windows)
+start-app.bat                       # startpunt van de snelkoppeling, roept start-app.ps1 aan
+start-app.ps1                       # server + browser starten, browser mee afsluiten (Windows)
 maak-bureaubladsnelkoppeling.ps1    # bureaubladicoon aanmaken (eenmalig, Windows)
 ```
 
