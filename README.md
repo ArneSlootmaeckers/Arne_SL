@@ -115,11 +115,13 @@ om verdere medewerkers aan te maken.
 ## Simulatiemodus (ontwikkeling en demo)
 
 Zonder een fysieke bandjeslezer kan elk scherm met `?sim=1` achter de URL
-geopend worden (bv. `http://localhost:8000/host/?sim=1`). Dat toont een
-paneel onderaan met een paar testbandjes om op te klikken, en een veld om
-een willekeurig bandje-ID in te typen. Een lezer die zich als toetsenbord
-gedraagt (bandje-ID + Enter) werkt op elk scherm sowieso al, ook zonder
-`?sim=1` — er hoeft geen tekstveld actief te zijn.
+geopend worden (bv. `http://localhost:8000/host/?sim=1`) — of, sneller,
+via de knop **"Open hostscherm in simulatiemodus"** op het tabblad
+**"Systeem"** van het beheerscherm. Dat toont een paneel onderaan met een
+paar testbandjes om op te klikken, en een veld om een willekeurig
+bandje-ID in te typen. Een lezer die zich als toetsenbord gedraagt
+(bandje-ID + Enter) werkt op elk scherm sowieso al, ook zonder `?sim=1` —
+er hoeft geen tekstveld actief te zijn.
 
 Om meteen wat testbandjes en een demo-admin/-supervisor te hebben:
 

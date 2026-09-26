@@ -42,6 +42,9 @@ en de gemiddelde tijd tussen twee sprongen bij de testsprong die dag.
 
 ## Tabblad "Systeem" (enkel zichtbaar voor rol admin)
 
+**Simulatiemodus** opent het hostscherm met een paneel van testbandjes,
+om te oefenen of te demonstreren zonder een fysieke bandjeslezer.
+
 **Applicatie afsluiten** sluit de server netjes af (zelfde als Ctrl+C in
 het serverscherm): het host- en beheerscherm werken vanaf dan niet meer,
 tot de server manueel herstart wordt (bureaubladsnelkoppeling of
