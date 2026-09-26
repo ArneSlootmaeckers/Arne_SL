@@ -23,17 +23,19 @@ systeem opstart (`http://<server>:8000/`).
    staat geen tijdslimiet op het scherm — de testsprong duurt vaak langer
    dan 30 seconden.
    - Wordt de sprong goedgekeurd? Dan toont het scherm meteen "Geslaagd —
-     oefensprong" en sluit zichzelf na 30 seconden automatisch af.
+     oefensprong" met een leeglopende balk, en sluit zichzelf na
+     15 seconden automatisch af.
    - Bij "2e poging – laatste kans" die ook wordt afgekeurd, toont het
-     scherm "Vandaag niet meer toegestaan" en sluit zichzelf na
-     30 seconden automatisch af.
+     scherm "Vandaag niet meer toegestaan" met dezelfde balk, en sluit
+     zichzelf na 15 seconden automatisch af.
 4. **Bij "Geslaagd – oefensprong"**: er is geen oordeel nodig — de bezoeker
    mag door naar de Ski Jump. Je hoeft niets in te drukken: het scherm
-   sluit zichzelf na 30 seconden automatisch af en is dan klaar voor de
-   volgende scan.
+   toont een leeglopende balk en sluit zichzelf na 15 seconden automatisch
+   af en is dan klaar voor de volgende scan. Ging de oefensprong toch niet
+   door? Druk dan op **"Geen sprong / annuleer"**.
 5. **Bij "Vandaag niet meer toegestaan"**: laat deze bezoeker niet meer
    springen. Er is niets te doen op dit scherm — het sluit zichzelf na
-   30 seconden automatisch af.
+   15 seconden automatisch af.
 
 **Sprong toch niet doorgegaan?** (bezoeker bedenkt zich, wordt weggeroepen, …)
 Druk dan, tijdens het beoordelen, op de kleine link **"Geen sprong /
