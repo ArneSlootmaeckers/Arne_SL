@@ -5,7 +5,7 @@ import { playFailureSound, playNeutralSound, playSuccessSound } from "../shared/
 const POLLING_INTERVAL_MS = 3000;
 const TEST_WRISTBANDS = ["TEST-001", "TEST-002", "TEST-003", "TEST-004"];
 const CONFIRMATION_DISPLAY_MS = 3000;
-const FINAL_RESULT_DISPLAY_MS = 15000;
+const FINAL_RESULT_DISPLAY_MS = 5000;
 const REJECTED_TOAST_MS = 2500;
 
 const STATUS_INFO = {
