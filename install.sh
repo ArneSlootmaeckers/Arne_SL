@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
-# Installatiescript zonder Docker: zet een Python virtualenv op in backend/.venv
-# en installeert de dependencies. Zie README.md voor het volledige overzicht.
+# Installatiescript: zet een Python virtualenv op in backend/.venv en
+# installeert de dependencies. Zie README.md voor het volledige overzicht.
 set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"

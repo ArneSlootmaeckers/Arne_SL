@@ -26,32 +26,9 @@ statuslogica in hoofdstuk 2 van de opdracht (of
 
 ## Vereisten
 
-- Python 3.12 of hoger (bij installatie zonder Docker)
-- **Of** Docker + Docker Compose
+- Python 3.12 of hoger
 
 ## Installatie
-
-### Optie A — Docker Compose (aanbevolen voor de serverinstallatie)
-
-```bash
-docker compose up -d --build
-```
-
-De server luistert daarna op poort 8000 van de host-machine. Het
-SQLite-bestand staat in `./data/toelating.db` (gekoppeld als volume, blijft
-dus bewaard bij een herbouw van de container). Pas `backend/config.yaml` aan
-en herstart de container (`docker compose restart`) om configuratie te
-wijzigen — dat bestand wordt read-only in de container gemount.
-
-> De Dockerfile-paden zijn geverifieerd door de exacte mapstructuur van de
-> container (`/app/backend`, `/app/frontend`, `/app/data`) lokaal na te
-> bouwen en de server daarin te draaien — alle routes, de statische
-> bestanden en de automatische back-up werkten daarin correct. Een
-> volledige `docker build` zelf is niet uitgevoerd in de ontwikkelomgeving
-> waarin dit project gebouwd is (geen toegang tot de Docker-daemon daar);
-> test dit dus zeker even bij je eerste installatie.
-
-### Optie B — installatiescript zonder Docker
 
 ```bash
 ./install.sh
@@ -75,13 +52,11 @@ sudo systemctl enable --now toelatingssysteem
 
 ## Opstarten
 
-**Eén commando** (na installatie via optie A of B):
+**Eén commando** (na installatie):
 
 ```bash
 ./start.sh
 ```
-
-Of via Docker: `docker compose up -d`.
 
 `http://<server-ip>:8000/` opent altijd rechtstreeks het hostscherm. Het
 beheerscherm (`.../admin/`) is bereikbaar via de knop **"Profiel"**
@@ -99,8 +74,8 @@ en meteen in de app zitten, zonder terminal.
    apart, geminimaliseerd venster) en meteen het hostscherm te openen in de
    browser.
 
-Dit vereist dat `install.sh` al uitgevoerd is (stap "Optie B" hierboven) —
-de snelkoppeling gebruikt dezelfde virtualenv.
+Dit vereist dat `install.sh` al uitgevoerd is — de snelkoppeling gebruikt
+dezelfde virtualenv.
 
 ## Eerste admin aanmaken
 
@@ -110,7 +85,7 @@ allereerste admin aan met een apart script:
 
 ```bash
 cd backend
-source .venv/bin/activate   # niet nodig bij Docker: gebruik dan `docker compose exec toelatingssysteem python3 create_admin.py`
+source .venv/bin/activate
 python3 create_admin.py
 ```
 
