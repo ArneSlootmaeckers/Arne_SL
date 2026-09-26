@@ -19,6 +19,14 @@ html, body {
   text-align: center;
 }
 
+.login-brand {
+  font-size: 2.5rem;
+  font-weight: 900;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  margin-bottom: 0.5rem;
+}
+
 .login-form input,
 .login-form button {
   font-size: 1.5rem;
@@ -28,9 +36,9 @@ html, body {
 }
 
 .login-form button {
-  background: var(--kleur-groen);
-  color: white;
-  font-weight: bold;
+  background: var(--sparkx-gradient);
+  color: var(--kleur-achtergrond-diep);
+  font-weight: 900;
 }
 
 .error {
@@ -56,13 +64,26 @@ html, body {
   justify-content: space-between;
   align-items: center;
   padding: 1rem 1.5rem;
-  background: #1a1a1a;
-  border-bottom: 1px solid #333;
+  background: var(--kleur-achtergrond-diep);
+  border-bottom: 1px solid var(--kleur-achtergrond-paneel);
 }
 
 .admin-header-title {
-  font-size: 1.3rem;
-  font-weight: bold;
+  display: flex;
+  align-items: baseline;
+  gap: 0.75rem;
+}
+
+.brand-inline {
+  font-size: 1.5rem;
+  font-weight: 900;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+}
+
+.admin-header-subtitle {
+  font-size: 1rem;
+  color: var(--kleur-tekst-gedempt);
 }
 
 .admin-header-user {
@@ -72,7 +93,7 @@ html, body {
 }
 
 .btn-secondary {
-  background: #444;
+  background: var(--kleur-achtergrond-paneel);
   color: white;
   padding: 0.6rem 1.2rem;
   border-radius: 0.5rem;
@@ -83,27 +104,29 @@ html, body {
   display: flex;
   gap: 0.25rem;
   padding: 0.75rem 1.5rem 0;
-  background: #161616;
+  background: var(--kleur-achtergrond-diep);
   flex-wrap: wrap;
 }
 
 .tab-btn {
-  background: #222;
-  color: #ccc;
+  background: var(--kleur-achtergrond-paneel);
+  color: var(--kleur-tekst-gedempt);
   padding: 0.75rem 1.5rem;
   border-radius: 0.5rem 0.5rem 0 0;
   font-size: 1.05rem;
+  border-bottom: 3px solid transparent;
 }
 
 .tab-btn.active {
-  background: #2a2a2a;
+  background: var(--kleur-achtergrond);
   color: white;
   font-weight: bold;
+  border-bottom: 3px solid var(--sparkx-geel);
 }
 
 .tab-content {
   padding: 1.5rem;
-  background: #2a2a2a;
+  background: var(--kleur-achtergrond);
   min-height: calc(100vh - 8rem);
 }
 
@@ -137,9 +160,9 @@ html, body {
   font-size: 1rem;
   padding: 0.6rem 1.2rem;
   border-radius: 0.5rem;
-  background: var(--kleur-groen);
-  color: white;
-  font-weight: bold;
+  background: var(--sparkx-gradient);
+  color: var(--kleur-achtergrond-diep);
+  font-weight: 900;
 }
 
 .stacked-form {
@@ -150,7 +173,7 @@ html, body {
 }
 
 .card {
-  background: #1e1e1e;
+  background: var(--kleur-achtergrond-paneel);
   border-radius: 1rem;
   padding: 1.25rem;
   margin-bottom: 1.25rem;
@@ -161,7 +184,7 @@ html, body {
   font-weight: bold;
   font-size: 1.1rem;
   margin-bottom: 0.75rem;
-  color: #ffcc66;
+  color: var(--sparkx-geel);
 }
 
 .status-badge {
@@ -182,12 +205,12 @@ html, body {
 .data-table td {
   text-align: left;
   padding: 0.5rem 0.75rem;
-  border-bottom: 1px solid #3a3a3a;
+  border-bottom: 1px solid var(--kleur-achtergrond-paneel);
   font-size: 0.9rem;
 }
 
 .data-table th {
-  color: #aaaaaa;
+  color: var(--kleur-tekst-gedempt);
   font-weight: 600;
 }
 
@@ -199,7 +222,7 @@ html, body {
 }
 
 .stat-tile {
-  background: #1e1e1e;
+  background: var(--kleur-achtergrond-paneel);
   border-radius: 1rem;
   padding: 1.5rem;
   text-align: center;
@@ -208,11 +231,14 @@ html, body {
 .stat-value {
   font-size: 2.2rem;
   font-weight: 900;
-  color: var(--kleur-groen);
+  background: var(--sparkx-gradient);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
 }
 
 .stat-label {
-  color: #aaaaaa;
+  color: var(--kleur-tekst-gedempt);
   margin-top: 0.5rem;
 }
 

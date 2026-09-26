@@ -12,6 +12,7 @@
 
   <div id="login-view" class="view">
     <form id="login-form" class="login-form">
+      <div class="login-brand">Spark<span class="accent">x</span></div>
       <h1>Aanmelden</h1>
       <input id="pincode-input" type="password" inputmode="numeric" autocomplete="off" placeholder="Pincode" />
       <button type="submit">Inloggen</button>
@@ -21,7 +22,10 @@
 
   <div id="admin-view" class="view hidden">
     <header class="admin-header">
-      <div class="admin-header-title">Beheer — Toelatingssysteem</div>
+      <div class="admin-header-title">
+        <span class="brand-inline">Spark<span class="accent">x</span></span>
+        <span class="admin-header-subtitle">Beheer — Toelatingssysteem</span>
+      </div>
       <div class="admin-header-user">
         <span id="user-label"></span>
         <button id="logout-btn" class="btn-secondary">Uitloggen</button>

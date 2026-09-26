@@ -28,7 +28,7 @@ html, body {
 
 .waiting-hint {
   font-size: clamp(1.2rem, 4vw, 2.5rem);
-  color: #aaaaaa;
+  color: var(--kleur-tekst-gedempt);
 }
 
 .wristband-id {
@@ -36,7 +36,7 @@ html, body {
   font-family: "Courier New", monospace;
   letter-spacing: 0.1em;
   margin-bottom: 1rem;
-  color: #cccccc;
+  color: var(--kleur-tekst-gedempt);
 }
 
 .status-banner {
@@ -73,8 +73,8 @@ body.sim-mode #app {
   right: 0;
   max-height: 40vh;
   overflow-y: auto;
-  background: rgba(0, 0, 0, 0.85);
-  border-top: 2px solid #444;
+  background: var(--kleur-achtergrond-diep);
+  border-top: 2px solid var(--kleur-achtergrond-paneel);
   padding: 0.75rem 1rem;
   font-size: 1rem;
   z-index: 50;
@@ -83,7 +83,7 @@ body.sim-mode #app {
 .sim-panel-title {
   font-weight: bold;
   margin-bottom: 0.5rem;
-  color: #ffcc66;
+  color: var(--sparkx-geel);
 }
 
 .sim-panel-quickpicks {
@@ -94,7 +94,7 @@ body.sim-mode #app {
 }
 
 .sim-panel-btn {
-  background: #333;
+  background: var(--kleur-achtergrond-paneel);
   color: white;
   padding: 0.5rem 1rem;
   border-radius: 0.5rem;
@@ -116,7 +116,8 @@ body.sim-mode #app {
 
 .sim-panel-form button {
   padding: 0.5rem 1rem;
-  background: #555;
-  color: white;
+  background: var(--sparkx-gradient);
+  color: var(--kleur-achtergrond-diep);
+  font-weight: bold;
   border-radius: 0.5rem;
 }

@@ -1,5 +1,8 @@
 /* Base styles shared by all screens: high contrast, large text, usable in
- * bright sunlight and with gloves on a tablet. */
+ * bright sunlight and with gloves on a tablet. Huisstijl Sparkx: donker
+ * petrolblauw met een geel-naar-oranje verloopaccent. De statuskleuren
+ * (groen/oranje/rood) zijn functioneel — die blijven ongewijzigd, ook als
+ * ze toevallig in dezelfde kleurfamilie vallen als het merkaccent. */
 
 :root {
   --kleur-groen: #1b7d1b;
@@ -7,8 +10,15 @@
   --kleur-oranje: #b56600;
   --kleur-rood: #b3221c;
   --kleur-grijs: #3a3a3a;
-  --kleur-achtergrond: #101010;
+  --kleur-achtergrond: #0a2c3a;
+  --kleur-achtergrond-paneel: #0f3a4a;
+  --kleur-achtergrond-diep: #071f29;
   --kleur-tekst: #ffffff;
+  --kleur-tekst-gedempt: #9fc3d1;
+
+  --sparkx-geel: #ffd400;
+  --sparkx-oranje: #f7941d;
+  --sparkx-gradient: linear-gradient(135deg, var(--sparkx-geel), var(--sparkx-oranje));
 }
 
 * {
@@ -79,4 +89,30 @@ button {
 
 .status-rood {
   background: var(--kleur-rood);
+}
+
+/* Sparkx-merkje: "SPARK" in wit, "X" in het geel-oranje verloop, zoals het
+ * echte logo. Enkel decoratief (pointer-events: none) zodat het nooit een
+ * tik op een bedieningsknop kan onderscheppen. */
+.brand-mark {
+  position: fixed;
+  top: 0.75rem;
+  right: 1rem;
+  z-index: 40;
+  font-weight: 900;
+  font-size: 1rem;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  color: var(--kleur-tekst);
+  pointer-events: none;
+  opacity: 0.9;
+}
+
+/* Used anywhere the "x" of the Sparkx wordmark needs the gold accent, not
+ * just inside .brand-mark (also used in the admin header/login title). */
+.accent {
+  background: var(--sparkx-gradient);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
 }
