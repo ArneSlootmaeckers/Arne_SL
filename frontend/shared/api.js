@@ -70,6 +70,7 @@ export const api = {
     request("POST", "/api/host/scan", { wristband_id: wristbandId, device_id: deviceId }),
   verdict: (deviceId, verdict) => request("POST", "/api/host/verdict", { device_id: deviceId, verdict }),
   practiceAck: (deviceId) => request("POST", "/api/host/practice-ack", { device_id: deviceId }),
+  cancelScan: (deviceId) => request("POST", "/api/host/cancel", { device_id: deviceId }),
   gateScan: (wristbandId, deviceId) =>
     request("POST", "/api/gate/scan", { wristband_id: wristbandId, device_id: deviceId }),
 

@@ -26,10 +26,12 @@ const els = {
   statusText: document.getElementById("status-text"),
   verdictActions: document.getElementById("verdict-actions"),
   practiceActions: document.getElementById("practice-actions"),
+  cancelActions: document.getElementById("cancel-actions"),
   timeoutBar: document.getElementById("timeout-bar"),
   btnGroen: document.getElementById("btn-groen"),
   btnRood: document.getElementById("btn-rood"),
   btnPracticeAck: document.getElementById("btn-practice-ack"),
+  btnCancel: document.getElementById("btn-cancel"),
   simPanel: document.getElementById("sim-panel"),
 };
 
@@ -83,8 +85,10 @@ function renderScanResult(body) {
   els.wristbandId.textContent = body.wristband_id;
   applyStatusBanner(body.status);
 
+  const hasPendingAction = body.requires_verdict || body.requires_practice_ack;
   els.verdictActions.classList.toggle("hidden", !body.requires_verdict);
   els.practiceActions.classList.toggle("hidden", !body.requires_practice_ack);
+  els.cancelActions.classList.toggle("hidden", !hasPendingAction);
   els.timeoutBar.style.width = "100%";
 
   els.waitingView.classList.add("hidden");
@@ -121,6 +125,7 @@ async function handleVerdict(verdict) {
     applyStatusBanner(result.status);
     els.verdictActions.classList.add("hidden");
     els.practiceActions.classList.add("hidden");
+    els.cancelActions.classList.add("hidden");
     els.timeoutBar.style.width = "0%";
     returnTimeout = setTimeout(showWaiting, CONFIRMATION_DISPLAY_MS);
   } catch (err) {
@@ -141,9 +146,25 @@ async function handlePracticeAck() {
   }
 }
 
+async function handleCancel() {
+  // The visitor scanned but didn't actually jump (changed their mind, called
+  // away, ...): discard the pending scan without any status change, instead
+  // of waiting out the full time-out.
+  clearTimers();
+  try {
+    await api.cancelScan(deviceId);
+    playNeutralSound();
+  } catch (err) {
+    showRejectedToast(err instanceof ApiError ? err.message : "Er ging iets mis.");
+  } finally {
+    showWaiting();
+  }
+}
+
 els.btnGroen.addEventListener("click", () => handleVerdict("GROEN"));
 els.btnRood.addEventListener("click", () => handleVerdict("ROOD"));
 els.btnPracticeAck.addEventListener("click", handlePracticeAck);
+els.btnCancel.addEventListener("click", handleCancel);
 
 new KeyboardWedgeReader().start(handleScan);
 

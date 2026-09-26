@@ -26,7 +26,10 @@ class VerdictRequest(BaseModel):
     verdict: Verdict
 
 
-class PracticeAckRequest(BaseModel):
+class DeviceRequest(BaseModel):
+    """Shared shape for actions that only need to identify the device (e.g.
+    practice-jump acknowledgement, cancelling a pending scan)."""
+
     device_id: str
 
 

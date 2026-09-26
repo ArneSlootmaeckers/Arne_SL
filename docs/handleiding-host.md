@@ -21,11 +21,18 @@
 5. **Bij "Vandaag niet meer toegestaan"**: laat deze bezoeker niet springen.
    Er is niets te doen op dit scherm — het keert vanzelf terug naar wachten.
 
+**Sprong toch niet doorgegaan?** (bezoeker bedenkt zich, wordt weggeroepen, …)
+Druk dan op de kleine link **"Geen sprong / annuleer"** onder de knoppen. Dit
+wist de openstaande scan meteen, zonder dat de status verandert — je hoeft
+niet de volle time-out af te wachten en het bandje kan meteen opnieuw
+gescand worden.
+
 ## Belangrijk
 
 - **Eén scan = één oordeel.** Zolang je nog geen groen/rood hebt gegeven
-  (of de oefensprong nog niet bevestigd is), weigert het scherm een nieuwe
-  scan — je ziet dan kort een melding bovenaan. Rond eerst de vorige scan af.
+  (of de oefensprong nog niet bevestigd/geannuleerd is), weigert het scherm
+  een nieuwe scan — je ziet dan kort een melding bovenaan. Rond eerst de
+  vorige scan af (oordeel geven, of "Geen sprong / annuleer").
 - Als je te lang wacht, vervalt de scan vanzelf (voortgangsbalk onder de
   status) zonder dat de status verandert. Scan dan gewoon opnieuw.
 - **Je kan hier niets terugdraaien.** Als je per ongeluk de verkeerde knop

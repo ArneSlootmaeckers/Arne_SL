@@ -101,3 +101,60 @@ def test_practice_ack_via_verdict_endpoint_is_rejected(client):
 
     response = client.post("/api/host/verdict", json={"device_id": "host-1", "verdict": "GROEN"})
     assert response.status_code == 400
+
+
+def test_cancel_scan_discards_pending_scan_without_status_change(client):
+    """The visitor scanned but didn't actually jump (changed their mind, ...):
+    cancelling must leave the status untouched, exactly like a time-out."""
+    scan = _scan(client)
+    assert scan.json()["status"] == "NOG_NIET_GESPRONGEN"
+
+    cancel = client.post("/api/host/cancel", json={"device_id": "host-1"})
+    assert cancel.status_code == 200
+
+    # Status unchanged, and the device is immediately free for the next scan
+    # (no need to wait out the timeout).
+    again = _scan(client)
+    assert again.json()["status"] == "NOG_NIET_GESPRONGEN"
+
+
+def test_cancel_scan_works_while_a_verdict_is_pending_on_herkansing(client):
+    _scan(client)
+    client.post("/api/host/verdict", json={"device_id": "host-1", "verdict": "ROOD"})
+    scan = _scan(client)
+    assert scan.json()["status"] == "HERKANSING"
+
+    cancel = client.post("/api/host/cancel", json={"device_id": "host-1"})
+    assert cancel.status_code == 200
+
+    again = _scan(client)
+    assert again.json()["status"] == "HERKANSING"  # niet gedegradeerd, niet gepromoveerd
+
+
+def test_cancel_scan_also_works_for_a_pending_practice_jump(client):
+    _scan(client)
+    client.post("/api/host/verdict", json={"device_id": "host-1", "verdict": "GROEN"})
+    scan = _scan(client)
+    assert scan.json()["requires_practice_ack"] is True
+
+    cancel = client.post("/api/host/cancel", json={"device_id": "host-1"})
+    assert cancel.status_code == 200
+
+    again = _scan(client)
+    assert again.json()["status"] == "GESLAAGD"
+
+
+def test_cancel_scan_without_pending_scan_is_rejected(client):
+    response = client.post("/api/host/cancel", json={"device_id": "no-such-device"})
+    assert response.status_code == 409
+
+
+def test_cancel_scan_is_logged_as_geannuleerd(client, db_session):
+    _scan(client)
+    client.post("/api/host/cancel", json={"device_id": "host-1"})
+
+    from app.models import EventModel
+
+    events = db_session.query(EventModel).filter_by(event_type="GEANNULEERD").all()
+    assert len(events) == 1
+    assert events[0].wristband_id == "B001"

@@ -136,6 +136,23 @@ def submit_practice_ack(db: Session, *, device_id: str) -> None:
     db.commit()
 
 
+def cancel_scan(db: Session, *, device_id: str) -> None:
+    """Discard the device's pending scan without any status change — for when
+    the visitor scanned but didn't actually jump (changed their mind, called
+    away, ...). Same effect as a time-out, just host-initiated and instant
+    instead of waiting out the full scan_timeout_seconds.
+    """
+    pending = _expire_if_stale(db, device_id)
+    if pending is None:
+        db.commit()
+        raise NoPendingScanError("Geen openstaande scan (of deze is verlopen).")
+
+    wristband_id = pending.wristband_id
+    db.delete(pending)
+    log_event(db, event_type="GEANNULEERD", wristband_id=wristband_id, source=device_id)
+    db.commit()
+
+
 def reap_expired_pending_scans(db: Session) -> int:
     """Background sweep so a time-out gets logged promptly even without a next scan."""
     now = now_utc()

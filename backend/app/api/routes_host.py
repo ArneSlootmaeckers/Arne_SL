@@ -6,7 +6,7 @@ from sqlalchemy.orm import Session
 
 from app.config import Settings
 from app.dependencies import get_db, get_settings
-from app.schemas import PracticeAckRequest, ScanRequest, ScanResponse, VerdictRequest
+from app.schemas import DeviceRequest, ScanRequest, ScanResponse, VerdictRequest
 from app.services import scan_service
 
 router = APIRouter(prefix="/api/host", tags=["host"])
@@ -43,6 +43,12 @@ def submit_verdict(
 
 
 @router.post("/practice-ack")
-def practice_ack(payload: PracticeAckRequest, db: Session = Depends(get_db)) -> dict:
+def practice_ack(payload: DeviceRequest, db: Session = Depends(get_db)) -> dict:
     scan_service.submit_practice_ack(db, device_id=payload.device_id)
+    return {"ok": True}
+
+
+@router.post("/cancel")
+def cancel_scan(payload: DeviceRequest, db: Session = Depends(get_db)) -> dict:
+    scan_service.cancel_scan(db, device_id=payload.device_id)
     return {"ok": True}
