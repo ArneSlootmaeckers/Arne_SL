@@ -91,28 +91,14 @@ button {
   background: var(--kleur-rood);
 }
 
-/* Sparkx-merkje: "SPARK" in wit, "X" in het geel-oranje verloop, zoals het
- * echte logo. Enkel decoratief (pointer-events: none) zodat het nooit een
- * tik op een bedieningsknop kan onderscheppen. */
+/* Sparkx-logo rechtsboven. Enkel decoratief (pointer-events: none) zodat
+ * het nooit een tik op een bedieningsknop kan onderscheppen. */
 .brand-mark {
   position: fixed;
   top: 0.75rem;
   right: 1rem;
   z-index: 40;
-  font-weight: 900;
-  font-size: 1rem;
-  letter-spacing: 0.05em;
-  text-transform: uppercase;
-  color: var(--kleur-tekst);
+  height: 1.75rem;
+  width: auto;
   pointer-events: none;
-  opacity: 0.9;
-}
-
-/* Used anywhere the "x" of the Sparkx wordmark needs the gold accent, not
- * just inside .brand-mark (also used in the admin header/login title). */
-.accent {
-  background: var(--sparkx-gradient);
-  -webkit-background-clip: text;
-  background-clip: text;
-  color: transparent;
 }
