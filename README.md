@@ -72,9 +72,10 @@ en meteen in de app zitten, zonder terminal.
    bureaublad, met het Sparkx-logo als icoon.
 2. Vanaf dan: dubbelklik die snelkoppeling om de server te starten (in een
    apart, geminimaliseerd venster) en meteen het hostscherm te openen — in
-   een kiosk-achtig browservenster zonder adresbalk/tabbladen (via Chrome
-   of Edge's `--app`-modus, als een van beide geïnstalleerd is; anders in
-   een gewone browsertab).
+   een kiosk-achtig, volledig schermvullend browservenster zonder
+   adresbalk/tabbladen (via Chrome of Edge's `--app`- en
+   `--start-fullscreen`-modus, als een van beide geïnstalleerd is; anders
+   in een gewone browsertab).
 
 Dit vereist dat `install.sh` al uitgevoerd is — de snelkoppeling gebruikt
 dezelfde virtualenv.
