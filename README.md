@@ -1,8 +1,8 @@
 # Toelatingssysteem veiligheidssprong
 
 Softwaresysteem voor de veiligheidssprong-attractie: bezoekers scannen hun
-bandje bij elke test- of oefensprong, de host op het startplatform beoordeelt
-de sprong met groen/rood, en het hoge platform controleert de status van het
+bandje bij elke test- of oefensprong, de host bij de testsprong beoordeelt
+de sprong met groen/rood, en de Ski Jump controleert de status van het
 bandje bij de ingang. Zie de statuslogica in hoofdstuk 2 van de opdracht (of
 `backend/app/domain/status.py`) voor de volledige regels.
 
@@ -13,8 +13,8 @@ bandje bij de ingang. Zie de statuslogica in hoofdstuk 2 van de opdracht (of
   volledig unit-testbaar).
 - **Frontend**: drie eenvoudige HTML/CSS/JS-schermen, meegeserveerd door
   dezelfde backend:
-  - `/host/` — hostscherm op het startplatform
-  - `/gate/` — toegangscontrole bij het hoge platform
+  - `/host/` — hostscherm bij de testsprong
+  - `/gate/` — toegangscontrole bij de Ski Jump
   - `/admin/` — beheerscherm voor bevoegd personeel
 - **Geen internetverbinding nodig**: alles draait lokaal op één server
   (mini-pc of Raspberry Pi) binnen het park-netwerk.
@@ -187,7 +187,7 @@ backend/
 frontend/
   home/    # startpagina met kaarten naar de drie schermen (/)
   host/    # hostscherm (/host/)
-  gate/    # toegangscontrole hoog platform (/gate/)
+  gate/    # toegangscontrole Ski Jump (/gate/)
   admin/   # beheerscherm (/admin/)
   shared/  # gedeelde JS/CSS + logo/favicons: lezer-abstractie, API-client, basisstijl
 docs/

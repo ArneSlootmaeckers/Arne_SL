@@ -1,4 +1,4 @@
-"""Gate hardware abstraction for the high-platform turnstile.
+"""Gate hardware abstraction for the Ski Jump turnstile.
 
 The physical gate is not chosen yet, so the rest of the system only ever
 talks to this interface. Swapping in a real relay/GPIO controller later

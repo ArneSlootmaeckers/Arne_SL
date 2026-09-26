@@ -37,7 +37,7 @@ def test_red_then_green_sets_geslaagd_via_herkansing(client):
     assert response.json()["status"] == "GESLAAGD"
 
 
-def test_red_twice_sets_niet_geslaagd_and_blocks_low_platform(client):
+def test_red_twice_sets_niet_geslaagd_and_blocks_test_jump(client):
     _scan(client)
     client.post("/api/host/verdict", json={"device_id": "host-1", "verdict": "ROOD"})
     _scan(client)

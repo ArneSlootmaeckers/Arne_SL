@@ -1,7 +1,7 @@
 """Daily overview aggregation for the admin screen.
 
 "Gemiddelde tijd tussen twee sprongen" is interpreted as the throughput of
-the low platform: the average gap between consecutive SCAN events that day,
+the testsprong: the average gap between consecutive SCAN events that day,
 across all wristbands.
 """
 from __future__ import annotations

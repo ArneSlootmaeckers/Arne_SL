@@ -1,4 +1,4 @@
-"""HTTP-level tests for the high-platform gate (section 3.2)."""
+"""HTTP-level tests for the Ski Jump gate (section 3.2)."""
 from __future__ import annotations
 
 

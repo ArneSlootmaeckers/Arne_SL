@@ -1,4 +1,4 @@
-"""Host screen API (low platform): scan, verdict, practice acknowledgement."""
+"""Host screen API (testsprong): scan, verdict, practice acknowledgement."""
 from __future__ import annotations
 
 from fastapi import APIRouter, Depends

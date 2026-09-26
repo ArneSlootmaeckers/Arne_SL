@@ -14,7 +14,7 @@ Scan een bandje of typ het nummer in en klik op **Bekijk**:
   `GESLAAGD`, `NIET_GESLAAGD`). Vul altijd een **reden** in — dit wordt
   gelogd samen met je naam en de oude/nieuwe status. Gebruik dit enkel om
   een fout van de host te corrigeren, niet als vervanging voor een echte
-  beoordeling op het startplatform.
+  beoordeling bij de testsprong.
 
 ## Tabblad "Logs"
 
@@ -26,7 +26,7 @@ CSV-bestand, bijvoorbeeld voor een incidentonderzoek of rapportage.
 
 Kies een datum en klik **Toon** voor het aantal testsprongen, hoeveel
 daarvan geslaagd/herkansing/niet geslaagd waren, het aantal oefensprongen,
-en de gemiddelde tijd tussen twee sprongen op het startplatform die dag.
+en de gemiddelde tijd tussen twee sprongen bij de testsprong die dag.
 
 ## Tabblad "Medewerkers" (enkel zichtbaar voor rol admin)
 

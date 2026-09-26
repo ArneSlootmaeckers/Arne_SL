@@ -1,4 +1,4 @@
-# Handleiding — hostscherm (startplatform)
+# Handleiding — hostscherm (testsprong)
 
 ## Werking
 

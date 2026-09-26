@@ -1,4 +1,4 @@
-"""Scan and verdict handling for the low-platform host screen.
+"""Scan and verdict handling for the testsprong host screen.
 
 Wires the pure domain rules (app.domain.status) to the database, enforcing
 "één scan = één oordeel" per device and logging every step.

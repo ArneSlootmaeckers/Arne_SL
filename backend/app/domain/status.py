@@ -34,8 +34,8 @@ class VerdictResult:
     is_practice_jump: bool
 
 
-# Statuses for which the low platform still allows a jump (all except NIET_GESLAAGD).
-_LOW_PLATFORM_ALLOWED = {Status.NOG_NIET_GESPRONGEN, Status.HERKANSING, Status.GESLAAGD}
+# Statuses for which the test jump still allows an attempt (all except NIET_GESLAAGD).
+_TEST_JUMP_ALLOWED = {Status.NOG_NIET_GESPRONGEN, Status.HERKANSING, Status.GESLAAGD}
 
 # The transition table from section 2 of the assignment: (current status, verdict) -> next status.
 _TRANSITIONS: dict[tuple[Status, Verdict], Status] = {
@@ -75,13 +75,13 @@ def apply_verdict(current_status: Status, verdict: Verdict) -> VerdictResult:
     )
 
 
-def can_jump_low_platform(status: Status) -> bool:
-    """Whether a wristband with this status may still jump from the low platform."""
-    return status in _LOW_PLATFORM_ALLOWED
+def can_attempt_test_jump(status: Status) -> bool:
+    """Whether a wristband with this status may still attempt the test jump."""
+    return status in _TEST_JUMP_ALLOWED
 
 
-def can_jump_high_platform(status: Status) -> bool:
-    """Whether a wristband with this status may pass the high platform gate."""
+def can_access_ski_jump(status: Status) -> bool:
+    """Whether a wristband with this status may pass the Ski Jump gate."""
     return status is Status.GESLAAGD
 
 

@@ -5,8 +5,8 @@ from app.domain.status import (
     Verdict,
     VerdictNotAllowedError,
     apply_verdict,
-    can_jump_high_platform,
-    can_jump_low_platform,
+    can_access_ski_jump,
+    can_attempt_test_jump,
     is_valid_manual_status,
 )
 
@@ -51,7 +51,7 @@ class TestTransitionTable:
             apply_verdict(Status.NIET_GESLAAGD, verdict)
 
 
-class TestPlatformAccess:
+class TestLocationAccess:
     @pytest.mark.parametrize(
         "status,expected",
         [
@@ -61,8 +61,8 @@ class TestPlatformAccess:
             (Status.NIET_GESLAAGD, False),
         ],
     )
-    def test_low_platform_access(self, status, expected):
-        assert can_jump_low_platform(status) is expected
+    def test_test_jump_access(self, status, expected):
+        assert can_attempt_test_jump(status) is expected
 
     @pytest.mark.parametrize(
         "status,expected",
@@ -73,8 +73,8 @@ class TestPlatformAccess:
             (Status.NIET_GESLAAGD, False),
         ],
     )
-    def test_high_platform_access_requires_geslaagd(self, status, expected):
-        assert can_jump_high_platform(status) is expected
+    def test_ski_jump_access_requires_geslaagd(self, status, expected):
+        assert can_access_ski_jump(status) is expected
 
 
 class TestManualStatusValidation:
