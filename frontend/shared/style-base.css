@@ -91,14 +91,34 @@ button {
   background: var(--kleur-rood);
 }
 
-/* Sparkx-logo rechtsboven. Enkel decoratief (pointer-events: none) zodat
+/* Sparkx-logo linksboven. Enkel decoratief (pointer-events: none) zodat
  * het nooit een tik op een bedieningsknop kan onderscheppen. */
 .brand-mark {
   position: fixed;
   top: 0.75rem;
-  right: 1rem;
+  left: 1rem;
   z-index: 40;
   height: 1.75rem;
   width: auto;
   pointer-events: none;
+}
+
+/* Rechtsboven: toegang tot het beheerscherm (pincode-login voor bevoegd
+ * personeel). Klein en onopvallend gehouden, net als het logo. */
+.profile-button {
+  position: fixed;
+  top: 0.75rem;
+  right: 1rem;
+  z-index: 40;
+  background: var(--kleur-achtergrond-paneel);
+  color: white;
+  padding: 0.5rem 1.1rem;
+  border-radius: 0.5rem;
+  font-size: 0.95rem;
+  font-weight: 600;
+  text-decoration: none;
+}
+
+.profile-button:active {
+  background: var(--kleur-achtergrond-diep);
 }

@@ -1,7 +1,9 @@
 # Handleiding — beheerscherm (bevoegd personeel)
 
-Bereikbaar op `/admin/`. Log in met je persoonlijke pincode. Na **2 minuten
-inactiviteit** log je automatisch uit — sla je werk dus niet te lang op.
+Bereikbaar via de knop **"Profiel"** rechtsboven op het hostscherm, of
+rechtstreeks op `/admin/`. Log in met je persoonlijke pincode. Na
+**2 minuten inactiviteit** log je automatisch uit — sla je werk dus niet
+te lang op.
 
 ## Tabblad "Bandje"
 

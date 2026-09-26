@@ -2,7 +2,8 @@
 
 Dit ene scherm doet twee dingen: de testsprong beoordelen, én meteen ook
 tonen of de bezoeker naar de Ski Jump mag. Je hoeft dus nergens anders
-opnieuw te scannen.
+opnieuw te scannen. Dit is meteen ook de pagina die opent zodra het
+systeem opstart (`http://<server>:8000/`).
 
 ## Werking
 
@@ -49,8 +50,9 @@ gescand worden.
 - Als je te lang wacht, vervalt de scan vanzelf (voortgangsbalk onder de
   status) zonder dat de status verandert. Scan dan gewoon opnieuw.
 - **Je kan hier niets terugdraaien.** Als je per ongeluk de verkeerde knop
-  indrukt, kan dat enkel gecorrigeerd worden door bevoegd personeel met een
-  pincode op het beheerscherm.
+  indrukt, kan dat enkel gecorrigeerd worden door bevoegd personeel via de
+  knop **"Profiel"** rechtsboven — die opent het beheerscherm, waar je met
+  een pincode inlogt om de status van een bandje aan te passen.
 - Verschijnt er een **rode balk bovenaan** ("Geen verbinding met de
   server")? Laat dan niemand springen of naar de Ski Jump gaan tot de balk
   verdwijnt — de status kan dan niet betrouwbaar opgeslagen worden.

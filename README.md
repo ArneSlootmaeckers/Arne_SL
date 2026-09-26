@@ -16,8 +16,11 @@ statuslogica in hoofdstuk 2 van de opdracht (of
   dezelfde backend:
   - `/host/` — hostscherm: testsprong beoordelen én de Ski Jump-toegang
     (elke scan die meteen op GESLAAGD/NIET_GESLAAGD uitkomt, stuurt ook
-    het hekje aan en logt de toegangscontrole)
-  - `/admin/` — beheerscherm voor bevoegd personeel
+    het hekje aan en logt de toegangscontrole). Dit is de standaard
+    startpagina (`/` verwijst hiernaar door).
+  - `/admin/` — beheerscherm voor bevoegd personeel, bereikbaar via de
+    knop **"Profiel"** rechtsboven op het hostscherm (of rechtstreeks op
+    `/admin/`)
 - **Geen internetverbinding nodig**: alles draait lokaal op één server
   (mini-pc of Raspberry Pi) binnen het park-netwerk.
 
@@ -72,9 +75,9 @@ sudo systemctl enable --now toelatingssysteem
 
 Of via Docker: `docker compose up -d`.
 
-De schermen zijn dan bereikbaar op `http://<server-ip>:8000/host/` en
-`.../admin/`. `http://<server-ip>:8000/` toont een startpagina met het
-Sparkx-logo en een kaart per scherm.
+`http://<server-ip>:8000/` opent altijd rechtstreeks het hostscherm. Het
+beheerscherm (`.../admin/`) is bereikbaar via de knop **"Profiel"**
+rechtsboven op het hostscherm.
 
 ### Bureaubladsnelkoppeling (Windows)
 
@@ -85,7 +88,7 @@ en meteen in de app zitten, zonder terminal.
    met PowerShell"**. Dit zet een snelkoppeling "Toelatingssysteem" op het
    bureaublad, met het Sparkx-logo als icoon.
 2. Vanaf dan: dubbelklik die snelkoppeling om de server te starten (in een
-   apart, geminimaliseerd venster) en meteen de startpagina te openen in de
+   apart, geminimaliseerd venster) en meteen het hostscherm te openen in de
    browser.
 
 Dit vereist dat `install.sh` al uitgevoerd is (stap "Optie B" hierboven) —
@@ -187,9 +190,8 @@ backend/
   create_admin.py    # eerste admin aanmaken
   config.yaml
 frontend/
-  home/    # startpagina met kaarten naar de twee schermen (/)
-  host/    # hostscherm: testsprong + Ski Jump-toegang in één (/host/)
-  admin/   # beheerscherm (/admin/)
+  host/    # hostscherm: testsprong + Ski Jump-toegang in één, standaard startpagina (/, /host/)
+  admin/   # beheerscherm, bereikbaar via de "Profiel"-knop op het hostscherm (/admin/)
   shared/  # gedeelde JS/CSS + logo/favicons: lezer-abstractie, API-client, basisstijl
 docs/
   handleiding-host.md

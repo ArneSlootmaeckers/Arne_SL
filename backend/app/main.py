@@ -11,7 +11,7 @@ import contextlib
 from pathlib import Path
 
 from fastapi import FastAPI, Request
-from fastapi.responses import FileResponse, JSONResponse
+from fastapi.responses import FileResponse, JSONResponse, RedirectResponse
 from fastapi.staticfiles import StaticFiles
 
 from app.config import Settings, load_settings
@@ -108,10 +108,10 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     app.include_router(admin_router)
 
     # Each screen is a plain static site; mount whichever ones exist yet
-    # (gate/admin are added in later phases) plus the assets they share.
+    # plus the assets they share.
     if (_FRONTEND_DIR / "shared").is_dir():
         app.mount("/shared", StaticFiles(directory=_FRONTEND_DIR / "shared"), name="shared")
-    for screen in ("host", "gate", "admin"):
+    for screen in ("host", "admin"):
         screen_dir = _FRONTEND_DIR / screen
         if screen_dir.is_dir():
             app.mount(f"/{screen}", StaticFiles(directory=screen_dir, html=True), name=screen)
@@ -121,11 +121,9 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     def favicon() -> FileResponse:
         return FileResponse(_FRONTEND_DIR / "shared" / "icons" / "favicon.ico")
 
-    # The home screen is the app's front door, so it's mounted at "/" —
-    # registered last so it only catches what the routes/mounts above it
-    # didn't already claim (Starlette matches routes in registration order).
-    home_dir = _FRONTEND_DIR / "home"
-    if home_dir.is_dir():
-        app.mount("/", StaticFiles(directory=home_dir, html=True), name="home")
+    # The app always opens on the host screen — no separate chooser page.
+    @app.get("/", include_in_schema=False)
+    def root() -> RedirectResponse:
+        return RedirectResponse(url="/host/")
 
     return app
