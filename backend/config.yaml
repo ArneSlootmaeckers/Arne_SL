@@ -1,0 +1,14 @@
+timezone: "Europe/Brussels"
+port: 8000
+# Hoeveel seconden een scan op een oordeel/bevestiging mag wachten voor die vervalt.
+scan_timeout_seconds: 60
+# Hoeveel seconden inactiviteit voor een beheerdersessie automatisch uitlogt.
+session_inactivity_timeout_seconds: 120
+# Hoeveel dagen logs bewaard blijven voor de opruimfunctie ze verwijdert.
+log_retention_days: 365
+# Hoe vaak (seconden) de schermen de serververbinding en status pollen.
+polling_interval_seconds: 3
+# Uitbreidingspunt "kussen vrij"-sensor (buiten scope): nu altijd uit.
+cushion_sensor_enabled: false
+gate_controller: "dummy"
+database_path: "../data/toelating.db"
