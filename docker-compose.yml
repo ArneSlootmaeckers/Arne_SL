@@ -1,0 +1,11 @@
+services:
+  toelatingssysteem:
+    build:
+      context: .
+      dockerfile: backend/Dockerfile
+    ports:
+      - "8000:8000"
+    volumes:
+      - ./data:/app/data
+      - ./backend/config.yaml:/app/backend/config.yaml:ro
+    restart: unless-stopped
