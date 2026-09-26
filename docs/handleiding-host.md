@@ -34,8 +34,8 @@ systeem opstart (`http://<server>:8000/`).
    af en is dan klaar voor de volgende scan. Ging de oefensprong toch niet
    door? Druk dan op **"Geen sprong / annuleer"**.
 5. **Bij "Vandaag niet meer toegestaan"**: laat deze bezoeker niet meer
-   springen. Er is niets te doen op dit scherm — het sluit zichzelf na
-   15 seconden automatisch af.
+   springen. Het scherm sluit zichzelf na 15 seconden automatisch af, of
+   druk op **"Geen sprong / annuleer"** om meteen terug te gaan.
 
 **Sprong toch niet doorgegaan?** (bezoeker bedenkt zich, wordt weggeroepen, …)
 Druk dan, tijdens het beoordelen, op de kleine link **"Geen sprong /

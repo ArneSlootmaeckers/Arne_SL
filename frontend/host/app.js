@@ -39,6 +39,10 @@ const els = {
 
 let countdownInterval = null;
 let returnTimeout = null;
+// Bij NIET_GESLAAGD staat er geen openstaande scan meer om te annuleren
+// (die is al opgelost) — de knop keert dan gewoon meteen terug naar
+// "wacht op scan" zonder de server aan te spreken.
+let hasPendingScanToCancel = false;
 
 function clearTimers() {
   if (countdownInterval) clearInterval(countdownInterval);
@@ -116,9 +120,9 @@ function renderScanResult(body) {
   els.wristbandId.textContent = body.wristband_id;
   applyStatusBanner(body.status);
 
-  const hasPendingAction = body.requires_verdict || body.requires_practice_ack;
+  hasPendingScanToCancel = body.requires_verdict || body.requires_practice_ack;
   els.verdictActions.classList.toggle("hidden", !body.requires_verdict);
-  els.cancelActions.classList.toggle("hidden", !hasPendingAction);
+  els.cancelActions.classList.remove("hidden");
   els.finalResultBarTrack.classList.toggle("hidden", body.requires_verdict);
 
   els.waitingView.classList.add("hidden");
@@ -156,11 +160,15 @@ async function handleVerdict(verdict) {
     playSuccessSound();
     applyStatusBanner(result.status);
     els.verdictActions.classList.add("hidden");
-    els.cancelActions.classList.add("hidden");
+    hasPendingScanToCancel = false;
     if (FINAL_STATUSES.has(result.status)) {
+      // Geen openstaande scan meer (die is net opgelost): annuleren betekent
+      // hier gewoon meteen terug naar "wacht op scan".
+      els.cancelActions.classList.toggle("hidden", result.status !== "NIET_GESLAAGD");
       startFinalResultCountdown(FINAL_RESULT_DISPLAY_MS, showWaiting);
     } else {
       // HERKANSING: geen eindresultaat, gewoon kort bevestigen en verder.
+      els.cancelActions.classList.add("hidden");
       els.finalResultBarTrack.classList.add("hidden");
       returnTimeout = setTimeout(showWaiting, CONFIRMATION_DISPLAY_MS);
     }
@@ -175,6 +183,13 @@ async function handleCancel() {
   // away, ...): discard the pending scan without any status change, instead
   // of waiting out the full time-out.
   clearTimers();
+  if (!hasPendingScanToCancel) {
+    // NIET_GESLAAGD heeft geen openstaande scan (die is al opgelost) — hier
+    // is deze knop gewoon een snelle terugkeer naar "wacht op scan".
+    playNeutralSound();
+    showWaiting();
+    return;
+  }
   try {
     await api.cancelScan(deviceId);
     playNeutralSound();
