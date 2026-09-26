@@ -1,9 +1,10 @@
 # Toelatingssysteem veiligheidssprong
 
 Softwaresysteem voor de veiligheidssprong-attractie: bezoekers scannen hun
-bandje bij elke test- of oefensprong, de host bij de testsprong beoordeelt
-de sprong met groen/rood, en de Ski Jump controleert de status van het
-bandje bij de ingang. Zie de statuslogica in hoofdstuk 2 van de opdracht (of
+bandje bij elke test- of oefensprong, de host beoordeelt de sprong met
+groen/rood, en datzelfde hostscherm toont meteen ook of de bezoeker naar
+de Ski Jump mag — geen apart scherm bij de Ski Jump zelf nodig. Zie de
+statuslogica in hoofdstuk 2 van de opdracht (of
 `backend/app/domain/status.py`) voor de volledige regels.
 
 ## Overzicht
@@ -11,10 +12,11 @@ bandje bij de ingang. Zie de statuslogica in hoofdstuk 2 van de opdracht (of
 - **Backend**: Python (FastAPI) + SQLite, met de volledige statuslogica in
   één pure module (`backend/app/domain/status.py`, zonder I/O — dus
   volledig unit-testbaar).
-- **Frontend**: drie eenvoudige HTML/CSS/JS-schermen, meegeserveerd door
+- **Frontend**: twee eenvoudige HTML/CSS/JS-schermen, meegeserveerd door
   dezelfde backend:
-  - `/host/` — hostscherm bij de testsprong
-  - `/gate/` — toegangscontrole bij de Ski Jump
+  - `/host/` — hostscherm: testsprong beoordelen én de Ski Jump-toegang
+    (elke scan die meteen op GESLAAGD/NIET_GESLAAGD uitkomt, stuurt ook
+    het hekje aan en logt de toegangscontrole)
   - `/admin/` — beheerscherm voor bevoegd personeel
 - **Geen internetverbinding nodig**: alles draait lokaal op één server
   (mini-pc of Raspberry Pi) binnen het park-netwerk.
@@ -70,9 +72,9 @@ sudo systemctl enable --now toelatingssysteem
 
 Of via Docker: `docker compose up -d`.
 
-De schermen zijn dan bereikbaar op `http://<server-ip>:8000/host/`,
-`.../gate/` en `.../admin/`. `http://<server-ip>:8000/` toont een
-startpagina met het Sparkx-logo en een kaart per scherm.
+De schermen zijn dan bereikbaar op `http://<server-ip>:8000/host/` en
+`.../admin/`. `http://<server-ip>:8000/` toont een startpagina met het
+Sparkx-logo en een kaart per scherm.
 
 ### Bureaubladsnelkoppeling (Windows)
 
@@ -185,9 +187,8 @@ backend/
   create_admin.py    # eerste admin aanmaken
   config.yaml
 frontend/
-  home/    # startpagina met kaarten naar de drie schermen (/)
-  host/    # hostscherm (/host/)
-  gate/    # toegangscontrole Ski Jump (/gate/)
+  home/    # startpagina met kaarten naar de twee schermen (/)
+  host/    # hostscherm: testsprong + Ski Jump-toegang in één (/host/)
   admin/   # beheerscherm (/admin/)
   shared/  # gedeelde JS/CSS + logo/favicons: lezer-abstractie, API-client, basisstijl
 docs/
@@ -206,6 +207,11 @@ maak-bureaubladsnelkoppeling.ps1    # bureaubladicoon aanmaken (eenmalig, Window
 - **Echt hekje**: een nieuwe implementatie van `GateController` in
   `backend/app/hardware/gate_controller.py`, geselecteerd via
   `gate_controller` in `config.yaml`.
+- **Aparte toegangscontrole bij de Ski Jump**: momenteel doet het
+  hostscherm de volledige toegangscontrole (er is geen fysiek aparte
+  ingang). De backend-API `POST /api/gate/scan` bestaat wel nog los
+  (getest in `backend/tests/test_gate_access.py`) voor het geval er later
+  toch een apart scherm/lezer bij de Ski Jump zelf nodig is.
 - **"Kussen vrij"-sensor** (buiten scope, sectie 10 van de opdracht): de
   interface staat klaar in `backend/app/hardware/cushion_sensor.py`
   (`DummyCushionSensor` geeft nu altijd "vrij" terug), met een

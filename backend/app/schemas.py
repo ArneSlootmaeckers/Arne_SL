@@ -19,6 +19,17 @@ class ScanResponse(BaseModel):
     requires_verdict: bool
     requires_practice_ack: bool
     expires_at: datetime | None = None
+    # Ingevuld zodra de status al vaststaat (GESLAAGD/NIET_GESLAAGD): het
+    # hostscherm doet dan meteen ook de Ski Jump-toegangscontrole, zonder
+    # apart scherm/scan aan de Ski Jump zelf.
+    ski_jump_toegestaan: bool | None = None
+    ski_jump_reden: str | None = None
+
+
+class VerdictResponse(BaseModel):
+    status: Status
+    ski_jump_toegestaan: bool | None = None
+    ski_jump_reden: str | None = None
 
 
 class VerdictRequest(BaseModel):

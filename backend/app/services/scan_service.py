@@ -84,7 +84,13 @@ def register_scan(
     )
 
 
-def submit_verdict(db: Session, *, device_id: str, verdict: Verdict, tz: ZoneInfo) -> Status:
+@dataclass(frozen=True)
+class VerdictOutcome:
+    wristband_id: str
+    new_status: Status
+
+
+def submit_verdict(db: Session, *, device_id: str, verdict: Verdict, tz: ZoneInfo) -> VerdictOutcome:
     now = now_utc()
     today = local_today(now, tz)
 
@@ -119,7 +125,7 @@ def submit_verdict(db: Session, *, device_id: str, verdict: Verdict, tz: ZoneInf
         },
     )
     db.commit()
-    return result.new_status
+    return VerdictOutcome(wristband_id=wristband_id, new_status=result.new_status)
 
 
 def submit_practice_ack(db: Session, *, device_id: str) -> None:

@@ -4,7 +4,7 @@ import { playFailureSound, playNeutralSound, playSuccessSound } from "../shared/
 
 const POLLING_INTERVAL_MS = 3000;
 const TEST_WRISTBANDS = ["TEST-001", "TEST-002", "TEST-003", "TEST-004"];
-const CONFIRMATION_DISPLAY_MS = 2000;
+const CONFIRMATION_DISPLAY_MS = 3000;
 const REJECTED_TOAST_MS = 2500;
 
 const STATUS_INFO = {
@@ -24,6 +24,8 @@ const els = {
   wristbandId: document.getElementById("wristband-id"),
   statusBanner: document.getElementById("status-banner"),
   statusText: document.getElementById("status-text"),
+  skiJumpBanner: document.getElementById("ski-jump-banner"),
+  skiJumpText: document.getElementById("ski-jump-text"),
   verdictActions: document.getElementById("verdict-actions"),
   practiceActions: document.getElementById("practice-actions"),
   cancelActions: document.getElementById("cancel-actions"),
@@ -64,6 +66,18 @@ function applyStatusBanner(status, tekstOverride) {
   els.statusText.textContent = tekstOverride ?? info.tekst;
 }
 
+/** Ski Jump-toegang wordt enkel meegegeven zodra de status al vaststaat
+ * (GESLAAGD/NIET_GESLAAGD) — bij een openstaand oordeel is dit null en
+ * blijft de banner verborgen. */
+function applySkiJumpBanner(toegestaan, reden) {
+  if (toegestaan === null || toegestaan === undefined) {
+    els.skiJumpBanner.classList.add("hidden");
+    return;
+  }
+  els.skiJumpBanner.className = `ski-jump-banner status-${toegestaan ? "groen" : "rood"}`;
+  els.skiJumpText.textContent = toegestaan ? "Doorgaan" : reden || "Niet toegestaan";
+}
+
 function startCountdown(expiresAtIso) {
   const expiresAt = new Date(expiresAtIso).getTime();
   const totalMs = Math.max(1, expiresAt - Date.now());
@@ -84,6 +98,7 @@ function startCountdown(expiresAtIso) {
 function renderScanResult(body) {
   els.wristbandId.textContent = body.wristband_id;
   applyStatusBanner(body.status);
+  applySkiJumpBanner(body.ski_jump_toegestaan, body.ski_jump_reden);
 
   const hasPendingAction = body.requires_verdict || body.requires_practice_ack;
   els.verdictActions.classList.toggle("hidden", !body.requires_verdict);
@@ -123,6 +138,7 @@ async function handleVerdict(verdict) {
     const result = await api.verdict(deviceId, verdict);
     playSuccessSound();
     applyStatusBanner(result.status);
+    applySkiJumpBanner(result.ski_jump_toegestaan, result.ski_jump_reden);
     els.verdictActions.classList.add("hidden");
     els.practiceActions.classList.add("hidden");
     els.cancelActions.classList.add("hidden");

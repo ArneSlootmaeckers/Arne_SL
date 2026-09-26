@@ -158,3 +158,61 @@ def test_cancel_scan_is_logged_as_geannuleerd(client, db_session):
     events = db_session.query(EventModel).filter_by(event_type="GEANNULEERD").all()
     assert len(events) == 1
     assert events[0].wristband_id == "B001"
+
+
+# --- Ski Jump-toegang meteen mee op het hostscherm (geen apart toegangsscherm) ---
+
+
+def test_scan_of_a_pending_wristband_has_no_ski_jump_info_yet(client):
+    body = _scan(client).json()
+    assert body["status"] == "NOG_NIET_GESPRONGEN"
+    assert body["ski_jump_toegestaan"] is None
+    assert body["ski_jump_reden"] is None
+
+
+def test_green_verdict_response_grants_ski_jump_access(client):
+    _scan(client)
+    response = client.post("/api/host/verdict", json={"device_id": "host-1", "verdict": "GROEN"})
+    body = response.json()
+    assert body["status"] == "GESLAAGD"
+    assert body["ski_jump_toegestaan"] is True
+    assert body["ski_jump_reden"] is None
+
+
+def test_red_verdict_on_first_attempt_has_no_ski_jump_info_yet(client):
+    _scan(client)
+    response = client.post("/api/host/verdict", json={"device_id": "host-1", "verdict": "ROOD"})
+    body = response.json()
+    assert body["status"] == "HERKANSING"
+    assert body["ski_jump_toegestaan"] is None
+
+
+def test_red_verdict_on_herkansing_denies_ski_jump_access(client):
+    _scan(client)
+    client.post("/api/host/verdict", json={"device_id": "host-1", "verdict": "ROOD"})
+    _scan(client)
+    response = client.post("/api/host/verdict", json={"device_id": "host-1", "verdict": "ROOD"})
+    body = response.json()
+    assert body["status"] == "NIET_GESLAAGD"
+    assert body["ski_jump_toegestaan"] is False
+    assert body["ski_jump_reden"] == "Vandaag niet meer toegestaan"
+
+
+def test_rescanning_a_geslaagd_wristband_also_shows_ski_jump_access(client):
+    _scan(client)
+    client.post("/api/host/verdict", json={"device_id": "host-1", "verdict": "GROEN"})
+
+    body = _scan(client).json()
+    assert body["status"] == "GESLAAGD"
+    assert body["ski_jump_toegestaan"] is True
+
+
+def test_ski_jump_access_check_is_logged(client, db_session):
+    _scan(client)
+    client.post("/api/host/verdict", json={"device_id": "host-1", "verdict": "GROEN"})
+
+    from app.models import EventModel
+
+    events = db_session.query(EventModel).filter_by(event_type="TOEGANG_SKI_JUMP").all()
+    assert len(events) == 1
+    assert events[0].wristband_id == "B001"

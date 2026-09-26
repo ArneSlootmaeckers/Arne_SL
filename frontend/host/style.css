@@ -53,6 +53,22 @@ html, body {
   line-height: 1.1;
 }
 
+.ski-jump-banner {
+  width: 100%;
+  max-width: 60rem;
+  border-radius: 1rem;
+  padding: 1.25rem 1.5rem;
+  margin-bottom: 1.5rem;
+  font-size: clamp(1.3rem, 4vw, 2.2rem);
+  font-weight: 900;
+}
+
+.ski-jump-label {
+  font-weight: 600;
+  opacity: 0.85;
+  margin-right: 0.5rem;
+}
+
 .timeout-bar-track {
   width: 100%;
   max-width: 60rem;
