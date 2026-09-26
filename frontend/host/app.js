@@ -5,6 +5,7 @@ import { playFailureSound, playNeutralSound, playSuccessSound } from "../shared/
 const POLLING_INTERVAL_MS = 3000;
 const TEST_WRISTBANDS = ["TEST-001", "TEST-002", "TEST-003", "TEST-004"];
 const CONFIRMATION_DISPLAY_MS = 3000;
+const FINAL_RESULT_DISPLAY_MS = 30000;
 const REJECTED_TOAST_MS = 2500;
 
 const STATUS_INFO = {
@@ -13,6 +14,8 @@ const STATUS_INFO = {
   GESLAAGD: { kleur: "groen", tekst: "Geslaagd – oefensprong" },
   NIET_GESLAAGD: { kleur: "rood", tekst: "Vandaag niet meer toegestaan" },
 };
+
+const FINAL_STATUSES = new Set(["GESLAAGD", "NIET_GESLAAGD"]);
 
 const deviceId = getDeviceId();
 
@@ -24,15 +27,10 @@ const els = {
   wristbandId: document.getElementById("wristband-id"),
   statusBanner: document.getElementById("status-banner"),
   statusText: document.getElementById("status-text"),
-  skiJumpBanner: document.getElementById("ski-jump-banner"),
-  skiJumpText: document.getElementById("ski-jump-text"),
   verdictActions: document.getElementById("verdict-actions"),
-  practiceActions: document.getElementById("practice-actions"),
   cancelActions: document.getElementById("cancel-actions"),
-  timeoutBar: document.getElementById("timeout-bar"),
   btnGroen: document.getElementById("btn-groen"),
   btnRood: document.getElementById("btn-rood"),
-  btnPracticeAck: document.getElementById("btn-practice-ack"),
   btnCancel: document.getElementById("btn-cancel"),
   simPanel: document.getElementById("sim-panel"),
 };
@@ -66,55 +64,48 @@ function applyStatusBanner(status, tekstOverride) {
   els.statusText.textContent = tekstOverride ?? info.tekst;
 }
 
-/** Ski Jump-toegang wordt enkel meegegeven zodra de status al vaststaat
- * (GESLAAGD/NIET_GESLAAGD) — bij een openstaand oordeel is dit null en
- * blijft de banner verborgen. */
-function applySkiJumpBanner(toegestaan, reden) {
-  if (toegestaan === null || toegestaan === undefined) {
-    els.skiJumpBanner.classList.add("hidden");
-    return;
-  }
-  els.skiJumpBanner.className = `ski-jump-banner status-${toegestaan ? "groen" : "rood"}`;
-  els.skiJumpText.textContent = toegestaan ? "Doorgaan" : reden || "Niet toegestaan";
+/** Stille veiligheidstimeout tijdens het beoordelen (testsprong/herkansing):
+ * geen zichtbare balk — de sprong mag langer dan 30 seconden duren — maar
+ * als de host echt geen oordeel geeft binnen scan_timeout_seconds, keert
+ * het scherm alsnog terug naar "wacht op scan". */
+function watchVerdictExpiry(expiresAtIso) {
+  const expiresAt = new Date(expiresAtIso).getTime();
+  clearTimers();
+  countdownInterval = setInterval(() => {
+    if (Date.now() >= expiresAt) showWaiting();
+  }, 1000);
 }
 
-function startCountdown(expiresAtIso) {
-  const expiresAt = new Date(expiresAtIso).getTime();
-  const totalMs = Math.max(1, expiresAt - Date.now());
-  clearTimers();
-
-  function tick() {
-    const remainingMs = expiresAt - Date.now();
-    if (remainingMs <= 0) {
-      showWaiting();
-      return;
-    }
-    els.timeoutBar.style.width = `${Math.max(0, (remainingMs / totalMs) * 100)}%`;
+async function autoAcknowledgePractice() {
+  try {
+    await api.practiceAck(deviceId);
+    playNeutralSound();
+  } catch (err) {
+    console.error(err);
+  } finally {
+    showWaiting();
   }
-  countdownInterval = setInterval(tick, 200);
-  tick();
 }
 
 function renderScanResult(body) {
   els.wristbandId.textContent = body.wristband_id;
   applyStatusBanner(body.status);
-  applySkiJumpBanner(body.ski_jump_toegestaan, body.ski_jump_reden);
 
-  const hasPendingAction = body.requires_verdict || body.requires_practice_ack;
   els.verdictActions.classList.toggle("hidden", !body.requires_verdict);
-  els.practiceActions.classList.toggle("hidden", !body.requires_practice_ack);
-  els.cancelActions.classList.toggle("hidden", !hasPendingAction);
-  els.timeoutBar.style.width = "100%";
+  els.cancelActions.classList.toggle("hidden", !body.requires_verdict);
 
   els.waitingView.classList.add("hidden");
   els.resultView.classList.remove("hidden");
 
-  if (body.expires_at) {
-    startCountdown(body.expires_at);
+  clearTimers();
+  if (body.requires_verdict) {
+    watchVerdictExpiry(body.expires_at);
+  } else if (body.requires_practice_ack) {
+    // GESLAAGD: bevoegd personeel hoeft niets te doen, dit sluit zichzelf af.
+    returnTimeout = setTimeout(autoAcknowledgePractice, FINAL_RESULT_DISPLAY_MS);
   } else {
-    // NIET_GESLAAGD: nothing to resolve, just show it briefly then go back.
-    clearTimers();
-    returnTimeout = setTimeout(showWaiting, 4000);
+    // NIET_GESLAAGD: niets om af te ronden, gewoon tonen en dan terug.
+    returnTimeout = setTimeout(showWaiting, FINAL_RESULT_DISPLAY_MS);
   }
 }
 
@@ -138,26 +129,12 @@ async function handleVerdict(verdict) {
     const result = await api.verdict(deviceId, verdict);
     playSuccessSound();
     applyStatusBanner(result.status);
-    applySkiJumpBanner(result.ski_jump_toegestaan, result.ski_jump_reden);
     els.verdictActions.classList.add("hidden");
-    els.practiceActions.classList.add("hidden");
     els.cancelActions.classList.add("hidden");
-    els.timeoutBar.style.width = "0%";
-    returnTimeout = setTimeout(showWaiting, CONFIRMATION_DISPLAY_MS);
+    const delay = FINAL_STATUSES.has(result.status) ? FINAL_RESULT_DISPLAY_MS : CONFIRMATION_DISPLAY_MS;
+    returnTimeout = setTimeout(showWaiting, delay);
   } catch (err) {
     showRejectedToast(err instanceof ApiError ? err.message : "Er ging iets mis.");
-    showWaiting();
-  }
-}
-
-async function handlePracticeAck() {
-  clearTimers();
-  try {
-    await api.practiceAck(deviceId);
-    playNeutralSound();
-  } catch (err) {
-    showRejectedToast(err instanceof ApiError ? err.message : "Er ging iets mis.");
-  } finally {
     showWaiting();
   }
 }
@@ -179,7 +156,6 @@ async function handleCancel() {
 
 els.btnGroen.addEventListener("click", () => handleVerdict("GROEN"));
 els.btnRood.addEventListener("click", () => handleVerdict("ROOD"));
-els.btnPracticeAck.addEventListener("click", handlePracticeAck);
 els.btnCancel.addEventListener("click", handleCancel);
 
 new KeyboardWedgeReader().start(handleScan);

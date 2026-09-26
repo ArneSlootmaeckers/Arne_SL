@@ -53,39 +53,6 @@ html, body {
   line-height: 1.1;
 }
 
-.ski-jump-banner {
-  width: 100%;
-  max-width: 60rem;
-  border-radius: 1rem;
-  padding: 1.25rem 1.5rem;
-  margin-bottom: 1.5rem;
-  font-size: clamp(1.3rem, 4vw, 2.2rem);
-  font-weight: 900;
-}
-
-.ski-jump-label {
-  font-weight: 600;
-  opacity: 0.85;
-  margin-right: 0.5rem;
-}
-
-.timeout-bar-track {
-  width: 100%;
-  max-width: 60rem;
-  height: 0.75rem;
-  background: var(--kleur-achtergrond-diep);
-  border-radius: 0.5rem;
-  overflow: hidden;
-  margin-bottom: 2rem;
-}
-
-.timeout-bar {
-  height: 100%;
-  width: 100%;
-  background: var(--sparkx-gradient);
-  transition: width 0.2s linear;
-}
-
 .actions {
   display: flex;
   gap: 1.5rem;
@@ -117,10 +84,6 @@ html, body {
 
 .btn-rood:active {
   background: #7a1712;
-}
-
-.btn-full {
-  flex: 1 1 100%;
 }
 
 .secondary-actions {
