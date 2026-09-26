@@ -12,3 +12,7 @@ data/*.db-shm
 !data/.gitkeep
 
 .env
+
+# Windows-installer bouwresultaten (zie installer/build.sh)
+installer/build/
+installer/*.exe

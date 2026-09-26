@@ -30,10 +30,23 @@ statuslogica in hoofdstuk 2 van de opdracht (of
 
 ## Installatie
 
-**Windows**: rechtsklik `setup.ps1` → **"Uitvoeren met PowerShell"**. Dit
-ene script controleert Python, maakt een virtualenv aan in `backend\.venv`,
-installeert de dependencies, én zet meteen de bureaubladsnelkoppeling
-klaar — verder niets anders uit te voeren.
+**Windows**: dubbelklik **`Toelatingssysteem-Setup.exe`** (zie
+[installer/](installer/)) en doorloop de wizard — Volgende, Volgende,
+Installeren. Dit is een echte Windows-installer, geen script: hij
+controleert Python, zet de virtuele omgeving en dependencies op, en
+plaatst de bureaubladsnelkoppeling, allemaal automatisch. Omdat het een
+gecompileerd programma is (geen `.ps1`-bestand), heeft hij geen last van
+PowerShell's execution policy — een script kan Windows na een download
+soms stilzwijgend blokkeren, een installer niet.
+
+Deze `.exe` wordt niet in git bijgehouden (het is een bouwresultaat); zie
+[installer/README.md](installer/README.md) om hem zelf te (her)bouwen, of
+vraag de laatst gebouwde versie op.
+
+Geen zin in de installer, of liever een script dat je zelf kan aanpassen?
+Rechtsklik `setup.ps1` → **"Uitvoeren met PowerShell"** doet exact
+hetzelfde (maar loopt, als losstaand script, wél het hierboven genoemde
+execution-policy-risico).
 
 **Linux/macOS/Raspberry Pi**:
 
@@ -192,27 +205,33 @@ sqlite3 data/toelating.db ".backup data/backups/backup-$(date +%Y%m%d-%H%M%S).db
 
 ## Migreren naar een andere pc
 
+**Windows, met de installer (eenvoudigst):**
+
 1. **Sluit de server af** op de oude pc (knop **"Applicatie afsluiten"**
-   op tabblad "Systeem" van het beheerscherm, of Ctrl+C) — kopiëren
-   terwijl de database open staat kan een inconsistente kopie geven.
-2. **Kopieer de volledige projectmap** naar de nieuwe pc (USB-stick,
-   netwerkschijf, OneDrive/cloudschijf — wat je toepasselijk vindt), maar
-   **sla `backend\.venv` over**: die virtualenv bevat absolute paden naar
-   de Python-installatie van de oude pc en werkt niet zomaar op een
-   andere machine. Neem je op zich niets meer mee behalve die map, dan is
-   dit vanzelf al zo (`.venv` staat niet in git, dus ook niet in een zip
-   via `git archive`).
-   - **Bestaande gegevens (bandjes, logs, medewerkers) meenemen?** Kopieer
-     dan ook de map `data/` mee.
-   - **Liever een schone start** op de nieuwe pc (bv. omdat de oude pc
-     enkel voor testen diende)? Sla `data/` dan net zo goed over — die
-     wordt vanzelf opnieuw aangemaakt.
-3. **Op de nieuwe pc**: zorg dat Python 3.12+ geïnstalleerd is, en voer de
-   installatie opnieuw uit — op Windows `setup.ps1` (bouwt meteen ook de
-   bureaubladsnelkoppeling, want die van de oude pc verwijst naar een pad
-   dat op de nieuwe pc niet bestaat), op Linux/macOS `./install.sh`.
-4. **Geen eigen `data/` meegenomen?** Maak dan een eerste admin aan (zie
-   hierboven) voor je kan inloggen op het beheerscherm.
+   op tabblad "Systeem" van het beheerscherm, of Ctrl+C).
+2. Zet **`Toelatingssysteem-Setup.exe`** op de nieuwe pc (USB-stick,
+   netwerkschijf, OneDrive — wat je toepasselijk vindt) en voer hem uit.
+   Dit zet een volledig nieuwe, werkende installatie op (Python-check,
+   virtuele omgeving, dependencies, bureaubladsnelkoppeling) in
+   `%LOCALAPPDATA%\Toelatingssysteem`.
+3. **Bestaande gegevens (bandjes, logs, medewerkers) meenemen?** Kopieer
+   de map `data\` van de oude installatie over die van de nieuwe
+   (dezelfde locatie, `%LOCALAPPDATA%\Toelatingssysteem\data`) en herstart
+   de server. Geen eigen `data\` meegenomen? Maak dan een eerste admin aan
+   (zie hierboven) voor je kan inloggen op het beheerscherm.
+
+**Handmatig (Linux/macOS, of Windows zonder de installer):**
+
+1. Sluit de server af op de oude pc (zie hierboven).
+2. Kopieer de volledige projectmap naar de nieuwe pc, maar **sla
+   `backend/.venv` over**: die virtualenv bevat absolute paden naar de
+   Python-installatie van de oude pc en werkt niet op een andere machine
+   (staat sowieso niet in git, dus ook niet in een zip via
+   `git archive`). Bestaande gegevens behouden? Neem `data/` mee; anders
+   sla je die ook over.
+3. Op de nieuwe pc: zorg dat Python 3.12+ geïnstalleerd is, en voer de
+   installatie opnieuw uit (`./install.sh`, of op Windows `setup.ps1`).
+4. Geen eigen `data/` meegenomen? Maak een eerste admin aan.
 
 ## Mappenstructuur
 
@@ -235,9 +254,13 @@ frontend/
 docs/
   handleiding-host.md
   handleiding-beheer.md
+installer/
+  Toelatingssysteem-Setup.nsi         # NSIS-bronbestand voor de Windows-installer
+  build.sh                            # bouwt Toelatingssysteem-Setup.exe (niet in git)
+  README.md                           # hoe (her)bouwen
 data/      # SQLite-bestand + back-ups (niet in git)
 install.sh                          # installatie (Linux/macOS/WSL)
-setup.ps1                           # installatie + bureaubladsnelkoppeling (Windows, één script)
+setup.ps1                           # installatie + bureaubladsnelkoppeling (Windows, alternatief script)
 start.sh                            # server starten (Linux/macOS/WSL)
 start-app.bat                       # startpunt van de snelkoppeling, roept start-app.ps1 aan
 start-app.ps1                       # server + browser starten, browser mee afsluiten (Windows)
