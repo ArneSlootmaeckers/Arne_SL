@@ -71,8 +71,23 @@ sudo systemctl enable --now toelatingssysteem
 Of via Docker: `docker compose up -d`.
 
 De schermen zijn dan bereikbaar op `http://<server-ip>:8000/host/`,
-`.../gate/` en `.../admin/`. `http://<server-ip>:8000/` verwijst automatisch
-door naar het hostscherm.
+`.../gate/` en `.../admin/`. `http://<server-ip>:8000/` toont een
+startpagina met het Sparkx-logo en een kaart per scherm.
+
+### Bureaubladsnelkoppeling (Windows)
+
+Voor gebruik op de tablet/pc zelf (niet als aparte server): dubbelklikken
+en meteen in de app zitten, zonder terminal.
+
+1. Eenmalig: rechtsklik `maak-bureaubladsnelkoppeling.ps1` → **"Uitvoeren
+   met PowerShell"**. Dit zet een snelkoppeling "Toelatingssysteem" op het
+   bureaublad, met het Sparkx-logo als icoon.
+2. Vanaf dan: dubbelklik die snelkoppeling om de server te starten (in een
+   apart, geminimaliseerd venster) en meteen de startpagina te openen in de
+   browser.
+
+Dit vereist dat `install.sh` al uitgevoerd is (stap "Optie B" hierboven) —
+de snelkoppeling gebruikt dezelfde virtualenv.
 
 ## Eerste admin aanmaken
 
@@ -170,14 +185,17 @@ backend/
   create_admin.py    # eerste admin aanmaken
   config.yaml
 frontend/
+  home/    # startpagina met kaarten naar de drie schermen (/)
   host/    # hostscherm (/host/)
   gate/    # toegangscontrole hoog platform (/gate/)
   admin/   # beheerscherm (/admin/)
-  shared/  # gedeelde JS/CSS: lezer-abstractie, API-client, basisstijl
+  shared/  # gedeelde JS/CSS + logo/favicons: lezer-abstractie, API-client, basisstijl
 docs/
   handleiding-host.md
   handleiding-beheer.md
 data/      # SQLite-bestand + back-ups (niet in git)
+start-app.bat                       # server starten + browser openen (Windows)
+maak-bureaubladsnelkoppeling.ps1    # bureaubladicoon aanmaken (eenmalig, Windows)
 ```
 
 ## Uitbreidingspunten

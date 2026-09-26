@@ -1,0 +1,64 @@
+html, body {
+  width: 100%;
+  height: 100%;
+}
+
+#app {
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  padding: 2rem;
+}
+
+.home-logo {
+  height: 4.5rem;
+  width: auto;
+  margin-bottom: 1rem;
+}
+
+.home-subtitle {
+  color: var(--kleur-tekst-gedempt);
+  font-size: clamp(1rem, 3vw, 1.4rem);
+  margin: 0 0 3rem;
+}
+
+.home-cards {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 1.5rem;
+  justify-content: center;
+  max-width: 60rem;
+}
+
+.home-card {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  background: var(--kleur-achtergrond-paneel);
+  border-radius: 1.25rem;
+  padding: 2.5rem 3rem;
+  min-width: 14rem;
+  text-decoration: none;
+  color: white;
+  border-bottom: 4px solid transparent;
+  transition: border-color 0.15s ease, transform 0.15s ease;
+}
+
+.home-card:hover,
+.home-card:focus {
+  border-bottom-color: var(--sparkx-geel);
+  transform: translateY(-2px);
+}
+
+.home-card-title {
+  font-size: 1.4rem;
+  font-weight: 900;
+}
+
+.home-card-hint {
+  color: var(--kleur-tekst-gedempt);
+  font-size: 1rem;
+}

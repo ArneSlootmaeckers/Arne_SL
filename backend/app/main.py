@@ -11,7 +11,7 @@ import contextlib
 from pathlib import Path
 
 from fastapi import FastAPI, Request
-from fastapi.responses import JSONResponse, RedirectResponse
+from fastapi.responses import FileResponse, JSONResponse
 from fastapi.staticfiles import StaticFiles
 
 from app.config import Settings, load_settings
@@ -116,8 +116,16 @@ def create_app(settings: Settings | None = None) -> FastAPI:
         if screen_dir.is_dir():
             app.mount(f"/{screen}", StaticFiles(directory=screen_dir, html=True), name=screen)
 
-    @app.get("/")
-    def root() -> RedirectResponse:
-        return RedirectResponse(url="/host/")
+    # Browsers request this path directly regardless of a page's <link> tag.
+    @app.get("/favicon.ico", include_in_schema=False)
+    def favicon() -> FileResponse:
+        return FileResponse(_FRONTEND_DIR / "shared" / "icons" / "favicon.ico")
+
+    # The home screen is the app's front door, so it's mounted at "/" —
+    # registered last so it only catches what the routes/mounts above it
+    # didn't already claim (Starlette matches routes in registration order).
+    home_dir = _FRONTEND_DIR / "home"
+    if home_dir.is_dir():
+        app.mount("/", StaticFiles(directory=home_dir, html=True), name="home")
 
     return app
