@@ -1,5 +1,5 @@
 import { ApiError, api, getDeviceId, startHealthPolling } from "../shared/api.js";
-import { KeyboardWedgeReader, SimulatedReader } from "../shared/reader.js";
+import { KeyboardWedgeReader, NativeBridgeReader, SimulatedReader } from "../shared/reader.js";
 import { playFailureSound, playNeutralSound, playSuccessSound } from "../shared/sound.js";
 
 const POLLING_INTERVAL_MS = 3000;
@@ -205,6 +205,7 @@ els.btnRood.addEventListener("click", () => handleVerdict("ROOD"));
 els.btnCancel.addEventListener("click", handleCancel);
 
 new KeyboardWedgeReader().start(handleScan);
+new NativeBridgeReader().start(handleScan);
 
 const params = new URLSearchParams(location.search);
 if (params.get("sim") === "1") {

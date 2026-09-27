@@ -8,10 +8,11 @@ losse Gradle-projecten die je apart opent.
 
 Een dunne, snel te bouwen Android-app die het bestaande, volledig geteste
 hostscherm/beheerscherm toont als "echte" app (eigen icoon, geen adresbalk,
-volledig scherm). De server blijft draaien op een pc op het netwerk, net
-als nu — dit verandert niets aan hoe het systeem werkt, enkel hoe het
-eruitziet op een telefoon/tablet. Zie **[`webview-app/README.md`](webview-app/README.md)**
-voor hoe je dit opent en bouwt in Android Studio.
+volledig scherm) en bandjes scant met de NFC-chip van de telefoon zelf. De
+server blijft draaien op een pc op het netwerk, net als nu — dit verandert
+niets aan hoe het systeem werkt, enkel hoe het eruitziet en hoe een scan
+binnenkomt. Zie **[`webview-app/README.md`](webview-app/README.md)** voor
+hoe je dit opent en bouwt in Android Studio.
 
 Dit is de praktische keuze om **vandaag** een Android-versie naast de
 Windows-versie te kunnen tonen.

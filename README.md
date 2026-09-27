@@ -127,11 +127,12 @@ een browservenster zonder adresbalk (zoals de Windows-snelkoppeling) is op
 Android enkel mogelijk via HTTPS of een aparte app.
 
 Voor een echte, installeerbare Android-app (eigen icoon, geen adresbalk,
-volledig scherm) zonder die beperking, zie **[`android/webview-app/`](android/webview-app/README.md)**
-— toont hetzelfde host-/beheerscherm, gebouwd met Android Studio. Er is
-daarnaast een gepauzeerde, veel grotere native herbouw in Kotlin
-(standalone, eigen NFC-scanner, geen aparte pc nodig) — zie
-[`android/README.md`](android/README.md) voor de status daarvan.
+volledig scherm, en scant bandjes met de NFC-chip van de telefoon zelf)
+zonder die beperking, zie **[`android/webview-app/`](android/webview-app/README.md)**
+— toont hetzelfde host-/beheerscherm, gebouwd met Android Studio; de server
+blijft wel op een pc draaien. Er is daarnaast een gepauzeerde, veel grotere
+native herbouw in Kotlin (volledig standalone, helemaal geen aparte pc nodig)
+— zie [`android/README.md`](android/README.md) voor de status daarvan.
 
 ## Eerste admin aanmaken
 

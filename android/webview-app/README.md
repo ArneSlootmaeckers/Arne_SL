@@ -2,15 +2,16 @@
 
 Een dunne Android-app rond het bestaande, al volledig geteste hostscherm/
 beheerscherm (`backend/` + `frontend/`): eigen icoon op het startscherm,
-geen adresbalk, volledig scherm. De server blijft draaien op een pc op het
-lokale netwerk, precies zoals nu — deze app toont gewoon dezelfde pagina
-als een browser zou doen, maar dan als "echte" app.
+geen adresbalk, volledig scherm, en scant bandjes met de NFC-chip van de
+telefoon zelf. De server blijft draaien op een pc op het lokale netwerk,
+precies zoals nu — deze app toont dezelfde pagina als een browser zou doen
+en geeft er enkel een NFC-scan aan door, verder verandert er niets.
 
-Wat dit dus **niet** is: geen standalone app die zelf de server draait of
-de NFC-chip van de telefoon zelf gebruikt (dat zou de volledige native
-herbouw uit `android/domain/` zijn — zie `../README.md`). Deze app is de
-snellere, kleinere stap: dezelfde functionaliteit, gewoon met een beter
-uiterlijk op een telefoon/tablet.
+Wat dit dus **niet** is: geen standalone app die zelf de server draait
+(dat zou de volledige native herbouw uit `android/domain/` zijn — zie
+`../README.md`, gepauzeerd op fase 1/5). Deze app is de snellere, kleinere
+stap: dezelfde functionaliteit en dezelfde server, gewoon met een beter
+uiterlijk en een ingebouwde scanner op een telefoon/tablet.
 
 ## Belangrijk: dit is geschreven maar niet gecompileerd
 
@@ -57,12 +58,35 @@ Bij de eerste opstart vraagt de app om:
 Dit onthoudt de app nadien. Om het later te wijzigen: tik op het kleine
 tandwiel-icoontje rechtsonder in beeld.
 
-## Bekende beperking: NFC-lezer
+## NFC scannen met de telefoon
 
-Als er nu een USB/Bluetooth NFC-lezer aangesloten is die als toetsenbord
-werkt (typt het bandje-ID + Enter — zie `frontend/shared/reader.js`), zou
-die in theorie ook op een telefoon moeten werken via USB-OTG of
-Bluetooth-koppeling, omdat een WebView toetsaanslagen van fysieke
-toetsenborden gewoon doorgeeft aan de pagina, net als een browser op een pc.
-**Dit is niet met echte hardware getest** — test dit met de effectieve
-lezer voor je hierop vertrouwt voor een echte opendeurdag.
+Bandje tegen de achterkant van de telefoon houden is genoeg: de app leest
+de hardware-UID van het tagje (via Android's `NfcAdapter`, zie
+`MainActivity.kt`) en geeft die door aan de pagina, op dezelfde manier als
+een USB-lezer dat vandaag doet. Bandjes registreren zichzelf automatisch
+bij de eerste scan (zie `backend/app/services/common.py`), dus er is geen
+vooraf ingestelde lijst van geldige bandjes nodig — eender welk NFC-tagje
+werkt.
+
+Aandachtspunten:
+- **NFC moet aanstaan** in de Android-instellingen van het toestel. Staat
+  het uit, dan toont de app een korte melding. Heeft het toestel helemaal
+  geen NFC-chip, dan werkt deze functie niet, maar blijft de rest van de
+  app (en het beheerscherm) gewoon bruikbaar.
+- Zolang het bandje tegen het toestel blijft liggen, negeert de app
+  herhaalde detecties van hetzelfde tagje twee seconden lang, om geen
+  dubbele scans te sturen.
+- **Niet met echte hardware getest** — dit is geschreven en met de hand
+  nagekeken tegen Android's NFC-API's (dezelfde beperking als de rest van
+  deze app, zie hierboven), maar nooit met een echt toestel of een echt
+  NFC-tagje uitgeprobeerd. Test dit zeker voor je hierop vertrouwt tijdens
+  een echte opendeurdag.
+
+## Nog steeds ondersteund: externe NFC-lezer
+
+Een los USB/Bluetooth NFC-lezer die als toetsenbord werkt (typt het
+bandje-ID + Enter — zie `frontend/shared/reader.js`: `KeyboardWedgeReader`)
+blijft ook werken, aangesloten op de telefoon via USB-OTG of
+Bluetooth-koppeling: een WebView geeft toetsaanslagen van fysieke
+toetsenborden gewoon door aan de pagina, net als een browser op een pc.
+Ook dit pad is niet met echte hardware getest.

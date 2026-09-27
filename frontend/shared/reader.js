@@ -57,6 +57,23 @@ export class KeyboardWedgeReader {
   }
 }
 
+/** Bridge for the native Android wrapper app (android/webview-app): exposes
+ * window.ToelatingNativeBridge.onScan(id), which that app's own NFC-reading
+ * code (MainActivity.kt) calls after reading a wristband's hardware UID with
+ * the phone's own NFC chip — same effect as a KeyboardWedgeReader scan, just
+ * fed in directly instead of via synthetic keystrokes. Inert in a normal
+ * browser: nothing ever calls it there.
+ */
+export class NativeBridgeReader {
+  start(onScan) {
+    window.ToelatingNativeBridge = { onScan };
+  }
+
+  stop() {
+    delete window.ToelatingNativeBridge;
+  }
+}
+
 /** Development/demo stand-in: type an id or pick one from a list of test
  * wristbands. Any id works — an unknown one is simply registered on first use.
  */
