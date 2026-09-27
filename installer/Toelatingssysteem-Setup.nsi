@@ -15,6 +15,7 @@
 
 !include "MUI2.nsh"
 !include "LogicLib.nsh"
+!include "nsDialogs.nsh"
 
 Name "Toelatingssysteem veiligheidssprong"
 OutFile "Toelatingssysteem-Setup.exe"
@@ -23,9 +24,18 @@ RequestExecutionLevel user
 ShowInstDetails show
 ShowUninstDetails show
 
+Var AdminPage
+Var AdminNameField
+Var AdminPincodeField
+Var AdminPincodeConfirmField
+Var AdminName
+Var AdminPincode
+Var AdminPincodeConfirm
+
 !define MUI_ABORTWARNING
 !insertmacro MUI_PAGE_WELCOME
 !insertmacro MUI_PAGE_DIRECTORY
+Page custom AdminPageCreate AdminPageLeave
 !insertmacro MUI_PAGE_INSTFILES
 !define MUI_FINISHPAGE_RUN "$INSTDIR\start-app.bat"
 !define MUI_FINISHPAGE_RUN_TEXT "Toelatingssysteem nu starten"
@@ -35,6 +45,63 @@ ShowUninstDetails show
 !insertmacro MUI_UNPAGE_INSTFILES
 
 !insertmacro MUI_LANGUAGE "Dutch"
+
+Function AdminPageCreate
+  !insertmacro MUI_HEADER_TEXT "Eerste admin aanmaken" "Hiermee kan je meteen inloggen op het beheerscherm. Laat alles leeg om dit later zelf te doen."
+  nsDialogs::Create 1018
+  Pop $AdminPage
+  ${If} $AdminPage == error
+    Abort
+  ${EndIf}
+
+  ${NSD_CreateLabel} 0 0 100% 12u "Naam:"
+  Pop $0
+  ${NSD_CreateText} 0 13u 100% 13u ""
+  Pop $AdminNameField
+
+  ${NSD_CreateLabel} 0 32u 100% 12u "Pincode (min. 4 tekens):"
+  Pop $0
+  ${NSD_CreatePassword} 0 45u 100% 13u ""
+  Pop $AdminPincodeField
+
+  ${NSD_CreateLabel} 0 64u 100% 12u "Herhaal pincode:"
+  Pop $0
+  ${NSD_CreatePassword} 0 77u 100% 13u ""
+  Pop $AdminPincodeConfirmField
+
+  ${NSD_CreateLabel} 0 100u 100% 24u "Laat alle drie de velden leeg om dit later handmatig te doen (zie README.md, 'Eerste admin aanmaken')."
+  Pop $0
+
+  nsDialogs::Show
+FunctionEnd
+
+Function AdminPageLeave
+  ${NSD_GetText} $AdminNameField $AdminName
+  ${NSD_GetText} $AdminPincodeField $AdminPincode
+  ${NSD_GetText} $AdminPincodeConfirmField $AdminPincodeConfirm
+
+  ${If} $AdminName == ""
+  ${AndIf} $AdminPincode == ""
+  ${AndIf} $AdminPincodeConfirm == ""
+    Return
+  ${EndIf}
+
+  ${If} $AdminName == ""
+    MessageBox MB_OK|MB_ICONEXCLAMATION "Vul een naam in, of laat alle drie de velden leeg om dit later te doen."
+    Abort
+  ${EndIf}
+
+  ${If} $AdminPincode != $AdminPincodeConfirm
+    MessageBox MB_OK|MB_ICONEXCLAMATION "De pincodes komen niet overeen."
+    Abort
+  ${EndIf}
+
+  StrLen $1 $AdminPincode
+  ${If} $1 < 4
+    MessageBox MB_OK|MB_ICONEXCLAMATION "De pincode moet minstens 4 tekens lang zijn."
+    Abort
+  ${EndIf}
+FunctionEnd
 
 Section "Installeren"
   DetailPrint "Bestanden uitpakken..."
@@ -75,6 +142,15 @@ Section "Installeren"
   ${EndIf}
 
   CreateDirectory "$INSTDIR\data"
+
+  ${If} $AdminName != ""
+    DetailPrint "Eerste admin aanmaken..."
+    nsExec::ExecToLog '"$INSTDIR\backend\.venv\Scripts\python.exe" create_admin.py --name "$AdminName" --pincode "$AdminPincode"'
+    Pop $0
+    ${If} $0 != "0"
+      MessageBox MB_OK|MB_ICONEXCLAMATION "Aanmaken van de admin is mislukt (bv. een pincode die al in gebruik is). Je kan dit achteraf handmatig doen -- zie README.md, 'Eerste admin aanmaken'."
+    ${EndIf}
+  ${EndIf}
 
   DetailPrint "Bureaubladsnelkoppeling aanmaken..."
   CreateShortcut "$DESKTOP\Toelatingssysteem.lnk" "$INSTDIR\start-app.bat" "" "$INSTDIR\frontend\shared\icons\favicon.ico"
