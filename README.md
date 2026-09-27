@@ -112,6 +112,21 @@ Chrome of Edge geïnstalleerd is; is geen van beide gevonden, dan opent de
 snelkoppeling een gewone browsertab die na het afsluiten handmatig
 gesloten moet worden.
 
+### Startscherm-icoon op Android/tablet
+
+Het hostscherm heeft een `manifest.json` met naam, logo en kleuren. Om er
+een icoon van te maken op een Android-toestel:
+
+1. Open `http://<server-ip>:8000/` in Chrome.
+2. Tik op het menu (⋮, rechtsboven) → **"Toevoegen aan startscherm"**.
+
+Dit geeft een icoon met het Sparkx-logo op het startscherm. Let op: omdat
+dit systeem bewust zonder internetverbinding/HTTPS werkt (gewoon HTTP op
+het lokale netwerk), blijft de adresbalk van Chrome zichtbaar bovenaan —
+een browservenster zonder adresbalk (zoals de Windows-snelkoppeling) is op
+Android enkel mogelijk via HTTPS of een aparte app, wat meer setup vergt
+dan voor dit systeem de moeite waard is.
+
 ## Eerste admin aanmaken
 
 Medewerkers (met hun pincode) worden normaal aangemaakt via het
