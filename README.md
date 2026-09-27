@@ -124,8 +124,11 @@ Dit geeft een icoon met het Sparkx-logo op het startscherm. Let op: omdat
 dit systeem bewust zonder internetverbinding/HTTPS werkt (gewoon HTTP op
 het lokale netwerk), blijft de adresbalk van Chrome zichtbaar bovenaan —
 een browservenster zonder adresbalk (zoals de Windows-snelkoppeling) is op
-Android enkel mogelijk via HTTPS of een aparte app, wat meer setup vergt
-dan voor dit systeem de moeite waard is.
+Android enkel mogelijk via HTTPS of een aparte app.
+
+Voor een volwaardige, standalone Android-app (eigen NFC-scanner, geen
+aparte pc nodig) is een native herbouw in Kotlin gestart — zie
+[`android/README.md`](android/README.md) voor de status daarvan.
 
 ## Eerste admin aanmaken
 

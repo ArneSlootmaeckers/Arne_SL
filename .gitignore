@@ -16,3 +16,8 @@ data/*.db-shm
 # Windows-installer bouwresultaten (zie installer/build.sh)
 installer/build/
 installer/*.exe
+
+# Gradle/Android bouwresultaten
+.gradle/
+android/**/build/
+local.properties
