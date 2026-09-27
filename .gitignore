@@ -21,3 +21,7 @@ installer/*.exe
 .gradle/
 android/**/build/
 local.properties
+.idea/
+*.iml
+captures/
+.cxx/

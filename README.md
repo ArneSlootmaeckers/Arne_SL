@@ -126,8 +126,11 @@ het lokale netwerk), blijft de adresbalk van Chrome zichtbaar bovenaan —
 een browservenster zonder adresbalk (zoals de Windows-snelkoppeling) is op
 Android enkel mogelijk via HTTPS of een aparte app.
 
-Voor een volwaardige, standalone Android-app (eigen NFC-scanner, geen
-aparte pc nodig) is een native herbouw in Kotlin gestart — zie
+Voor een echte, installeerbare Android-app (eigen icoon, geen adresbalk,
+volledig scherm) zonder die beperking, zie **[`android/webview-app/`](android/webview-app/README.md)**
+— toont hetzelfde host-/beheerscherm, gebouwd met Android Studio. Er is
+daarnaast een gepauzeerde, veel grotere native herbouw in Kotlin
+(standalone, eigen NFC-scanner, geen aparte pc nodig) — zie
 [`android/README.md`](android/README.md) voor de status daarvan.
 
 ## Eerste admin aanmaken
