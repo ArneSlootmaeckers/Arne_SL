@@ -2,10 +2,10 @@
 
 Een dunne Android-app rond het bestaande, al volledig geteste hostscherm/
 beheerscherm (`backend/` + `frontend/`): eigen icoon op het startscherm,
-geen adresbalk, volledig scherm, en scant bandjes met de NFC-chip van de
-telefoon zelf. De server blijft draaien op een pc op het lokale netwerk,
-precies zoals nu — deze app toont dezelfde pagina als een browser zou doen
-en geeft er enkel een NFC-scan aan door, verder verandert er niets.
+geen adresbalk, en scant bandjes met de NFC-chip van de telefoon zelf. De
+server blijft draaien op een pc op het lokale netwerk, precies zoals nu —
+deze app toont dezelfde pagina als een browser zou doen en geeft er enkel
+een NFC-scan aan door, verder verandert er niets.
 
 Wat dit dus **niet** is: geen standalone app die zelf de server draait
 (dat zou de volledige native herbouw uit `android/domain/` zijn — zie
@@ -55,8 +55,10 @@ Bij de eerste opstart vraagt de app om:
 2. **Hostscherm of Beheerscherm**: welke van de twee pagina's deze app
    toont.
 
-Dit onthoudt de app nadien. Om het later te wijzigen: tik op het kleine
-tandwiel-icoontje rechtsonder in beeld.
+Dit onthoudt de app nadien. Om het later te wijzigen: **houd je vinger een
+seconde ergens op het scherm** (geen apart knopje meer — dat nam ruimte in
+beeld in). De app opent zonder gedwongen volledig scherm; de status-/
+navigatiebalk van het toestel blijft gewoon zichtbaar.
 
 De WebView laadt elke pagina altijd vers op (geen cache) — een aanpassing
 aan `frontend/` op de server verschijnt dus meteen bij de volgende keer
@@ -68,10 +70,12 @@ handmatig moet wissen.
 Bandje tegen de achterkant van de telefoon houden is genoeg: de app leest
 de hardware-UID van het tagje (via Android's `NfcAdapter`, zie
 `MainActivity.kt`) en geeft die door aan de pagina, op dezelfde manier als
-een USB-lezer dat vandaag doet. Bandjes registreren zichzelf automatisch
-bij de eerste scan (zie `backend/app/services/common.py`), dus er is geen
-vooraf ingestelde lijst van geldige bandjes nodig — eender welk NFC-tagje
-werkt.
+een USB-lezer dat vandaag doet. Werkt op **beide** schermen: op het
+hostscherm start het een scan (zelfde flow als vandaag); op het
+beheerscherm (tab "Bandje") vult het automatisch het bandje-ID-veld in en
+toont meteen de status. Bandjes registreren zichzelf automatisch bij de
+eerste scan (zie `backend/app/services/common.py`), dus er is geen vooraf
+ingestelde lijst van geldige bandjes nodig — eender welk NFC-tagje werkt.
 
 Aandachtspunten:
 - **NFC moet aanstaan** in de Android-instellingen van het toestel. Staat

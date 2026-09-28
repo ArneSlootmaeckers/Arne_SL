@@ -1,5 +1,5 @@
 import { ADMIN_TOKEN_KEY, ApiError, api, startHealthPolling } from "../shared/api.js";
-import { KeyboardWedgeReader } from "../shared/reader.js";
+import { KeyboardWedgeReader, NativeBridgeReader } from "../shared/reader.js";
 
 const POLLING_INTERVAL_MS = 3000;
 // Mirrors config.yaml's session_inactivity_timeout_seconds default; the
@@ -244,6 +244,9 @@ els.overrideForm.addEventListener("submit", async (event) => {
 
 // A real/simulated scan while on the "Bandje" tab looks the wristband up directly.
 new KeyboardWedgeReader().start((wristbandId) => {
+  if (activeTab === "bandje") lookupWristband(wristbandId);
+});
+new NativeBridgeReader().start((wristbandId) => {
   if (activeTab === "bandje") lookupWristband(wristbandId);
 });
 

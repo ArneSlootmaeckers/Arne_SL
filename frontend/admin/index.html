@@ -74,12 +74,14 @@
 
           <div class="card">
             <div class="card-title">Geschiedenis vandaag</div>
-            <table class="data-table" id="wristband-history-table">
-              <thead>
-                <tr><th>Tijdstip</th><th>Type</th><th>Bron</th><th>Detail</th></tr>
-              </thead>
-              <tbody></tbody>
-            </table>
+            <div class="table-scroll">
+              <table class="data-table" id="wristband-history-table">
+                <thead>
+                  <tr><th>Tijdstip</th><th>Type</th><th>Bron</th><th>Detail</th></tr>
+                </thead>
+                <tbody></tbody>
+              </table>
+            </div>
           </div>
         </div>
       </section>
@@ -107,12 +109,14 @@
           <button type="button" id="export-csv-btn" class="btn-secondary">Exporteer CSV</button>
         </form>
 
-        <table class="data-table" id="logs-table">
-          <thead>
-            <tr><th>Tijdstip</th><th>Type</th><th>Bandje</th><th>Bron</th><th>Medewerker</th><th>Detail</th></tr>
-          </thead>
-          <tbody></tbody>
-        </table>
+        <div class="table-scroll">
+          <table class="data-table" id="logs-table">
+            <thead>
+              <tr><th>Tijdstip</th><th>Type</th><th>Bandje</th><th>Bron</th><th>Medewerker</th><th>Detail</th></tr>
+            </thead>
+            <tbody></tbody>
+          </table>
+        </div>
       </section>
 
       <!-- Dagoverzicht -->
@@ -148,12 +152,14 @@
           <p id="create-employee-message" class="message hidden"></p>
         </div>
 
-        <table class="data-table" id="employees-table">
-          <thead>
-            <tr><th>Naam</th><th>Rol</th><th>Actief</th><th>Acties</th></tr>
-          </thead>
-          <tbody></tbody>
-        </table>
+        <div class="table-scroll">
+          <table class="data-table" id="employees-table">
+            <thead>
+              <tr><th>Naam</th><th>Rol</th><th>Actief</th><th>Acties</th></tr>
+            </thead>
+            <tbody></tbody>
+          </table>
+        </div>
       </section>
 
       <!-- Systeem -->

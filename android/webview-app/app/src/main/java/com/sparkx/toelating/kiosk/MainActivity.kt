@@ -5,17 +5,12 @@ import android.app.PendingIntent
 import android.content.Context
 import android.content.Intent
 import android.content.SharedPreferences
-import android.graphics.Color
-import android.graphics.drawable.GradientDrawable
 import android.nfc.NfcAdapter
 import android.nfc.Tag
 import android.os.Build
 import android.os.Bundle
 import android.text.InputType
-import android.view.Gravity
 import android.view.View
-import android.view.WindowInsets
-import android.view.WindowInsetsController
 import android.view.WindowManager
 import android.webkit.WebResourceError
 import android.webkit.WebResourceRequest
@@ -23,11 +18,9 @@ import android.webkit.WebSettings
 import android.webkit.WebView
 import android.webkit.WebViewClient
 import android.widget.EditText
-import android.widget.FrameLayout
 import android.widget.LinearLayout
 import android.widget.RadioButton
 import android.widget.RadioGroup
-import android.widget.TextView
 import android.widget.Toast
 import androidx.appcompat.app.AlertDialog
 import androidx.appcompat.app.AppCompatActivity
@@ -45,11 +38,14 @@ private const val NFC_DEDUPE_WINDOW_MS = 2000L
 
 /**
  * Toont het bestaande, al geteste webhostscherm/beheerscherm (zie backend/ +
- * frontend/) als volwaardige Android-app: eigen icoon, geen adresbalk,
- * volledig scherm. De server (FastAPI) blijft draaien op een pc op het
- * lokale netwerk — deze app verandert niets aan hoe inloggen of de
- * status-logica werkt, enkel welk toestel de pagina toont en hoe een scan
- * binnenkomt.
+ * frontend/) als volwaardige Android-app: eigen icoon, geen adresbalk. De
+ * server (FastAPI) blijft draaien op een pc op het lokale netwerk — deze app
+ * verandert niets aan hoe inloggen of de status-logica werkt, enkel welk
+ * toestel de pagina toont en hoe een scan binnenkomt.
+ *
+ * Geen gedwongen volledig scherm (gewoon venster, met status-/navigatiebalk
+ * zichtbaar) en geen zichtbare instellingenknop: een lange druk ergens op
+ * de pagina opent het instellingenscherm (serveradres, host-/beheerscherm).
  *
  * Twee manieren om een bandje te scannen komen hier samen op dezelfde
  * pagina, via dezelfde reader-interface (zie frontend/shared/reader.js):
@@ -91,8 +87,11 @@ class MainActivity : AppCompatActivity() {
             // Server draait lokaal op het netwerk (snel, geen bandbreedte-kosten),
             // dus geen reden om verouderde CSS/JS te blijven tonen na een update.
             settings.cacheMode = WebSettings.LOAD_NO_CACHE
-            isLongClickable = false
-            setOnLongClickListener { true }
+            // Geen zichtbare instellingenknop (die nam ruimte in op het scherm) --
+            // een lange druk ergens op de pagina opent hetzelfde dialoogvenster,
+            // en onderdrukt meteen ook WebView's eigen tekstselectie-contextmenu.
+            isLongClickable = true
+            setOnLongClickListener { showSettingsDialog(); true }
             webViewClient = object : WebViewClient() {
                 override fun onReceivedError(
                     view: WebView?,
@@ -107,33 +106,8 @@ class MainActivity : AppCompatActivity() {
             }
         }
 
-        val settingsButton = TextView(this).apply {
-            text = "⚙"
-            textSize = 18f
-            setTextColor(Color.WHITE)
-            gravity = Gravity.CENTER
-            background = GradientDrawable().apply {
-                shape = GradientDrawable.OVAL
-                setColor(Color.parseColor("#55000000"))
-            }
-            setOnClickListener { showSettingsDialog() }
-        }
-
-        val root = FrameLayout(this).apply {
-            addView(
-                webView,
-                FrameLayout.LayoutParams(FrameLayout.LayoutParams.MATCH_PARENT, FrameLayout.LayoutParams.MATCH_PARENT),
-            )
-            addView(
-                settingsButton,
-                FrameLayout.LayoutParams(dp(40), dp(40), Gravity.BOTTOM or Gravity.END).apply {
-                    setMargins(0, 0, dp(8), dp(8))
-                },
-            )
-        }
-
-        setContentView(root)
-        applyFullscreen()
+        setContentView(webView)
+        window.addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
 
         val savedServer = prefs.getString(KEY_SERVER, null)
         if (savedServer.isNullOrBlank()) {
@@ -141,11 +115,6 @@ class MainActivity : AppCompatActivity() {
         } else {
             loadServer(savedServer, prefs.getString(KEY_SCREEN, SCREEN_HOST) ?: SCREEN_HOST)
         }
-    }
-
-    override fun onWindowFocusChanged(hasFocus: Boolean) {
-        super.onWindowFocusChanged(hasFocus)
-        if (hasFocus) applyFullscreen()
     }
 
     override fun onResume() {
@@ -199,27 +168,6 @@ class MainActivity : AppCompatActivity() {
             "window.ToelatingNativeBridge && window.ToelatingNativeBridge.onScan(${JSONObject.quote(hexId)});",
             null,
         )
-    }
-
-    private fun applyFullscreen() {
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
-            window.setDecorFitsSystemWindows(false)
-            window.insetsController?.let {
-                it.hide(WindowInsets.Type.systemBars())
-                it.systemBarsBehavior = WindowInsetsController.BEHAVIOR_SHOW_TRANSIENT_BARS_BY_SWIPE
-            }
-        } else {
-            @Suppress("DEPRECATION")
-            window.decorView.systemUiVisibility = (
-                View.SYSTEM_UI_FLAG_IMMERSIVE_STICKY
-                    or View.SYSTEM_UI_FLAG_LAYOUT_STABLE
-                    or View.SYSTEM_UI_FLAG_LAYOUT_HIDE_NAVIGATION
-                    or View.SYSTEM_UI_FLAG_LAYOUT_FULLSCREEN
-                    or View.SYSTEM_UI_FLAG_HIDE_NAVIGATION
-                    or View.SYSTEM_UI_FLAG_FULLSCREEN
-                )
-        }
-        window.addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
     }
 
     private fun dp(value: Int): Int = (value * resources.displayMetrics.density).toInt()

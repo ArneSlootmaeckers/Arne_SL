@@ -1,7 +1,8 @@
 html, body {
   width: 100%;
   min-height: 100%;
-  overflow: auto;
+  overflow-x: hidden;
+  overflow-y: auto;
   user-select: text;
 }
 
@@ -9,14 +10,23 @@ html, body {
   min-height: 100vh;
 }
 
+#login-view {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+}
+
 .login-form {
   max-width: 24rem;
-  margin: 15vh auto;
+  width: 100%;
+  margin: 0;
   display: flex;
   flex-direction: column;
   gap: 1rem;
   padding: 2rem;
   text-align: center;
+  box-sizing: border-box;
 }
 
 .login-brand {
@@ -217,10 +227,15 @@ html, body {
   font-weight: 900;
 }
 
+.table-scroll {
+  width: 100%;
+  max-width: 70rem;
+  overflow-x: auto;
+}
+
 .data-table {
   width: 100%;
   border-collapse: collapse;
-  max-width: 70rem;
 }
 
 .data-table th,
