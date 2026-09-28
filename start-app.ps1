@@ -47,7 +47,6 @@ if ($browserPath) {
     $arguments = @(
         "--app=`"$appUrl`"",
         "--no-first-run",
-        "--start-fullscreen",
         "--user-data-dir=`"$profileDir`""
     )
     Start-Process -FilePath $browserPath -ArgumentList $arguments | Out-Null

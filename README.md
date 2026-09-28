@@ -90,10 +90,10 @@ apart voor nodig.
 
 Dubbelklik de snelkoppeling "Toelatingssysteem" op het bureaublad om de
 server te starten (in een apart, geminimaliseerd venster) en meteen het
-hostscherm te openen — in een kiosk-achtig, volledig schermvullend
-browservenster zonder adresbalk/tabbladen (via Chrome of Edge's `--app`-
-en `--start-fullscreen`-modus, als een van beide geïnstalleerd is; anders
-in een gewone browsertab).
+hostscherm te openen — in een gewoon, verplaatsbaar/herschaalbaar
+browservenster zonder adresbalk/tabbladen (via Chrome of Edge's
+`--app`-modus, als een van beide geïnstalleerd is; anders in een gewone
+browsertab).
 
 ### Stoppen
 
