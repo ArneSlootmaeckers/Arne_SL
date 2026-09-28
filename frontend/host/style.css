@@ -81,10 +81,11 @@ html, body {
 .btn {
   flex: 1 1 30%;
   min-width: 26%;
-  font-size: clamp(2rem, 6vw, 4rem);
+  font-size: clamp(1.3rem, 6vw, 4rem);
   font-weight: 900;
-  padding: 2.5rem 1rem;
+  padding: 2.5rem 0.75rem;
   color: white;
+  overflow-wrap: anywhere;
 }
 
 .btn-groen {
