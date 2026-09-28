@@ -15,7 +15,10 @@ if (-not (Test-Path $venvPython)) {
     exit 1
 }
 
-$env:TOELATING_HOST = "127.0.0.1"
+# 0.0.0.0: luister op alle netwerkkaarten, niet enkel deze pc zelf -- nodig
+# zodra iets anders dan deze pc (bv. de Android-app op een telefoon) de
+# server over het lokale netwerk moet kunnen bereiken.
+$env:TOELATING_HOST = "0.0.0.0"
 $serverProcess = Start-Process -FilePath $venvPython -ArgumentList "run.py" `
     -WorkingDirectory $backendDir -WindowStyle Minimized -PassThru
 
