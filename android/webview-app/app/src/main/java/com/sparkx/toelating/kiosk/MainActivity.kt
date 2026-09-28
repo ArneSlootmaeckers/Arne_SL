@@ -147,6 +147,7 @@ class MainActivity : AppCompatActivity() {
     private var connectionErrorDialog: AlertDialog? = null
     private var pageLoaded = false
     private var showingFallbackPage = false
+    private var settingsDialogShowing = false
 
     @SuppressLint("SetJavaScriptEnabled")
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -367,6 +368,7 @@ class MainActivity : AppCompatActivity() {
     /** Zelfde in code opgebouwde Sparkx-stijl als showConnectionError, i.p.v.
      * het standaard grijze AlertDialog-uiterlijk. */
     private fun showSettingsDialog(forceShow: Boolean = false) {
+        settingsDialogShowing = true
         val panel = LinearLayout(this).apply {
             orientation = LinearLayout.VERTICAL
             setPadding(dp(28), dp(28), dp(28), dp(24))
@@ -490,6 +492,10 @@ class MainActivity : AppCompatActivity() {
             .setView(panel)
             .setCancelable(!forceShow)
             .create()
+        // Ongeacht hoe dit venster sluit (Opslaan, Annuleer, of terugknop/
+        // buiten tikken bij niet-verplicht venster): de achtergrondcontrole
+        // mag pas weer een "Geen verbinding"-venster tonen vanaf hier.
+        dialog.setOnDismissListener { settingsDialogShowing = false }
         dialog.window?.setBackgroundDrawableResource(android.R.color.transparent)
         dialog.show()
     }
@@ -510,7 +516,12 @@ class MainActivity : AppCompatActivity() {
      * (donker petrolblauw paneel, geel-oranje verloopaccent -- zie
      * frontend/shared/style-base.css voor dezelfde kleuren). */
     private fun showConnectionError() {
-        if (connectionErrorShowing) return
+        // Zolang het instellingenvenster open staat (bv. net geopend vanuit
+        // dit venster om het serveradres te wijzigen) mag de achtergrond-
+        // controle dit venster niet erover-tonen: de server is uiteraard nog
+        // onbereikbaar zolang het juiste adres nog niet is ingevuld en
+        // opgeslagen -- personeel moet hier onbeperkt de tijd voor krijgen.
+        if (connectionErrorShowing || settingsDialogShowing) return
         connectionErrorShowing = true
 
         val panel = LinearLayout(this).apply {
@@ -617,6 +628,11 @@ class MainActivity : AppCompatActivity() {
                     connectionErrorShowing = false
                     connectionErrorDialog = null
                     consecutiveHealthFailures = 0
+                    // Meteen al aan, niet pas in showSettingsDialog(): anders
+                    // kan de achtergrondcontrole in het (korte) gaatje tussen
+                    // dit dismiss() en het instellingenvenster alsnog dit
+                    // venster heropenen.
+                    settingsDialogShowing = true
                     // Pas het instellingenvenster openen nadat dit venster
                     // écht weg is, anders overlappen de twee vensters even
                     // zichtbaar (dismiss() speelt nog een afsluitanimatie af).
