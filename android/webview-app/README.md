@@ -58,6 +58,11 @@ Bij de eerste opstart vraagt de app om:
 Dit onthoudt de app nadien. Om het later te wijzigen: tik op het kleine
 tandwiel-icoontje rechtsonder in beeld.
 
+De WebView laadt elke pagina altijd vers op (geen cache) — een aanpassing
+aan `frontend/` op de server verschijnt dus meteen bij de volgende keer
+openen, zonder dat je de app zelf opnieuw moet installeren of de cache
+handmatig moet wissen.
+
 ## NFC scannen met de telefoon
 
 Bandje tegen de achterkant van de telefoon houden is genoeg: de app leest

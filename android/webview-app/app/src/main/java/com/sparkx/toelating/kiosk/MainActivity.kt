@@ -19,6 +19,7 @@ import android.view.WindowInsetsController
 import android.view.WindowManager
 import android.webkit.WebResourceError
 import android.webkit.WebResourceRequest
+import android.webkit.WebSettings
 import android.webkit.WebView
 import android.webkit.WebViewClient
 import android.widget.EditText
@@ -87,6 +88,9 @@ class MainActivity : AppCompatActivity() {
             settings.loadWithOverviewMode = true
             settings.setSupportZoom(false)
             settings.builtInZoomControls = false
+            // Server draait lokaal op het netwerk (snel, geen bandbreedte-kosten),
+            // dus geen reden om verouderde CSS/JS te blijven tonen na een update.
+            settings.cacheMode = WebSettings.LOAD_NO_CACHE
             isLongClickable = false
             setOnLongClickListener { true }
             webViewClient = object : WebViewClient() {
