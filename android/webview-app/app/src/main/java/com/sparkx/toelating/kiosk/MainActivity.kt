@@ -12,6 +12,7 @@ import android.os.Bundle
 import android.os.Handler
 import android.os.Looper
 import android.text.InputType
+import android.view.MotionEvent
 import android.view.View
 import android.view.WindowManager
 import android.webkit.WebResourceError
@@ -49,6 +50,10 @@ private const val HEALTH_CHECK_INTERVAL_MS = 5000L
 private const val HEALTH_CHECK_TIMEOUT_MS = 4000
 private const val HEALTH_CHECK_FAILURES_BEFORE_ERROR = 3
 
+// Bewust lang: een gewone lange druk (~0,5s) is te makkelijk per ongeluk te
+// raken tijdens normaal gebruik van de knoppen op de pagina.
+private const val SETTINGS_HOLD_DURATION_MS = 10000L
+
 /**
  * Toont het bestaande, al geteste webhostscherm/beheerscherm (zie backend/ +
  * frontend/) als volwaardige Android-app: eigen icoon, geen adresbalk. De
@@ -57,8 +62,10 @@ private const val HEALTH_CHECK_FAILURES_BEFORE_ERROR = 3
  * toestel de pagina toont en hoe een scan binnenkomt.
  *
  * Geen gedwongen volledig scherm (gewoon venster, met status-/navigatiebalk
- * zichtbaar) en geen zichtbare instellingenknop: een lange druk ergens op
- * de pagina opent het instellingenscherm (serveradres, host-/beheerscherm).
+ * zichtbaar) en geen zichtbare instellingenknop: het scherm 10 seconden
+ * ononderbroken ingedrukt houden (SETTINGS_HOLD_DURATION_MS) opent het
+ * instellingenscherm (serveradres, host-/beheerscherm) -- bewust lang, zodat
+ * dit niet per ongeluk gebeurt tijdens normaal gebruik van de knoppen.
  *
  * Twee manieren om een bandje te scannen komen hier samen op dezelfde
  * pagina, via dezelfde reader-interface (zie frontend/shared/reader.js):
@@ -92,6 +99,7 @@ class MainActivity : AppCompatActivity() {
     private var nfcAdapter: NfcAdapter? = null
     private var lastNfcTagId: String? = null
     private var lastNfcTagAtMs: Long = 0L
+    private var settingsHoldRunnable: Runnable? = null
 
     private val mainHandler = Handler(Looper.getMainLooper())
     private val healthCheckExecutor: ExecutorService = Executors.newSingleThreadExecutor()
@@ -116,10 +124,15 @@ class MainActivity : AppCompatActivity() {
             // dus geen reden om verouderde CSS/JS te blijven tonen na een update.
             settings.cacheMode = WebSettings.LOAD_NO_CACHE
             // Geen zichtbare instellingenknop (die nam ruimte in op het scherm) --
-            // een lange druk ergens op de pagina opent hetzelfde dialoogvenster,
-            // en onderdrukt meteen ook WebView's eigen tekstselectie-contextmenu.
+            // maar een gewone lange druk (~0,5s) is te makkelijk per ongeluk te
+            // raken tijdens normaal gebruik (bv. een knop iets te lang ingedrukt
+            // houden), dus dit dialoogvenster opent pas na SETTINGS_HOLD_DURATION_MS
+            // (zie setOnTouchListener/handleSettingsHoldTouch hieronder). Deze
+            // listener zelf onderdrukt enkel WebView's eigen ~0,5s-tekstselectie-
+            // contextmenu.
             isLongClickable = true
-            setOnLongClickListener { showSettingsDialog(); true }
+            setOnLongClickListener { true }
+            setOnTouchListener { _, event -> handleSettingsHoldTouch(event); false }
             webViewClient = object : WebViewClient() {
                 override fun onReceivedError(
                     view: WebView?,
@@ -203,6 +216,23 @@ class MainActivity : AppCompatActivity() {
             "window.ToelatingNativeBridge && window.ToelatingNativeBridge.onScan(${JSONObject.quote(hexId)});",
             null,
         )
+    }
+
+    /** Opent de instellingen pas nadat het scherm SETTINGS_HOLD_DURATION_MS
+     * ononderbroken ingedrukt is gehouden -- lost het `false` op zodat de
+     * WebView aanraakevents gewoon zelf blijft verwerken (scrollen, knoppen). */
+    private fun handleSettingsHoldTouch(event: MotionEvent) {
+        when (event.actionMasked) {
+            MotionEvent.ACTION_DOWN -> {
+                val runnable = Runnable { showSettingsDialog() }
+                settingsHoldRunnable = runnable
+                mainHandler.postDelayed(runnable, SETTINGS_HOLD_DURATION_MS)
+            }
+            MotionEvent.ACTION_UP, MotionEvent.ACTION_CANCEL -> {
+                settingsHoldRunnable?.let { mainHandler.removeCallbacks(it) }
+                settingsHoldRunnable = null
+            }
+        }
     }
 
     private fun startHealthChecks() {

@@ -59,8 +59,10 @@ Bij de eerste opstart vraagt de app om:
 2. **Hostscherm of Beheerscherm**: welke van de twee pagina's deze app
    toont.
 
-Dit onthoudt de app nadien. Om het later te wijzigen: **houd je vinger een
-seconde ergens op het scherm** (geen apart knopje meer — dat nam ruimte in
+Dit onthoudt de app nadien. Om het later te wijzigen: **houd je vinger 10
+seconden ononderbroken ergens op het scherm** (bewust lang, zodat dit niet
+per ongeluk gebeurt tijdens normaal gebruik — geen apart knopje meer, dat nam
+ruimte in
 beeld in). De app opent zonder gedwongen volledig scherm; de status-/
 navigatiebalk van het toestel blijft gewoon zichtbaar.
 
