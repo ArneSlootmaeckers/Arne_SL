@@ -63,8 +63,8 @@ private const val NFC_DEDUPE_WINDOW_MS = 2000L
  *   backend/app/services/common.py: get_or_create_wristband), dus de
  *   hardware-UID als ID gebruiken vergt geen vooraf ingestelde lijst.
  *
- * Geen van beide input-paden is met echte hardware getest vanuit deze
- * omgeving (geen Android-toestel, geen NFC-lezer beschikbaar hier).
+ * De NFC-chip-scan is bevestigd werkend met een echt toestel en een echt
+ * tagje. Het externe USB/Bluetooth-lezerpad is niet apart getest.
  */
 class MainActivity : AppCompatActivity() {
 

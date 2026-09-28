@@ -13,16 +13,16 @@ Wat dit dus **niet** is: geen standalone app die zelf de server draait
 stap: dezelfde functionaliteit en dezelfde server, gewoon met een beter
 uiterlijk en een ingebouwde scanner op een telefoon/tablet.
 
-## Belangrijk: dit is geschreven maar niet gecompileerd
+## Status: gebouwd en werkend bevestigd
 
 Deze omgeving heeft geen toegang tot het Android SDK (Google's
-downloadservers zijn geblokkeerd — zie `../README.md`), dus de code hier is
-zorgvuldig met de hand nagekeken tegen de Android-API's, maar **nooit
-gebouwd of getest**. De eerste keer dat je dit opent in Android Studio is
-dus ook de eerste echte compilatie. Kleine build-foutjes (een verkeerde
-versiecombinatie, een ontbrekende dependency) zijn mogelijk — meld ze en ik
-los ze op, maar reken er niet op dat het gegarandeerd in één keer lukt zoals
-bij de Windows/backend-kant (die wel volledig getest is).
+downloadservers zijn geblokkeerd — zie `../README.md`), dus de code kon hier
+enkel met de hand nagekeken worden, niet gecompileerd. Ze is intussen wel
+echt gebouwd in Android Studio en op een fysiek toestel uitgeprobeerd:
+verbinding met de server, hostscherm en de NFC-scan met een echt bandje
+werken. Bij een nieuwe checkout/wijziging kan een eerste Gradle-sync nog
+steeds een versie-update voorstellen (AGP/Kotlin) — gewoon accepteren, dat
+is normaal.
 
 ## Bouwen en installeren
 
@@ -76,11 +76,8 @@ Aandachtspunten:
 - Zolang het bandje tegen het toestel blijft liggen, negeert de app
   herhaalde detecties van hetzelfde tagje twee seconden lang, om geen
   dubbele scans te sturen.
-- **Niet met echte hardware getest** — dit is geschreven en met de hand
-  nagekeken tegen Android's NFC-API's (dezelfde beperking als de rest van
-  deze app, zie hierboven), maar nooit met een echt toestel of een echt
-  NFC-tagje uitgeprobeerd. Test dit zeker voor je hierop vertrouwt tijdens
-  een echte opendeurdag.
+- **Bevestigd werkend met een echt toestel en een echt NFC-bandje**
+  tijdens de eerste installatie.
 
 ## Nog steeds ondersteund: externe NFC-lezer
 
