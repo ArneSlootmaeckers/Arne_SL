@@ -24,6 +24,10 @@ werken. Bij een nieuwe checkout/wijziging kan een eerste Gradle-sync nog
 steeds een versie-update voorstellen (AGP/Kotlin) — gewoon accepteren, dat
 is normaal.
 
+De verbindingscontrole hierboven (elke 5s /api/health checken) is nieuw en
+nog niet apart op een fysiek toestel uitgeprobeerd — test dit door de
+server even te stoppen terwijl de app openstaat, voor je hierop vertrouwt.
+
 ## Bouwen en installeren
 
 Nodig: [Android Studio](https://developer.android.com/studio) (gratis), op
@@ -64,6 +68,16 @@ De WebView laadt elke pagina altijd vers op (geen cache) — een aanpassing
 aan `frontend/` op de server verschijnt dus meteen bij de volgende keer
 openen, zonder dat je de app zelf opnieuw moet installeren of de cache
 handmatig moet wissen.
+
+## Bij verbindingsverlies
+
+De pagina zelf toont al een rode balk als de server onbereikbaar is (zelfde
+gedrag als in een browser), maar dat is enkel een bannertje op een verder
+onveranderd scherm — op een telefoon valt dat makkelijk niet op, en het
+scherm kan zo "bevroren" aanvoelen. Deze app controleert daarom zelf, apart
+van de pagina, elke 5 seconden of de server bereikbaar is; na 3 mislukkingen
+op rij (~15 seconden) verschijnt een duidelijk "Geen verbinding"-venster met
+**Instellingen** (serveradres wijzigen) en **Opnieuw proberen**.
 
 ## NFC scannen met de telefoon
 

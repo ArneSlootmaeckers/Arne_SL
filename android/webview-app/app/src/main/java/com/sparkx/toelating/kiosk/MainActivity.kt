@@ -9,6 +9,8 @@ import android.nfc.NfcAdapter
 import android.nfc.Tag
 import android.os.Build
 import android.os.Bundle
+import android.os.Handler
+import android.os.Looper
 import android.text.InputType
 import android.view.View
 import android.view.WindowManager
@@ -25,6 +27,10 @@ import android.widget.Toast
 import androidx.appcompat.app.AlertDialog
 import androidx.appcompat.app.AppCompatActivity
 import org.json.JSONObject
+import java.net.HttpURLConnection
+import java.net.URL
+import java.util.concurrent.ExecutorService
+import java.util.concurrent.Executors
 
 private const val PREFS_NAME = "toelating_kiosk"
 private const val KEY_SERVER = "server_address"
@@ -35,6 +41,13 @@ private const val SCREEN_ADMIN = "/admin/"
 // Zelfde tagje binnen dit venster genegeerd: Android's foreground dispatch kan
 // meerdere keren afvuren zolang het bandje tegen het toestel blijft liggen.
 private const val NFC_DEDUPE_WINDOW_MS = 2000L
+
+// Hoe vaak (en na hoeveel mislukkingen op rij) een verloren serververbinding
+// gedetecteerd wordt, los van de pagina's eigen (JS-only) verbindingsbanner --
+// zie de klasse-KDoc hieronder voor waarom dit apart, native moet gebeuren.
+private const val HEALTH_CHECK_INTERVAL_MS = 5000L
+private const val HEALTH_CHECK_TIMEOUT_MS = 4000
+private const val HEALTH_CHECK_FAILURES_BEFORE_ERROR = 3
 
 /**
  * Toont het bestaande, al geteste webhostscherm/beheerscherm (zie backend/ +
@@ -62,6 +75,15 @@ private const val NFC_DEDUPE_WINDOW_MS = 2000L
  *
  * De NFC-chip-scan is bevestigd werkend met een echt toestel en een echt
  * tagje. Het externe USB/Bluetooth-lezerpad is niet apart getest.
+ *
+ * Verbindingsverlies: de pagina zelf toont al een banner via haar eigen
+ * (JavaScript-only) polling (frontend/shared/api.js: startHealthPolling) --
+ * maar dat blijft een passieve banner op een verder ongewijzigd scherm, wat
+ * op een telefoon makkelijk over het hoofd gezien wordt of "bevroren" aanvoelt.
+ * Deze klasse doet daarom zijn eigen, onafhankelijke polling van /api/health
+ * (in onResume/onPause), en toont na een paar mislukkingen op rij hetzelfde
+ * "Geen verbinding"-dialoogvenster als bij een mislukte eerste keer laden --
+ * een duidelijk, actief signaal in plaats van enkel een bannertje.
  */
 class MainActivity : AppCompatActivity() {
 
@@ -70,6 +92,12 @@ class MainActivity : AppCompatActivity() {
     private var nfcAdapter: NfcAdapter? = null
     private var lastNfcTagId: String? = null
     private var lastNfcTagAtMs: Long = 0L
+
+    private val mainHandler = Handler(Looper.getMainLooper())
+    private val healthCheckExecutor: ExecutorService = Executors.newSingleThreadExecutor()
+    private var healthCheckRunnable: Runnable? = null
+    private var consecutiveHealthFailures = 0
+    private var connectionErrorShowing = false
 
     @SuppressLint("SetJavaScriptEnabled")
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -119,6 +147,7 @@ class MainActivity : AppCompatActivity() {
 
     override fun onResume() {
         super.onResume()
+        startHealthChecks()
         val adapter = nfcAdapter ?: return
         if (!adapter.isEnabled) {
             Toast.makeText(
@@ -140,7 +169,13 @@ class MainActivity : AppCompatActivity() {
 
     override fun onPause() {
         super.onPause()
+        stopHealthChecks()
         nfcAdapter?.disableForegroundDispatch(this)
+    }
+
+    override fun onDestroy() {
+        super.onDestroy()
+        healthCheckExecutor.shutdown()
     }
 
     override fun onNewIntent(intent: Intent) {
@@ -168,6 +203,65 @@ class MainActivity : AppCompatActivity() {
             "window.ToelatingNativeBridge && window.ToelatingNativeBridge.onScan(${JSONObject.quote(hexId)});",
             null,
         )
+    }
+
+    private fun startHealthChecks() {
+        stopHealthChecks()
+        val runnable = object : Runnable {
+            override fun run() {
+                checkHealthOnce()
+                mainHandler.postDelayed(this, HEALTH_CHECK_INTERVAL_MS)
+            }
+        }
+        healthCheckRunnable = runnable
+        mainHandler.postDelayed(runnable, HEALTH_CHECK_INTERVAL_MS)
+    }
+
+    private fun stopHealthChecks() {
+        healthCheckRunnable?.let { mainHandler.removeCallbacks(it) }
+        healthCheckRunnable = null
+    }
+
+    private fun checkHealthOnce() {
+        val server = prefs.getString(KEY_SERVER, null)
+        if (server.isNullOrBlank()) return
+        val healthUrl = buildHealthUrl(server)
+        healthCheckExecutor.execute {
+            val reachable = isServerReachable(healthUrl)
+            mainHandler.post { onHealthCheckResult(reachable) }
+        }
+    }
+
+    private fun buildHealthUrl(address: String): String {
+        val clean = address.trim().removeSuffix("/")
+        val base = if (clean.startsWith("http://") || clean.startsWith("https://")) clean else "http://$clean"
+        return "$base/api/health"
+    }
+
+    private fun isServerReachable(healthUrl: String): Boolean {
+        var connection: HttpURLConnection? = null
+        return try {
+            connection = URL(healthUrl).openConnection() as HttpURLConnection
+            connection.connectTimeout = HEALTH_CHECK_TIMEOUT_MS
+            connection.readTimeout = HEALTH_CHECK_TIMEOUT_MS
+            connection.requestMethod = "GET"
+            connection.responseCode in 200..299
+        } catch (e: Exception) {
+            false
+        } finally {
+            connection?.disconnect()
+        }
+    }
+
+    private fun onHealthCheckResult(reachable: Boolean) {
+        if (reachable) {
+            consecutiveHealthFailures = 0
+            return
+        }
+        consecutiveHealthFailures++
+        if (consecutiveHealthFailures >= HEALTH_CHECK_FAILURES_BEFORE_ERROR && !connectionErrorShowing) {
+            showConnectionError()
+        }
     }
 
     private fun dp(value: Int): Int = (value * resources.displayMetrics.density).toInt()
@@ -226,14 +320,22 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun showConnectionError() {
+        if (connectionErrorShowing) return
+        connectionErrorShowing = true
         AlertDialog.Builder(this)
             .setTitle("Geen verbinding")
             .setMessage(
                 "Kan de server niet bereiken. Controleer of de pc aan staat, " +
                     "de server draait, en het IP-adres klopt.",
             )
-            .setPositiveButton("Instellingen") { _, _ -> showSettingsDialog(forceShow = true) }
+            .setPositiveButton("Instellingen") { _, _ ->
+                connectionErrorShowing = false
+                consecutiveHealthFailures = 0
+                showSettingsDialog(forceShow = true)
+            }
             .setNegativeButton("Opnieuw proberen") { _, _ ->
+                connectionErrorShowing = false
+                consecutiveHealthFailures = 0
                 loadServer(prefs.getString(KEY_SERVER, "") ?: "", prefs.getString(KEY_SCREEN, SCREEN_HOST) ?: SCREEN_HOST)
             }
             .setCancelable(false)
