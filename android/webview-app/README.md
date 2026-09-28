@@ -83,9 +83,13 @@ bij de **eerste mislukking** een duidelijk "Geen verbinding"-venster met
 zonder wachttijd of aantal pogingen, want een onbereikbare server mag bij
 dit systeem nooit onopgemerkt blijven.
 
-Dat venster is in de eigen Sparkx-huisstijl opgebouwd (donker petrolblauw
-paneel, geel-oranje verloopknop — dezelfde kleuren als de webpagina zelf),
-niet het standaard grijze Android-dialoogvenster.
+Dat venster (en het serverinstellingen-venster erachter) is in de eigen
+Sparkx-huisstijl opgebouwd (donker petrolblauw paneel, geel-oranje
+verloopknop — dezelfde kleuren als de webpagina zelf), niet het standaard
+grijze Android-dialoogvenster. De achterliggende WebView zelf toont bij een
+mislukte paginalading ook geen Android/Chromium-standaardfoutpagina (wit,
+met groen robotje) meer, maar een lege pagina in dezelfde donkere kleur —
+die was anders rond de randen van het venster zichtbaar gebleven.
 
 Die controle blijft ook doorlopen terwijl dat venster open staat. Komt de
 server terug (bv. na een korte wifi-onderbreking die zichzelf herstelt, of

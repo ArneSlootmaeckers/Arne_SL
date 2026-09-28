@@ -5,6 +5,7 @@ import android.app.PendingIntent
 import android.content.Context
 import android.content.Intent
 import android.content.SharedPreferences
+import android.content.res.ColorStateList
 import android.graphics.Color
 import android.graphics.Typeface
 import android.graphics.drawable.GradientDrawable
@@ -74,6 +75,15 @@ private const val COLOR_ROOD = "#b3221c"
 private const val COLOR_SPARKX_GEEL = "#ffd400"
 private const val COLOR_SPARKX_ORANJE = "#f7941d"
 
+// Vervangt Android/Chromium's eigen (witte, met groen robotje) foutpagina
+// zodra een paginalading mislukt -- zonder dit blijft die lelijke standaard-
+// pagina zichtbaar rond de randen van het "Geen verbinding"-venster.
+private const val FALLBACK_PAGE_HTML =
+    "<!doctype html><html><head><meta name=\"viewport\" " +
+        "content=\"width=device-width, initial-scale=1\"><style>html,body{" +
+        "margin:0;height:100%;background:$COLOR_ACHTERGROND_DIEP;}</style>" +
+        "</head><body></body></html>"
+
 /**
  * Toont het bestaande, al geteste webhostscherm/beheerscherm (zie backend/ +
  * frontend/) als volwaardige Android-app: eigen icoon, geen adresbalk. De
@@ -136,6 +146,7 @@ class MainActivity : AppCompatActivity() {
     private var connectionErrorShowing = false
     private var connectionErrorDialog: AlertDialog? = null
     private var pageLoaded = false
+    private var showingFallbackPage = false
 
     @SuppressLint("SetJavaScriptEnabled")
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -172,6 +183,8 @@ class MainActivity : AppCompatActivity() {
                     super.onReceivedError(view, request, error)
                     if (request?.isForMainFrame == true) {
                         pageLoaded = false
+                        showingFallbackPage = true
+                        view?.loadDataWithBaseURL(null, FALLBACK_PAGE_HTML, "text/html", "UTF-8", null)
                         showConnectionError()
                     }
                 }
@@ -334,39 +347,87 @@ class MainActivity : AppCompatActivity() {
     }
 
     /** De server is weer bereikbaar terwijl het "Geen verbinding"-venster nog
-     * open stond -- sluit het vanzelf, zonder dat personeel moet tikken. Was
-     * de pagina zelf nooit succesvol geladen (bv. de app startte tijdens de
-     * storing), dan staat er nog niets bruikbaars op het scherm en laadt dit
-     * de pagina alsnog; anders bleef de pagina + haar eigen JS-status gewoon
-     * intact, dus is enkel het venster wegnemen genoeg. */
+     * open stond -- sluit het vanzelf, zonder dat personeel moet tikken. Stond
+     * de vervangende foutpagina nog op het scherm (nooit succesvol geladen,
+     * of de app startte tijdens de storing), dan laadt dit de echte pagina
+     * alsnog; anders bleef de pagina + haar eigen JS-status gewoon intact,
+     * dus is enkel het venster wegnemen genoeg. */
     private fun recoverFromConnectionError() {
         connectionErrorDialog?.dismiss()
         connectionErrorDialog = null
         connectionErrorShowing = false
         Toast.makeText(this, "Verbinding hersteld", Toast.LENGTH_SHORT).show()
-        if (!pageLoaded) {
+        if (!pageLoaded || showingFallbackPage) {
             loadServer(prefs.getString(KEY_SERVER, "") ?: "", prefs.getString(KEY_SCREEN, SCREEN_HOST) ?: SCREEN_HOST)
         }
     }
 
     private fun dp(value: Int): Int = (value * resources.displayMetrics.density).toInt()
 
+    /** Zelfde in code opgebouwde Sparkx-stijl als showConnectionError, i.p.v.
+     * het standaard grijze AlertDialog-uiterlijk. */
     private fun showSettingsDialog(forceShow: Boolean = false) {
-        val container = LinearLayout(this).apply {
+        val panel = LinearLayout(this).apply {
             orientation = LinearLayout.VERTICAL
-            setPadding(dp(24), dp(16), dp(24), dp(16))
+            setPadding(dp(28), dp(28), dp(28), dp(24))
+            background = GradientDrawable().apply {
+                cornerRadius = dp(20).toFloat()
+                setColor(Color.parseColor(COLOR_ACHTERGROND_PANEEL))
+            }
         }
+
+        panel.addView(
+            TextView(this).apply {
+                text = "Serverinstellingen"
+                textSize = 20f
+                setTextColor(Color.WHITE)
+                typeface = Typeface.DEFAULT_BOLD
+                gravity = Gravity.CENTER
+                layoutParams = LinearLayout.LayoutParams(
+                    LinearLayout.LayoutParams.MATCH_PARENT,
+                    LinearLayout.LayoutParams.WRAP_CONTENT,
+                ).apply { bottomMargin = dp(18) }
+            },
+        )
 
         val serverInput = EditText(this).apply {
             hint = "bv. 192.168.1.50:8000"
+            setHintTextColor(Color.parseColor(COLOR_TEKST_GEDEMPT))
+            setTextColor(Color.WHITE)
             inputType = InputType.TYPE_CLASS_TEXT or InputType.TYPE_TEXT_VARIATION_URI
             setText(prefs.getString(KEY_SERVER, ""))
+            setPadding(dp(16), dp(14), dp(16), dp(14))
+            background = GradientDrawable().apply {
+                cornerRadius = dp(12).toFloat()
+                setColor(Color.parseColor(COLOR_ACHTERGROND_DIEP))
+            }
+            layoutParams = LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.MATCH_PARENT,
+                LinearLayout.LayoutParams.WRAP_CONTENT,
+            ).apply { bottomMargin = dp(18) }
         }
-        container.addView(serverInput)
+        panel.addView(serverInput)
 
-        val radioGroup = RadioGroup(this).apply { orientation = RadioGroup.VERTICAL }
-        val hostRadio = RadioButton(this).apply { text = "Hostscherm"; id = View.generateViewId() }
-        val adminRadio = RadioButton(this).apply { text = "Beheerscherm"; id = View.generateViewId() }
+        val accentTint = ColorStateList.valueOf(Color.parseColor(COLOR_SPARKX_GEEL))
+        val radioGroup = RadioGroup(this).apply {
+            orientation = RadioGroup.VERTICAL
+            layoutParams = LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.WRAP_CONTENT,
+                LinearLayout.LayoutParams.WRAP_CONTENT,
+            ).apply { bottomMargin = dp(22) }
+        }
+        val hostRadio = RadioButton(this).apply {
+            text = "Hostscherm"
+            setTextColor(Color.WHITE)
+            buttonTintList = accentTint
+            id = View.generateViewId()
+        }
+        val adminRadio = RadioButton(this).apply {
+            text = "Beheerscherm"
+            setTextColor(Color.WHITE)
+            buttonTintList = accentTint
+            id = View.generateViewId()
+        }
         radioGroup.addView(hostRadio)
         radioGroup.addView(adminRadio)
         if (prefs.getString(KEY_SCREEN, SCREEN_HOST) == SCREEN_ADMIN) {
@@ -374,27 +435,67 @@ class MainActivity : AppCompatActivity() {
         } else {
             hostRadio.isChecked = true
         }
-        container.addView(radioGroup)
+        panel.addView(radioGroup)
 
-        val dialogBuilder = AlertDialog.Builder(this)
-            .setTitle("Serverinstellingen")
-            .setView(container)
-            .setPositiveButton("Opslaan") { _, _ ->
-                val address = serverInput.text.toString().trim()
-                val screenPath = if (adminRadio.isChecked) SCREEN_ADMIN else SCREEN_HOST
-                prefs.edit().putString(KEY_SERVER, address).putString(KEY_SCREEN, screenPath).apply()
-                loadServer(address, screenPath)
-            }
-            .setCancelable(!forceShow)
+        lateinit var dialog: AlertDialog
+
+        panel.addView(
+            Button(this).apply {
+                text = "Opslaan"
+                isAllCaps = false
+                textSize = 16f
+                typeface = Typeface.DEFAULT_BOLD
+                setTextColor(Color.parseColor(COLOR_ACHTERGROND_DIEP))
+                setPadding(dp(20), dp(14), dp(20), dp(14))
+                background = GradientDrawable(
+                    GradientDrawable.Orientation.TL_BR,
+                    intArrayOf(Color.parseColor(COLOR_SPARKX_GEEL), Color.parseColor(COLOR_SPARKX_ORANJE)),
+                ).apply { cornerRadius = dp(14).toFloat() }
+                layoutParams = LinearLayout.LayoutParams(
+                    LinearLayout.LayoutParams.MATCH_PARENT,
+                    LinearLayout.LayoutParams.WRAP_CONTENT,
+                ).apply { if (!forceShow) bottomMargin = dp(10) }
+                setOnClickListener {
+                    val address = serverInput.text.toString().trim()
+                    val screenPath = if (adminRadio.isChecked) SCREEN_ADMIN else SCREEN_HOST
+                    prefs.edit().putString(KEY_SERVER, address).putString(KEY_SCREEN, screenPath).apply()
+                    dialog.dismiss()
+                    loadServer(address, screenPath)
+                }
+            },
+        )
 
         if (!forceShow) {
-            dialogBuilder.setNegativeButton("Annuleer", null)
+            panel.addView(
+                Button(this).apply {
+                    text = "Annuleer"
+                    isAllCaps = false
+                    textSize = 16f
+                    setTextColor(Color.parseColor(COLOR_TEKST_GEDEMPT))
+                    setPadding(dp(20), dp(12), dp(20), dp(12))
+                    background = GradientDrawable().apply {
+                        cornerRadius = dp(14).toFloat()
+                        setColor(Color.TRANSPARENT)
+                    }
+                    layoutParams = LinearLayout.LayoutParams(
+                        LinearLayout.LayoutParams.MATCH_PARENT,
+                        LinearLayout.LayoutParams.WRAP_CONTENT,
+                    )
+                    setOnClickListener { dialog.dismiss() }
+                },
+            )
         }
 
-        dialogBuilder.show()
+        dialog = AlertDialog.Builder(this)
+            .setView(panel)
+            .setCancelable(!forceShow)
+            .create()
+        dialog.window?.setBackgroundDrawableResource(android.R.color.transparent)
+        dialog.show()
     }
 
     private fun loadServer(address: String, screenPath: String) {
+        showingFallbackPage = false
         val cleanAddress = address.trim().removeSuffix("/")
         val url = if (cleanAddress.startsWith("http://") || cleanAddress.startsWith("https://")) {
             "$cleanAddress$screenPath"
@@ -485,10 +586,10 @@ class MainActivity : AppCompatActivity() {
                     LinearLayout.LayoutParams.WRAP_CONTENT,
                 ).apply { bottomMargin = dp(10) }
                 setOnClickListener {
-                    dialog.dismiss()
                     connectionErrorShowing = false
                     connectionErrorDialog = null
                     consecutiveHealthFailures = 0
+                    dialog.dismiss()
                     loadServer(
                         prefs.getString(KEY_SERVER, "") ?: "",
                         prefs.getString(KEY_SCREEN, SCREEN_HOST) ?: SCREEN_HOST,
@@ -513,11 +614,14 @@ class MainActivity : AppCompatActivity() {
                     LinearLayout.LayoutParams.WRAP_CONTENT,
                 )
                 setOnClickListener {
-                    dialog.dismiss()
                     connectionErrorShowing = false
                     connectionErrorDialog = null
                     consecutiveHealthFailures = 0
-                    showSettingsDialog(forceShow = true)
+                    // Pas het instellingenvenster openen nadat dit venster
+                    // écht weg is, anders overlappen de twee vensters even
+                    // zichtbaar (dismiss() speelt nog een afsluitanimatie af).
+                    dialog.setOnDismissListener { showSettingsDialog(forceShow = true) }
+                    dialog.dismiss()
                 }
             },
         )
