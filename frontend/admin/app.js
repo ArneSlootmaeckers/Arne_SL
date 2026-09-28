@@ -108,7 +108,12 @@ function showAdmin(employee) {
   localStorage.setItem(EMPLOYEE_LABEL_KEY, JSON.stringify(employee));
   els.loginView.classList.add("hidden");
   els.adminView.classList.remove("hidden");
-  els.userLabel.textContent = `${employee.name} (${employee.role})`;
+  els.userLabel.textContent = "";
+  els.userLabel.append(document.createTextNode(`${employee.name} `));
+  const roleSpan = document.createElement("span");
+  roleSpan.className = "user-role";
+  roleSpan.textContent = `(${employee.role})`;
+  els.userLabel.append(roleSpan);
 
   for (const tab of ["medewerkers", "systeem"]) {
     const btn = els.tabButtons.find((b) => b.dataset.tab === tab);
@@ -415,7 +420,8 @@ document.querySelector('.tab-btn[data-tab="medewerkers"]').addEventListener("cli
 els.shutdownBtn.addEventListener("click", async () => {
   const confirmed = confirm(
     "Weet je zeker dat je de applicatie wil afsluiten? Het host- en " +
-      "beheerscherm werken dan niet meer tot de server manueel herstart wordt."
+      "beheerscherm werken dan niet meer, ook niet op de telefoon. " +
+      "Enkel via de pc zelf terug op te starten — dit kan niet vanaf de telefoon."
   );
   if (!confirmed) return;
 
