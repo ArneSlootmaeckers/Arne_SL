@@ -70,8 +70,10 @@ html, body {
 
 .admin-header {
   display: flex;
+  flex-wrap: wrap;
   justify-content: space-between;
   align-items: center;
+  gap: 0.5rem;
   padding: 1rem 1.5rem;
   background: var(--kleur-achtergrond-diep);
   border-bottom: 1px solid var(--kleur-achtergrond-paneel);
@@ -95,6 +97,7 @@ html, body {
 
 .admin-header-user {
   display: flex;
+  flex-wrap: wrap;
   align-items: center;
   gap: 1rem;
 }
@@ -168,13 +171,10 @@ html, body {
 
 .inline-form {
   display: flex;
+  flex-wrap: wrap;
   gap: 0.75rem;
   margin-bottom: 1.5rem;
   align-items: center;
-}
-
-.inline-form.wrap {
-  flex-wrap: wrap;
 }
 
 .inline-form input,
@@ -221,10 +221,13 @@ html, body {
 
 .status-badge {
   display: inline-block;
+  max-width: 100%;
+  box-sizing: border-box;
   padding: 0.75rem 1.5rem;
   border-radius: 0.75rem;
-  font-size: 1.5rem;
+  font-size: clamp(1rem, 4vw, 1.5rem);
   font-weight: 900;
+  overflow-wrap: anywhere;
 }
 
 .table-scroll {
