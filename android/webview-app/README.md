@@ -77,18 +77,25 @@ De pagina zelf toont al een rode balk als de server onbereikbaar is (zelfde
 gedrag als in een browser), maar dat is enkel een bannertje op een verder
 onveranderd scherm — op een telefoon valt dat makkelijk niet op, en het
 scherm kan zo "bevroren" aanvoelen. Deze app controleert daarom zelf, apart
-van de pagina, elke 5 seconden of de server bereikbaar is; na 3 mislukkingen
-op rij (~15 seconden) verschijnt een duidelijk "Geen verbinding"-venster met
-**Instellingen** (serveradres wijzigen) en **Opnieuw proberen**.
+van de pagina, **elke 2 seconden** of de server bereikbaar is, en toont al
+bij de **eerste mislukking** een duidelijk "Geen verbinding"-venster met
+**Instellingen** (serveradres wijzigen) en **Opnieuw proberen** — bewust
+zonder wachttijd of aantal pogingen, want een onbereikbare server mag bij
+dit systeem nooit onopgemerkt blijven.
+
+Dat venster is in de eigen Sparkx-huisstijl opgebouwd (donker petrolblauw
+paneel, geel-oranje verloopknop — dezelfde kleuren als de webpagina zelf),
+niet het standaard grijze Android-dialoogvenster.
 
 Die controle blijft ook doorlopen terwijl dat venster open staat. Komt de
-server vanzelf terug (bv. na een korte wifi-onderbreking die zichzelf
-herstelt), dan sluit het venster **automatisch** zodra de eerstvolgende
-controle weer slaagt — personeel hoeft dus niet zelf te tikken, en de
-lopende pagina (met alles wat erop stond) blijft gewoon intact. Enkel als de
-allereerste paginalading zelf nooit gelukt is (bv. de app werd net gestart
-tijdens een storing) laadt dit herstel de pagina alsnog opnieuw, want dan
-stond er nog niets bruikbaars op het scherm.
+server terug (bv. na een korte wifi-onderbreking die zichzelf herstelt, of
+gewoon een vals alarm van een heel kort haperingetje), dan sluit het venster
+**automatisch** zodra de eerstvolgende controle weer slaagt — personeel
+hoeft dus niet zelf te tikken, en de lopende pagina (met alles wat erop
+stond) blijft gewoon intact. Enkel als de allereerste paginalading zelf
+nooit gelukt is (bv. de app werd net gestart tijdens een storing) laadt dit
+herstel de pagina alsnog opnieuw, want dan stond er nog niets bruikbaars op
+het scherm.
 
 ## NFC scannen met de telefoon
 

@@ -5,6 +5,9 @@ import android.app.PendingIntent
 import android.content.Context
 import android.content.Intent
 import android.content.SharedPreferences
+import android.graphics.Color
+import android.graphics.Typeface
+import android.graphics.drawable.GradientDrawable
 import android.nfc.NfcAdapter
 import android.nfc.Tag
 import android.os.Build
@@ -12,6 +15,7 @@ import android.os.Bundle
 import android.os.Handler
 import android.os.Looper
 import android.text.InputType
+import android.view.Gravity
 import android.view.MotionEvent
 import android.view.View
 import android.view.WindowManager
@@ -20,10 +24,12 @@ import android.webkit.WebResourceRequest
 import android.webkit.WebSettings
 import android.webkit.WebView
 import android.webkit.WebViewClient
+import android.widget.Button
 import android.widget.EditText
 import android.widget.LinearLayout
 import android.widget.RadioButton
 import android.widget.RadioGroup
+import android.widget.TextView
 import android.widget.Toast
 import androidx.appcompat.app.AlertDialog
 import androidx.appcompat.app.AppCompatActivity
@@ -46,13 +52,27 @@ private const val NFC_DEDUPE_WINDOW_MS = 2000L
 // Hoe vaak (en na hoeveel mislukkingen op rij) een verloren serververbinding
 // gedetecteerd wordt, los van de pagina's eigen (JS-only) verbindingsbanner --
 // zie de klasse-KDoc hieronder voor waarom dit apart, native moet gebeuren.
-private const val HEALTH_CHECK_INTERVAL_MS = 5000L
-private const val HEALTH_CHECK_TIMEOUT_MS = 4000
-private const val HEALTH_CHECK_FAILURES_BEFORE_ERROR = 3
+// Bewust op scherp gezet (1 mislukking is genoeg, elke 2 seconden gecheckt):
+// bij dit systeem mag een onbereikbare server nooit onopgemerkt blijven, dus
+// geen risico nemen met een aantal pogingen of een trage interval -- de
+// automatische herstelfunctie (zie recoverFromConnectionError) zorgt dat een
+// vals alarm bij een heel kort haperingetje vanzelf meteen weer verdwijnt.
+private const val HEALTH_CHECK_INTERVAL_MS = 2000L
+private const val HEALTH_CHECK_TIMEOUT_MS = 2500
+private const val HEALTH_CHECK_FAILURES_BEFORE_ERROR = 1
 
 // Bewust lang: een gewone lange druk (~0,5s) is te makkelijk per ongeluk te
 // raken tijdens normaal gebruik van de knoppen op de pagina.
 private const val SETTINGS_HOLD_DURATION_MS = 10000L
+
+// Zelfde Sparkx-huisstijlkleuren als frontend/shared/style-base.css, voor het
+// "Geen verbinding"-venster (zie showConnectionError).
+private const val COLOR_ACHTERGROND_DIEP = "#071f29"
+private const val COLOR_ACHTERGROND_PANEEL = "#0f3a4a"
+private const val COLOR_TEKST_GEDEMPT = "#9fc3d1"
+private const val COLOR_ROOD = "#b3221c"
+private const val COLOR_SPARKX_GEEL = "#ffd400"
+private const val COLOR_SPARKX_ORANJE = "#f7941d"
 
 /**
  * Toont het bestaande, al geteste webhostscherm/beheerscherm (zie backend/ +
@@ -384,29 +404,133 @@ class MainActivity : AppCompatActivity() {
         webView.loadUrl(url)
     }
 
+    /** Eigen, in code opgebouwd venster (i.p.v. het standaard grijze
+     * AlertDialog-uiterlijk) in de Sparkx-huisstijl van de webpagina zelf
+     * (donker petrolblauw paneel, geel-oranje verloopaccent -- zie
+     * frontend/shared/style-base.css voor dezelfde kleuren). */
     private fun showConnectionError() {
         if (connectionErrorShowing) return
         connectionErrorShowing = true
-        connectionErrorDialog = AlertDialog.Builder(this)
-            .setTitle("Geen verbinding")
-            .setMessage(
-                "Kan de server niet bereiken. Controleer of de pc aan staat, " +
-                    "de server draait, en het IP-adres klopt.",
-            )
-            .setPositiveButton("Instellingen") { _, _ ->
-                connectionErrorShowing = false
-                connectionErrorDialog = null
-                consecutiveHealthFailures = 0
-                showSettingsDialog(forceShow = true)
+
+        val panel = LinearLayout(this).apply {
+            orientation = LinearLayout.VERTICAL
+            gravity = Gravity.CENTER_HORIZONTAL
+            setPadding(dp(28), dp(28), dp(28), dp(24))
+            background = GradientDrawable().apply {
+                cornerRadius = dp(20).toFloat()
+                setColor(Color.parseColor(COLOR_ACHTERGROND_PANEEL))
             }
-            .setNegativeButton("Opnieuw proberen") { _, _ ->
-                connectionErrorShowing = false
-                connectionErrorDialog = null
-                consecutiveHealthFailures = 0
-                loadServer(prefs.getString(KEY_SERVER, "") ?: "", prefs.getString(KEY_SCREEN, SCREEN_HOST) ?: SCREEN_HOST)
-            }
+        }
+
+        panel.addView(
+            TextView(this).apply {
+                text = "!"
+                textSize = 26f
+                setTextColor(Color.WHITE)
+                typeface = Typeface.DEFAULT_BOLD
+                gravity = Gravity.CENTER
+                val size = dp(56)
+                layoutParams = LinearLayout.LayoutParams(size, size).apply { bottomMargin = dp(16) }
+                background = GradientDrawable().apply {
+                    shape = GradientDrawable.OVAL
+                    setColor(Color.parseColor(COLOR_ROOD))
+                }
+            },
+        )
+
+        panel.addView(
+            TextView(this).apply {
+                text = "Geen verbinding"
+                textSize = 20f
+                setTextColor(Color.WHITE)
+                typeface = Typeface.DEFAULT_BOLD
+                gravity = Gravity.CENTER
+                layoutParams = LinearLayout.LayoutParams(
+                    LinearLayout.LayoutParams.WRAP_CONTENT,
+                    LinearLayout.LayoutParams.WRAP_CONTENT,
+                ).apply { bottomMargin = dp(10) }
+            },
+        )
+
+        panel.addView(
+            TextView(this).apply {
+                text = "Kan de server niet bereiken. Controleer of de pc aan staat, " +
+                    "de server draait, en het IP-adres klopt."
+                textSize = 15f
+                setTextColor(Color.parseColor(COLOR_TEKST_GEDEMPT))
+                gravity = Gravity.CENTER
+                layoutParams = LinearLayout.LayoutParams(
+                    LinearLayout.LayoutParams.MATCH_PARENT,
+                    LinearLayout.LayoutParams.WRAP_CONTENT,
+                ).apply { bottomMargin = dp(22) }
+            },
+        )
+
+        lateinit var dialog: AlertDialog
+
+        panel.addView(
+            Button(this).apply {
+                text = "Opnieuw proberen"
+                isAllCaps = false
+                textSize = 16f
+                typeface = Typeface.DEFAULT_BOLD
+                setTextColor(Color.parseColor(COLOR_ACHTERGROND_DIEP))
+                setPadding(dp(20), dp(14), dp(20), dp(14))
+                background = GradientDrawable(
+                    GradientDrawable.Orientation.TL_BR,
+                    intArrayOf(Color.parseColor(COLOR_SPARKX_GEEL), Color.parseColor(COLOR_SPARKX_ORANJE)),
+                ).apply { cornerRadius = dp(14).toFloat() }
+                layoutParams = LinearLayout.LayoutParams(
+                    LinearLayout.LayoutParams.MATCH_PARENT,
+                    LinearLayout.LayoutParams.WRAP_CONTENT,
+                ).apply { bottomMargin = dp(10) }
+                setOnClickListener {
+                    dialog.dismiss()
+                    connectionErrorShowing = false
+                    connectionErrorDialog = null
+                    consecutiveHealthFailures = 0
+                    loadServer(
+                        prefs.getString(KEY_SERVER, "") ?: "",
+                        prefs.getString(KEY_SCREEN, SCREEN_HOST) ?: SCREEN_HOST,
+                    )
+                }
+            },
+        )
+
+        panel.addView(
+            Button(this).apply {
+                text = "Instellingen"
+                isAllCaps = false
+                textSize = 16f
+                setTextColor(Color.WHITE)
+                setPadding(dp(20), dp(14), dp(20), dp(14))
+                background = GradientDrawable().apply {
+                    cornerRadius = dp(14).toFloat()
+                    setColor(Color.parseColor(COLOR_ACHTERGROND_DIEP))
+                }
+                layoutParams = LinearLayout.LayoutParams(
+                    LinearLayout.LayoutParams.MATCH_PARENT,
+                    LinearLayout.LayoutParams.WRAP_CONTENT,
+                )
+                setOnClickListener {
+                    dialog.dismiss()
+                    connectionErrorShowing = false
+                    connectionErrorDialog = null
+                    consecutiveHealthFailures = 0
+                    showSettingsDialog(forceShow = true)
+                }
+            },
+        )
+
+        dialog = AlertDialog.Builder(this)
+            .setView(panel)
             .setCancelable(false)
-            .show()
+            .create()
+        // Transparante venster-achtergrond nodig, anders overschrijft Android's
+        // eigen (rechthoekige, grijze) dialoogkader onze afgeronde paneelvorm.
+        dialog.window?.setBackgroundDrawableResource(android.R.color.transparent)
+        dialog.show()
+        connectionErrorDialog = dialog
     }
 
     @Suppress("DEPRECATION")
