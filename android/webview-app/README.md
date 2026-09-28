@@ -81,6 +81,15 @@ van de pagina, elke 5 seconden of de server bereikbaar is; na 3 mislukkingen
 op rij (~15 seconden) verschijnt een duidelijk "Geen verbinding"-venster met
 **Instellingen** (serveradres wijzigen) en **Opnieuw proberen**.
 
+Die controle blijft ook doorlopen terwijl dat venster open staat. Komt de
+server vanzelf terug (bv. na een korte wifi-onderbreking die zichzelf
+herstelt), dan sluit het venster **automatisch** zodra de eerstvolgende
+controle weer slaagt — personeel hoeft dus niet zelf te tikken, en de
+lopende pagina (met alles wat erop stond) blijft gewoon intact. Enkel als de
+allereerste paginalading zelf nooit gelukt is (bv. de app werd net gestart
+tijdens een storing) laadt dit herstel de pagina alsnog opnieuw, want dan
+stond er nog niets bruikbaars op het scherm.
+
 ## NFC scannen met de telefoon
 
 Bandje tegen de achterkant van de telefoon houden is genoeg: de app leest

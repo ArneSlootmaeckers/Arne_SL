@@ -91,6 +91,14 @@ private const val SETTINGS_HOLD_DURATION_MS = 10000L
  * (in onResume/onPause), en toont na een paar mislukkingen op rij hetzelfde
  * "Geen verbinding"-dialoogvenster als bij een mislukte eerste keer laden --
  * een duidelijk, actief signaal in plaats van enkel een bannertje.
+ *
+ * Die controle blijft ook doorlopen terwijl dat venster open staat, en sluit
+ * het dan automatisch zodra de server weer bereikbaar is (bv. na een korte
+ * wifi-onderbreking die vanzelf hersteld is) -- personeel hoeft dus niet
+ * zelf op "Opnieuw proberen" te tikken. Was de allereerste paginalading zelf
+ * mislukt (pageLoaded nog false, bv. de app werd gestart tijdens een storing),
+ * dan laadt dat herstel de pagina meteen alsnog, want dan staat er nog
+ * niets bruikbaars op het scherm om gewoon op verder te werken.
  */
 class MainActivity : AppCompatActivity() {
 
@@ -106,6 +114,8 @@ class MainActivity : AppCompatActivity() {
     private var healthCheckRunnable: Runnable? = null
     private var consecutiveHealthFailures = 0
     private var connectionErrorShowing = false
+    private var connectionErrorDialog: AlertDialog? = null
+    private var pageLoaded = false
 
     @SuppressLint("SetJavaScriptEnabled")
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -141,8 +151,14 @@ class MainActivity : AppCompatActivity() {
                 ) {
                     super.onReceivedError(view, request, error)
                     if (request?.isForMainFrame == true) {
+                        pageLoaded = false
                         showConnectionError()
                     }
+                }
+
+                override fun onPageFinished(view: WebView?, url: String?) {
+                    super.onPageFinished(view, url)
+                    pageLoaded = true
                 }
             }
         }
@@ -286,11 +302,30 @@ class MainActivity : AppCompatActivity() {
     private fun onHealthCheckResult(reachable: Boolean) {
         if (reachable) {
             consecutiveHealthFailures = 0
+            if (connectionErrorShowing) {
+                recoverFromConnectionError()
+            }
             return
         }
         consecutiveHealthFailures++
         if (consecutiveHealthFailures >= HEALTH_CHECK_FAILURES_BEFORE_ERROR && !connectionErrorShowing) {
             showConnectionError()
+        }
+    }
+
+    /** De server is weer bereikbaar terwijl het "Geen verbinding"-venster nog
+     * open stond -- sluit het vanzelf, zonder dat personeel moet tikken. Was
+     * de pagina zelf nooit succesvol geladen (bv. de app startte tijdens de
+     * storing), dan staat er nog niets bruikbaars op het scherm en laadt dit
+     * de pagina alsnog; anders bleef de pagina + haar eigen JS-status gewoon
+     * intact, dus is enkel het venster wegnemen genoeg. */
+    private fun recoverFromConnectionError() {
+        connectionErrorDialog?.dismiss()
+        connectionErrorDialog = null
+        connectionErrorShowing = false
+        Toast.makeText(this, "Verbinding hersteld", Toast.LENGTH_SHORT).show()
+        if (!pageLoaded) {
+            loadServer(prefs.getString(KEY_SERVER, "") ?: "", prefs.getString(KEY_SCREEN, SCREEN_HOST) ?: SCREEN_HOST)
         }
     }
 
@@ -352,7 +387,7 @@ class MainActivity : AppCompatActivity() {
     private fun showConnectionError() {
         if (connectionErrorShowing) return
         connectionErrorShowing = true
-        AlertDialog.Builder(this)
+        connectionErrorDialog = AlertDialog.Builder(this)
             .setTitle("Geen verbinding")
             .setMessage(
                 "Kan de server niet bereiken. Controleer of de pc aan staat, " +
@@ -360,11 +395,13 @@ class MainActivity : AppCompatActivity() {
             )
             .setPositiveButton("Instellingen") { _, _ ->
                 connectionErrorShowing = false
+                connectionErrorDialog = null
                 consecutiveHealthFailures = 0
                 showSettingsDialog(forceShow = true)
             }
             .setNegativeButton("Opnieuw proberen") { _, _ ->
                 connectionErrorShowing = false
+                connectionErrorDialog = null
                 consecutiveHealthFailures = 0
                 loadServer(prefs.getString(KEY_SERVER, "") ?: "", prefs.getString(KEY_SCREEN, SCREEN_HOST) ?: SCREEN_HOST)
             }
