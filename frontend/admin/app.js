@@ -71,6 +71,10 @@ const els = {
   createEmployeeMessage: document.getElementById("create-employee-message"),
   employeesTableBody: document.querySelector("#employees-table tbody"),
 
+  networkAddresses: document.getElementById("network-addresses"),
+  networkNote: document.getElementById("network-note"),
+  networkRefreshBtn: document.getElementById("network-refresh-btn"),
+
   shutdownBtn: document.getElementById("shutdown-btn"),
   shutdownMessage: document.getElementById("shutdown-message"),
 };
@@ -416,6 +420,52 @@ els.createEmployeeForm.addEventListener("submit", async (event) => {
 document.querySelector('.tab-btn[data-tab="medewerkers"]').addEventListener("click", loadEmployees, { once: false });
 
 // ---- Systeem tab ----------------------------------------------------------
+
+function showNetworkNote(text) {
+  els.networkNote.textContent = text;
+  els.networkNote.classList.toggle("hidden", !text);
+}
+
+async function loadNetworkInfo() {
+  els.networkAddresses.textContent = "";
+  showNetworkNote("");
+  try {
+    const info = await api.networkInfo();
+    if (info.addresses.length === 0) {
+      showNetworkNote(
+        "Geen netwerkverbinding gevonden op deze pc. Controleer of de " +
+          "netwerkkabel/wifi verbonden is en klik op Vernieuwen."
+      );
+      return;
+    }
+    info.addresses.forEach((address, index) => {
+      const row = document.createElement("div");
+      const value = document.createElement("span");
+      value.className = "network-address";
+      value.textContent = `${address}:${info.port}`;
+      row.append(value);
+      if (index === 0 && info.addresses.length > 1) {
+        const hint = document.createElement("div");
+        hint.className = "network-address-hint";
+        hint.textContent = "Meest waarschijnlijk — probeer dit eerst.";
+        row.append(hint);
+      }
+      els.networkAddresses.append(row);
+    });
+    if (info.addresses.length > 1) {
+      showNetworkNote(
+        "Deze pc heeft meerdere netwerkverbindingen. Werkt het eerste adres " +
+          "niet in de app, probeer dan het volgende."
+      );
+    }
+  } catch (err) {
+    if (err instanceof ApiError && err.status === 401) return handleUnauthorized();
+    showNetworkNote(err instanceof ApiError ? err.message : "Kon het IP-adres niet ophalen.");
+  }
+}
+
+document.querySelector('.tab-btn[data-tab="systeem"]').addEventListener("click", loadNetworkInfo);
+els.networkRefreshBtn.addEventListener("click", loadNetworkInfo);
 
 els.shutdownBtn.addEventListener("click", async () => {
   const confirmed = confirm(

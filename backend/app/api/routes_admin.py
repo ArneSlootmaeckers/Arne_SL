@@ -18,7 +18,7 @@ from app.schemas import (
     ManualStatusRequest,
     WristbandStatusResponse,
 )
-from app.services import employee_service, log_service, report_service
+from app.services import employee_service, log_service, network_service, report_service
 from app.services.common import get_or_create_wristband, log_event, now_utc, read_effective_status
 
 router = APIRouter(prefix="/api/admin", tags=["admin"])
@@ -156,6 +156,14 @@ def purge_logs(
 ) -> dict:
     count = log_service.purge_old_events(db, settings.log_retention_days)
     return {"verwijderd": count}
+
+
+@router.get("/network")
+def get_network_info(
+    settings: Settings = Depends(get_settings),
+    _: EmployeeModel = Depends(require_role("admin")),
+) -> dict:
+    return {"port": settings.port, "addresses": network_service.local_ipv4_addresses()}
 
 
 @router.post("/shutdown")

@@ -91,6 +91,7 @@ export const api = {
   createEmployee: (name, pincode, role) => request("POST", "/api/admin/employees", { name, pincode, role }),
   updateEmployee: (id, fields) => request("PATCH", `/api/admin/employees/${id}`, fields),
 
+  networkInfo: () => request("GET", "/api/admin/network"),
   shutdown: () => request("POST", "/api/admin/shutdown"),
 };
 

@@ -90,10 +90,16 @@ apart voor nodig.
 
 Dubbelklik de snelkoppeling "Toelatingssysteem" op het bureaublad om de
 server te starten (in een apart, geminimaliseerd venster) en meteen het
-hostscherm te openen — in een gewoon, verplaatsbaar/herschaalbaar
+**beheerscherm** te openen (de pc is de beheerplek; het hostscherm draait
+op de telefoons) — in een gewoon, verplaatsbaar/herschaalbaar
 browservenster zonder adresbalk/tabbladen (via Chrome of Edge's
 `--app`-modus, als een van beide geïnstalleerd is; anders in een gewone
 browsertab).
+
+Het adres dat je in de telefoon-app moet invullen (IP-adres van de pc +
+poort, bv. `10.18.0.155:8000`) staat op het tabblad **"Systeem"** van het
+beheerscherm, onder "Verbinden met de telefoon-app" — geen `ipconfig`
+meer nodig.
 
 ### Stoppen
 

@@ -24,7 +24,8 @@ $serverProcess = Start-Process -FilePath $venvPython -ArgumentList "run.py" `
 
 Start-Sleep -Seconds 2
 
-$appUrl = "http://127.0.0.1:8000/"
+# De pc is de beheerplek; het hostscherm draait op de telefoons.
+$appUrl = "http://127.0.0.1:8000/admin/"
 $browserPaths = @(
     "$env:ProgramFiles\Google\Chrome\Application\chrome.exe",
     "${env:ProgramFiles(x86)}\Google\Chrome\Application\chrome.exe",
