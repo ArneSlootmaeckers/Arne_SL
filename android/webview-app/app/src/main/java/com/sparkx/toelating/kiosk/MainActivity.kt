@@ -9,6 +9,7 @@ import android.content.res.ColorStateList
 import android.graphics.Color
 import android.graphics.Typeface
 import android.graphics.drawable.GradientDrawable
+import android.net.ConnectivityManager
 import android.nfc.NfcAdapter
 import android.nfc.Tag
 import android.os.Build
@@ -28,6 +29,7 @@ import android.webkit.WebViewClient
 import android.widget.Button
 import android.widget.EditText
 import android.widget.LinearLayout
+import android.widget.ProgressBar
 import android.widget.RadioButton
 import android.widget.RadioGroup
 import android.widget.TextView
@@ -62,12 +64,17 @@ private const val HEALTH_CHECK_INTERVAL_MS = 2000L
 private const val HEALTH_CHECK_TIMEOUT_MS = 2500
 private const val HEALTH_CHECK_FAILURES_BEFORE_ERROR = 1
 
+// Zolang het "Geen verbinding"-venster open staat, wordt de server om de
+// zoveel tijd opnieuw op het netwerk gezocht -- bv. voor als de pc na een
+// herstart een ander IP-adres kreeg.
+private const val DISCOVERY_RETRY_INTERVAL_MS = 15_000L
+
 // Bewust lang: een gewone lange druk (~0,5s) is te makkelijk per ongeluk te
 // raken tijdens normaal gebruik van de knoppen op de pagina.
 private const val SETTINGS_HOLD_DURATION_MS = 10000L
 
-// Zelfde Sparkx-huisstijlkleuren als frontend/shared/style-base.css, voor het
-// "Geen verbinding"-venster (zie showConnectionError).
+// Zelfde Sparkx-huisstijlkleuren als frontend/shared/style-base.css, voor de
+// eigen vensters van de app (zie brandedPanel e.a.).
 private const val COLOR_ACHTERGROND_DIEP = "#071f29"
 private const val COLOR_ACHTERGROND_PANEEL = "#0f3a4a"
 private const val COLOR_TEKST_GEDEMPT = "#9fc3d1"
@@ -118,9 +125,7 @@ private const val FALLBACK_PAGE_HTML =
  * maar dat blijft een passieve banner op een verder ongewijzigd scherm, wat
  * op een telefoon makkelijk over het hoofd gezien wordt of "bevroren" aanvoelt.
  * Deze klasse doet daarom zijn eigen, onafhankelijke polling van /api/health
- * (in onResume/onPause), en toont na een paar mislukkingen op rij hetzelfde
- * "Geen verbinding"-dialoogvenster als bij een mislukte eerste keer laden --
- * een duidelijk, actief signaal in plaats van enkel een bannertje.
+ * (in onResume/onPause), en toont meteen het "Geen verbinding"-venster.
  *
  * Die controle blijft ook doorlopen terwijl dat venster open staat, en sluit
  * het dan automatisch zodra de server weer bereikbaar is (bv. na een korte
@@ -129,11 +134,18 @@ private const val FALLBACK_PAGE_HTML =
  * mislukt (pageLoaded nog false, bv. de app werd gestart tijdens een storing),
  * dan laadt dat herstel de pagina meteen alsnog, want dan staat er nog
  * niets bruikbaars op het scherm om gewoon op verder te werken.
+ *
+ * Serveradres automatisch vinden (ServerDiscovery): bij de allereerste start,
+ * en telkens opnieuw zolang het "Geen verbinding"-venster open staat, zoekt de
+ * app de server zelf op het wifinetwerk. Kreeg de pc een ander IP-adres, dan
+ * wordt het nieuwe adres dus vanzelf gevonden, opgeslagen en geladen.
+ * Handmatig invullen blijft altijd mogelijk via de instellingen.
  */
 class MainActivity : AppCompatActivity() {
 
     private lateinit var webView: WebView
     private lateinit var prefs: SharedPreferences
+    private lateinit var serverDiscovery: ServerDiscovery
     private var nfcAdapter: NfcAdapter? = null
     private var lastNfcTagId: String? = null
     private var lastNfcTagAtMs: Long = 0L
@@ -145,14 +157,21 @@ class MainActivity : AppCompatActivity() {
     private var consecutiveHealthFailures = 0
     private var connectionErrorShowing = false
     private var connectionErrorDialog: AlertDialog? = null
+    private var connectionErrorStatus: TextView? = null
     private var pageLoaded = false
     private var showingFallbackPage = false
     private var settingsDialogShowing = false
+
+    private val discoveryExecutor: ExecutorService = Executors.newSingleThreadExecutor()
+    private var discoveryRunning = false
+    private var lastDiscoveryAtMs = 0L
+    private val discoveryCallbacks = mutableListOf<(String?) -> Unit>()
 
     @SuppressLint("SetJavaScriptEnabled")
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         prefs = getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+        serverDiscovery = ServerDiscovery(getSystemService(Context.CONNECTIVITY_SERVICE) as ConnectivityManager)
         nfcAdapter = NfcAdapter.getDefaultAdapter(this)
 
         webView = WebView(this).apply {
@@ -202,7 +221,7 @@ class MainActivity : AppCompatActivity() {
 
         val savedServer = prefs.getString(KEY_SERVER, null)
         if (savedServer.isNullOrBlank()) {
-            showSettingsDialog(forceShow = true)
+            searchServerOnFirstStart()
         } else {
             loadServer(savedServer, prefs.getString(KEY_SCREEN, SCREEN_HOST) ?: SCREEN_HOST)
         }
@@ -239,6 +258,7 @@ class MainActivity : AppCompatActivity() {
     override fun onDestroy() {
         super.onDestroy()
         healthCheckExecutor.shutdown()
+        discoveryExecutor.shutdownNow()
     }
 
     override fun onNewIntent(intent: Intent) {
@@ -334,6 +354,9 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun onHealthCheckResult(reachable: Boolean) {
+        // Een controle die nog onderweg was toen de app afsloot: geen vensters
+        // of zoektocht meer starten op een afgesloten scherm.
+        if (isFinishing || isDestroyed) return
         if (reachable) {
             consecutiveHealthFailures = 0
             if (connectionErrorShowing) {
@@ -342,7 +365,9 @@ class MainActivity : AppCompatActivity() {
             return
         }
         consecutiveHealthFailures++
-        if (consecutiveHealthFailures >= HEALTH_CHECK_FAILURES_BEFORE_ERROR && !connectionErrorShowing) {
+        if (connectionErrorShowing) {
+            maybeStartAutoDiscovery()
+        } else if (consecutiveHealthFailures >= HEALTH_CHECK_FAILURES_BEFORE_ERROR) {
             showConnectionError()
         }
     }
@@ -350,47 +375,183 @@ class MainActivity : AppCompatActivity() {
     /** De server is weer bereikbaar terwijl het "Geen verbinding"-venster nog
      * open stond -- sluit het vanzelf, zonder dat personeel moet tikken. Stond
      * de vervangende foutpagina nog op het scherm (nooit succesvol geladen,
-     * of de app startte tijdens de storing), dan laadt dit de echte pagina
-     * alsnog; anders bleef de pagina + haar eigen JS-status gewoon intact,
-     * dus is enkel het venster wegnemen genoeg. */
-    private fun recoverFromConnectionError() {
+     * of de app startte tijdens de storing), of werd de server op een nieuw
+     * adres gevonden, dan laadt dit de echte pagina (opnieuw); anders bleef
+     * de pagina + haar eigen JS-status gewoon intact, dus is enkel het venster
+     * wegnemen genoeg. */
+    private fun recoverFromConnectionError(message: String = "Verbinding hersteld", forceReload: Boolean = false) {
         connectionErrorDialog?.dismiss()
         connectionErrorDialog = null
+        connectionErrorStatus = null
         connectionErrorShowing = false
-        Toast.makeText(this, "Verbinding hersteld", Toast.LENGTH_SHORT).show()
-        if (!pageLoaded || showingFallbackPage) {
+        Toast.makeText(this, message, Toast.LENGTH_SHORT).show()
+        if (forceReload || !pageLoaded || showingFallbackPage) {
             loadServer(prefs.getString(KEY_SERVER, "") ?: "", prefs.getString(KEY_SCREEN, SCREEN_HOST) ?: SCREEN_HOST)
+        }
+    }
+
+    /** Zoekt de server op een achtergrondthread. Vraagt iemand een resultaat
+     * terwijl er al gezocht wordt, dan krijgt die gewoon hetzelfde resultaat
+     * in plaats van een tweede zoektocht ernaast. */
+    private fun discoverServer(onResult: (String?) -> Unit) {
+        discoveryCallbacks.add(onResult)
+        if (discoveryRunning) return
+        discoveryRunning = true
+        lastDiscoveryAtMs = System.currentTimeMillis()
+        discoveryExecutor.execute {
+            val found = serverDiscovery.findServer()
+            mainHandler.post {
+                discoveryRunning = false
+                val callbacks = discoveryCallbacks.toList()
+                discoveryCallbacks.clear()
+                if (isFinishing || isDestroyed) return@post
+                callbacks.forEach { it(found) }
+            }
+        }
+    }
+
+    private fun maybeStartAutoDiscovery() {
+        if (discoveryRunning || settingsDialogShowing) return
+        if (System.currentTimeMillis() - lastDiscoveryAtMs < DISCOVERY_RETRY_INTERVAL_MS) return
+        connectionErrorStatus?.text = "Server wordt automatisch gezocht op het netwerk…"
+        discoverServer(::onAutoDiscoveryResult)
+    }
+
+    private fun onAutoDiscoveryResult(found: String?) {
+        // Intussen al hersteld, of personeel is zelf het adres aan het invullen.
+        if (!connectionErrorShowing || settingsDialogShowing) return
+        if (found == null) {
+            connectionErrorStatus?.text = "Server nog niet gevonden op het netwerk — er wordt verder gezocht."
+            return
+        }
+        val changed = found != prefs.getString(KEY_SERVER, null)
+        prefs.edit().putString(KEY_SERVER, found).apply()
+        recoverFromConnectionError("Server gevonden op $found", forceReload = changed)
+    }
+
+    private fun searchServerOnFirstStart() {
+        val panel = brandedPanel()
+        panel.addView(brandedTitle("Server zoeken…", bottomMarginDp = 16))
+        panel.addView(
+            ProgressBar(this).apply {
+                indeterminateTintList = ColorStateList.valueOf(Color.parseColor(COLOR_SPARKX_GEEL))
+                layoutParams = LinearLayout.LayoutParams(dp(48), dp(48)).apply { bottomMargin = dp(16) }
+            },
+        )
+        panel.addView(
+            brandedText(
+                "De app zoekt de toelatingsserver op het wifinetwerk. Dit duurt enkele seconden.",
+                bottomMarginDp = 0,
+            ),
+        )
+        val dialog = showBrandedDialog(panel, cancelable = false)
+
+        discoverServer { found ->
+            dialog.dismiss()
+            if (found == null) {
+                showSettingsDialog(
+                    forceShow = true,
+                    notice = "Server niet automatisch gevonden. Vul het adres in dat op de pc " +
+                        "bij Beheer → Systeem staat.",
+                )
+                return@discoverServer
+            }
+            prefs.edit().putString(KEY_SERVER, found).putString(KEY_SCREEN, SCREEN_HOST).apply()
+            Toast.makeText(this, "Server gevonden op $found", Toast.LENGTH_SHORT).show()
+            loadServer(found, SCREEN_HOST)
         }
     }
 
     private fun dp(value: Int): Int = (value * resources.displayMetrics.density).toInt()
 
-    /** Zelfde in code opgebouwde Sparkx-stijl als showConnectionError, i.p.v.
-     * het standaard grijze AlertDialog-uiterlijk. */
-    private fun showSettingsDialog(forceShow: Boolean = false) {
-        settingsDialogShowing = true
-        val panel = LinearLayout(this).apply {
-            orientation = LinearLayout.VERTICAL
-            setPadding(dp(28), dp(28), dp(28), dp(24))
-            background = GradientDrawable().apply {
-                cornerRadius = dp(20).toFloat()
-                setColor(Color.parseColor(COLOR_ACHTERGROND_PANEEL))
-            }
-        }
+    // ---- Sparkx-stijl voor de eigen vensters (i.p.v. het standaard grijze
+    // AlertDialog-uiterlijk), zelfde kleuren als frontend/shared/style-base.css.
 
-        panel.addView(
-            TextView(this).apply {
-                text = "Serverinstellingen"
-                textSize = 20f
-                setTextColor(Color.WHITE)
-                typeface = Typeface.DEFAULT_BOLD
-                gravity = Gravity.CENTER
-                layoutParams = LinearLayout.LayoutParams(
-                    LinearLayout.LayoutParams.MATCH_PARENT,
-                    LinearLayout.LayoutParams.WRAP_CONTENT,
-                ).apply { bottomMargin = dp(18) }
-            },
-        )
+    private fun brandedPanel(): LinearLayout = LinearLayout(this).apply {
+        orientation = LinearLayout.VERTICAL
+        gravity = Gravity.CENTER_HORIZONTAL
+        setPadding(dp(28), dp(28), dp(28), dp(24))
+        background = GradientDrawable().apply {
+            cornerRadius = dp(20).toFloat()
+            setColor(Color.parseColor(COLOR_ACHTERGROND_PANEEL))
+        }
+    }
+
+    private fun fullWidth(bottomMarginDp: Int): LinearLayout.LayoutParams = LinearLayout.LayoutParams(
+        LinearLayout.LayoutParams.MATCH_PARENT,
+        LinearLayout.LayoutParams.WRAP_CONTENT,
+    ).apply { bottomMargin = dp(bottomMarginDp) }
+
+    private fun brandedTitle(label: String, bottomMarginDp: Int): TextView = TextView(this).apply {
+        text = label
+        textSize = 20f
+        setTextColor(Color.WHITE)
+        typeface = Typeface.DEFAULT_BOLD
+        gravity = Gravity.CENTER
+        layoutParams = fullWidth(bottomMarginDp)
+    }
+
+    private fun brandedText(
+        label: String,
+        bottomMarginDp: Int,
+        color: String = COLOR_TEKST_GEDEMPT,
+        sizeSp: Float = 15f,
+    ): TextView = TextView(this).apply {
+        text = label
+        textSize = sizeSp
+        setTextColor(Color.parseColor(color))
+        gravity = Gravity.CENTER
+        layoutParams = fullWidth(bottomMarginDp)
+    }
+
+    private fun gradientButton(label: String, bottomMarginDp: Int): Button = Button(this).apply {
+        text = label
+        isAllCaps = false
+        textSize = 16f
+        typeface = Typeface.DEFAULT_BOLD
+        setTextColor(Color.parseColor(COLOR_ACHTERGROND_DIEP))
+        setPadding(dp(20), dp(14), dp(20), dp(14))
+        background = GradientDrawable(
+            GradientDrawable.Orientation.TL_BR,
+            intArrayOf(Color.parseColor(COLOR_SPARKX_GEEL), Color.parseColor(COLOR_SPARKX_ORANJE)),
+        ).apply { cornerRadius = dp(14).toFloat() }
+        layoutParams = fullWidth(bottomMarginDp)
+    }
+
+    private fun darkButton(label: String, bottomMarginDp: Int): Button = Button(this).apply {
+        text = label
+        isAllCaps = false
+        textSize = 16f
+        setTextColor(Color.WHITE)
+        setPadding(dp(20), dp(14), dp(20), dp(14))
+        background = GradientDrawable().apply {
+            cornerRadius = dp(14).toFloat()
+            setColor(Color.parseColor(COLOR_ACHTERGROND_DIEP))
+        }
+        layoutParams = fullWidth(bottomMarginDp)
+    }
+
+    private fun showBrandedDialog(panel: View, cancelable: Boolean): AlertDialog {
+        val dialog = AlertDialog.Builder(this)
+            .setView(panel)
+            .setCancelable(cancelable)
+            .create()
+        // Transparante venster-achtergrond nodig, anders overschrijft Android's
+        // eigen (rechthoekige, grijze) dialoogkader onze afgeronde paneelvorm.
+        dialog.window?.setBackgroundDrawableResource(android.R.color.transparent)
+        dialog.show()
+        return dialog
+    }
+
+    private fun showSettingsDialog(forceShow: Boolean = false, notice: String? = null) {
+        settingsDialogShowing = true
+        val panel = brandedPanel()
+        panel.addView(brandedTitle("Serverinstellingen", bottomMarginDp = 18))
+
+        val status = brandedText(notice ?: "", bottomMarginDp = 14, sizeSp = 14f).apply {
+            visibility = if (notice == null) View.GONE else View.VISIBLE
+        }
+        panel.addView(status)
 
         val serverInput = EditText(this).apply {
             hint = "bv. 192.168.1.50:8000"
@@ -403,12 +564,29 @@ class MainActivity : AppCompatActivity() {
                 cornerRadius = dp(12).toFloat()
                 setColor(Color.parseColor(COLOR_ACHTERGROND_DIEP))
             }
-            layoutParams = LinearLayout.LayoutParams(
-                LinearLayout.LayoutParams.MATCH_PARENT,
-                LinearLayout.LayoutParams.WRAP_CONTENT,
-            ).apply { bottomMargin = dp(18) }
+            layoutParams = fullWidth(bottomMarginDp = 10)
         }
         panel.addView(serverInput)
+
+        val searchButton = darkButton("Automatisch zoeken", bottomMarginDp = 18)
+        searchButton.setOnClickListener {
+            searchButton.isEnabled = false
+            searchButton.text = "Zoeken…"
+            status.visibility = View.VISIBLE
+            status.text = "De server wordt gezocht op het wifinetwerk…"
+            discoverServer { found ->
+                searchButton.isEnabled = true
+                searchButton.text = "Automatisch zoeken"
+                if (found == null) {
+                    status.text = "Niet gevonden. Controleer of deze telefoon op hetzelfde netwerk " +
+                        "zit als de pc, of vul het adres uit Beheer → Systeem in."
+                } else {
+                    serverInput.setText(found)
+                    status.text = "Gevonden! Druk op Opslaan."
+                }
+            }
+        }
+        panel.addView(searchButton)
 
         val accentTint = ColorStateList.valueOf(Color.parseColor(COLOR_SPARKX_GEEL))
         val radioGroup = RadioGroup(this).apply {
@@ -416,7 +594,10 @@ class MainActivity : AppCompatActivity() {
             layoutParams = LinearLayout.LayoutParams(
                 LinearLayout.LayoutParams.WRAP_CONTENT,
                 LinearLayout.LayoutParams.WRAP_CONTENT,
-            ).apply { bottomMargin = dp(22) }
+            ).apply {
+                gravity = Gravity.START
+                bottomMargin = dp(22)
+            }
         }
         val hostRadio = RadioButton(this).apply {
             text = "Hostscherm"
@@ -442,21 +623,7 @@ class MainActivity : AppCompatActivity() {
         lateinit var dialog: AlertDialog
 
         panel.addView(
-            Button(this).apply {
-                text = "Opslaan"
-                isAllCaps = false
-                textSize = 16f
-                typeface = Typeface.DEFAULT_BOLD
-                setTextColor(Color.parseColor(COLOR_ACHTERGROND_DIEP))
-                setPadding(dp(20), dp(14), dp(20), dp(14))
-                background = GradientDrawable(
-                    GradientDrawable.Orientation.TL_BR,
-                    intArrayOf(Color.parseColor(COLOR_SPARKX_GEEL), Color.parseColor(COLOR_SPARKX_ORANJE)),
-                ).apply { cornerRadius = dp(14).toFloat() }
-                layoutParams = LinearLayout.LayoutParams(
-                    LinearLayout.LayoutParams.MATCH_PARENT,
-                    LinearLayout.LayoutParams.WRAP_CONTENT,
-                ).apply { if (!forceShow) bottomMargin = dp(10) }
+            gradientButton("Opslaan", bottomMarginDp = if (forceShow) 0 else 10).apply {
                 setOnClickListener {
                     val address = serverInput.text.toString().trim()
                     val screenPath = if (adminRadio.isChecked) SCREEN_ADMIN else SCREEN_HOST
@@ -479,25 +646,17 @@ class MainActivity : AppCompatActivity() {
                         cornerRadius = dp(14).toFloat()
                         setColor(Color.TRANSPARENT)
                     }
-                    layoutParams = LinearLayout.LayoutParams(
-                        LinearLayout.LayoutParams.MATCH_PARENT,
-                        LinearLayout.LayoutParams.WRAP_CONTENT,
-                    )
+                    layoutParams = fullWidth(bottomMarginDp = 0)
                     setOnClickListener { dialog.dismiss() }
                 },
             )
         }
 
-        dialog = AlertDialog.Builder(this)
-            .setView(panel)
-            .setCancelable(!forceShow)
-            .create()
+        dialog = showBrandedDialog(panel, cancelable = !forceShow)
         // Ongeacht hoe dit venster sluit (Opslaan, Annuleer, of terugknop/
         // buiten tikken bij niet-verplicht venster): de achtergrondcontrole
         // mag pas weer een "Geen verbinding"-venster tonen vanaf hier.
         dialog.setOnDismissListener { settingsDialogShowing = false }
-        dialog.window?.setBackgroundDrawableResource(android.R.color.transparent)
-        dialog.show()
     }
 
     private fun loadServer(address: String, screenPath: String) {
@@ -511,10 +670,6 @@ class MainActivity : AppCompatActivity() {
         webView.loadUrl(url)
     }
 
-    /** Eigen, in code opgebouwd venster (i.p.v. het standaard grijze
-     * AlertDialog-uiterlijk) in de Sparkx-huisstijl van de webpagina zelf
-     * (donker petrolblauw paneel, geel-oranje verloopaccent -- zie
-     * frontend/shared/style-base.css voor dezelfde kleuren). */
     private fun showConnectionError() {
         // Zolang het instellingenvenster open staat (bv. net geopend vanuit
         // dit venster om het serveradres te wijzigen) mag de achtergrond-
@@ -524,16 +679,7 @@ class MainActivity : AppCompatActivity() {
         if (connectionErrorShowing || settingsDialogShowing) return
         connectionErrorShowing = true
 
-        val panel = LinearLayout(this).apply {
-            orientation = LinearLayout.VERTICAL
-            gravity = Gravity.CENTER_HORIZONTAL
-            setPadding(dp(28), dp(28), dp(28), dp(24))
-            background = GradientDrawable().apply {
-                cornerRadius = dp(20).toFloat()
-                setColor(Color.parseColor(COLOR_ACHTERGROND_PANEEL))
-            }
-        }
-
+        val panel = brandedPanel()
         panel.addView(
             TextView(this).apply {
                 text = "!"
@@ -549,56 +695,25 @@ class MainActivity : AppCompatActivity() {
                 }
             },
         )
-
+        panel.addView(brandedTitle("Geen verbinding", bottomMarginDp = 10))
         panel.addView(
-            TextView(this).apply {
-                text = "Geen verbinding"
-                textSize = 20f
-                setTextColor(Color.WHITE)
-                typeface = Typeface.DEFAULT_BOLD
-                gravity = Gravity.CENTER
-                layoutParams = LinearLayout.LayoutParams(
-                    LinearLayout.LayoutParams.WRAP_CONTENT,
-                    LinearLayout.LayoutParams.WRAP_CONTENT,
-                ).apply { bottomMargin = dp(10) }
-            },
+            brandedText(
+                "Kan de server niet bereiken. Controleer of de pc aan staat, " +
+                    "de server draait, en het IP-adres klopt.",
+                bottomMarginDp = 12,
+            ),
         )
-
-        panel.addView(
-            TextView(this).apply {
-                text = "Kan de server niet bereiken. Controleer of de pc aan staat, " +
-                    "de server draait, en het IP-adres klopt."
-                textSize = 15f
-                setTextColor(Color.parseColor(COLOR_TEKST_GEDEMPT))
-                gravity = Gravity.CENTER
-                layoutParams = LinearLayout.LayoutParams(
-                    LinearLayout.LayoutParams.MATCH_PARENT,
-                    LinearLayout.LayoutParams.WRAP_CONTENT,
-                ).apply { bottomMargin = dp(22) }
-            },
-        )
+        val status = brandedText("", bottomMarginDp = 22, color = COLOR_SPARKX_GEEL, sizeSp = 13f)
+        panel.addView(status)
 
         lateinit var dialog: AlertDialog
 
         panel.addView(
-            Button(this).apply {
-                text = "Opnieuw proberen"
-                isAllCaps = false
-                textSize = 16f
-                typeface = Typeface.DEFAULT_BOLD
-                setTextColor(Color.parseColor(COLOR_ACHTERGROND_DIEP))
-                setPadding(dp(20), dp(14), dp(20), dp(14))
-                background = GradientDrawable(
-                    GradientDrawable.Orientation.TL_BR,
-                    intArrayOf(Color.parseColor(COLOR_SPARKX_GEEL), Color.parseColor(COLOR_SPARKX_ORANJE)),
-                ).apply { cornerRadius = dp(14).toFloat() }
-                layoutParams = LinearLayout.LayoutParams(
-                    LinearLayout.LayoutParams.MATCH_PARENT,
-                    LinearLayout.LayoutParams.WRAP_CONTENT,
-                ).apply { bottomMargin = dp(10) }
+            gradientButton("Opnieuw proberen", bottomMarginDp = 10).apply {
                 setOnClickListener {
                     connectionErrorShowing = false
                     connectionErrorDialog = null
+                    connectionErrorStatus = null
                     consecutiveHealthFailures = 0
                     dialog.dismiss()
                     loadServer(
@@ -608,25 +723,12 @@ class MainActivity : AppCompatActivity() {
                 }
             },
         )
-
         panel.addView(
-            Button(this).apply {
-                text = "Instellingen"
-                isAllCaps = false
-                textSize = 16f
-                setTextColor(Color.WHITE)
-                setPadding(dp(20), dp(14), dp(20), dp(14))
-                background = GradientDrawable().apply {
-                    cornerRadius = dp(14).toFloat()
-                    setColor(Color.parseColor(COLOR_ACHTERGROND_DIEP))
-                }
-                layoutParams = LinearLayout.LayoutParams(
-                    LinearLayout.LayoutParams.MATCH_PARENT,
-                    LinearLayout.LayoutParams.WRAP_CONTENT,
-                )
+            darkButton("Instellingen", bottomMarginDp = 0).apply {
                 setOnClickListener {
                     connectionErrorShowing = false
                     connectionErrorDialog = null
+                    connectionErrorStatus = null
                     consecutiveHealthFailures = 0
                     // Meteen al aan, niet pas in showSettingsDialog(): anders
                     // kan de achtergrondcontrole in het (korte) gaatje tussen
@@ -642,15 +744,10 @@ class MainActivity : AppCompatActivity() {
             },
         )
 
-        dialog = AlertDialog.Builder(this)
-            .setView(panel)
-            .setCancelable(false)
-            .create()
-        // Transparante venster-achtergrond nodig, anders overschrijft Android's
-        // eigen (rechthoekige, grijze) dialoogkader onze afgeronde paneelvorm.
-        dialog.window?.setBackgroundDrawableResource(android.R.color.transparent)
-        dialog.show()
+        dialog = showBrandedDialog(panel, cancelable = false)
         connectionErrorDialog = dialog
+        connectionErrorStatus = status
+        maybeStartAutoDiscovery()
     }
 
     @Suppress("DEPRECATION")

@@ -52,12 +52,37 @@ niet-Play-Store-app).
 
 ## Eerste gebruik
 
-Bij de eerste opstart vraagt de app om:
+Bij de eerste opstart **zoekt de app de server zelf** op het wifinetwerk
+("Server zoeken…", enkele seconden) en opent daarna het hostscherm. Vindt
+ze niets, dan vraagt ze om:
 1. **Serveradres**: het IP-adres + poort van de pc die de server draait,
-   bv. `192.168.1.50:8000` (te vinden via `ipconfig` op die pc, zie de
-   hoofd-`README.md`).
+   bv. `192.168.1.50:8000` — staat op de pc in het beheerscherm, tabblad
+   **Systeem**, onder "Verbinden met de telefoon-app".
 2. **Hostscherm of Beheerscherm**: welke van de twee pagina's deze app
    toont.
+
+Het instellingenvenster heeft ook een knop **Automatisch zoeken**.
+
+### Hoe het automatisch zoeken werkt
+
+De app kent haar eigen adres op het wifi (bv. `192.168.8.23`) en vraagt elk
+ander adres in dat netwerk op poort 8000 naar `/api/health`. Enkel een
+antwoord met `"app": "toelatingssysteem"` telt (zie
+`backend/app/api/routes_health.py`), zodat een ander toestel dat toevallig
+op poort 8000 draait nooit per ongeluk gekozen wordt. Er is dus **geen extra
+poort of firewallregel** op de pc nodig. Zie `ServerDiscovery.kt`.
+
+Beperkingen:
+- Werkt enkel waar toestellen elkaar op het netwerk kunnen bereiken — op
+  een gastennetwerk met client-isolatie (zoals "SPARKX Guest") lukt dit
+  niet, maar daar werkt de app sowieso niet.
+- Op een heel groot netwerk (groter dan ~1000 adressen, bv. een
+  bedrijfsnetwerk) zoekt de app enkel de ~250 adressen rond haar eigen
+  adres af: een volledige scan zou te lang duren en kan door IT als
+  verdacht gezien worden. Op een reisroutertje of thuisnetwerk speelt dit
+  niet.
+- Vereist een server met de herkenningswaarde in `/api/health`: installeer
+  dus ook de nieuwste versie van de pc-installer.
 
 Dit onthoudt de app nadien. Om het later te wijzigen: **houd je vinger 10
 seconden ononderbroken ergens op het scherm** (bewust lang, zodat dit niet
@@ -100,6 +125,12 @@ stond) blijft gewoon intact. Enkel als de allereerste paginalading zelf
 nooit gelukt is (bv. de app werd net gestart tijdens een storing) laadt dit
 herstel de pagina alsnog opnieuw, want dan stond er nog niets bruikbaars op
 het scherm.
+
+Terwijl het venster open staat, **zoekt de app de server ook opnieuw op het
+netwerk** (meteen, en daarna om de 15 seconden; onderaan in het venster in
+het geel te zien). Kreeg de pc intussen een ander IP-adres (bv. na een
+herstart van de pc of de router), dan wordt het nieuwe adres vanzelf
+gevonden, opgeslagen en geladen — niemand hoeft iets over te typen.
 
 ## NFC scannen met de telefoon
 

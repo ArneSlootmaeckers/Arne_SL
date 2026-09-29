@@ -96,10 +96,11 @@ browservenster zonder adresbalk/tabbladen (via Chrome of Edge's
 `--app`-modus, als een van beide geïnstalleerd is; anders in een gewone
 browsertab).
 
-Het adres dat je in de telefoon-app moet invullen (IP-adres van de pc +
-poort, bv. `10.18.0.155:8000`) staat op het tabblad **"Systeem"** van het
-beheerscherm, onder "Verbinden met de telefoon-app" — geen `ipconfig`
-meer nodig.
+De telefoon-app zoekt de pc normaal zelf op het netwerk (zie
+`android/webview-app/README.md`). Lukt dat niet, dan staat het adres om in
+te vullen (IP-adres van de pc + poort, bv. `10.18.0.155:8000`) op het
+tabblad **"Systeem"** van het beheerscherm, onder "Verbinden met de
+telefoon-app" — geen `ipconfig` meer nodig.
 
 ### Stoppen
 
