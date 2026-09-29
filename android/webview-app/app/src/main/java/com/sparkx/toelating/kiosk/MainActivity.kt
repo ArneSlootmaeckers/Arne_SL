@@ -1,6 +1,7 @@
 package com.sparkx.toelating.kiosk
 
 import android.annotation.SuppressLint
+import android.app.ActivityManager
 import android.app.PendingIntent
 import android.content.Context
 import android.content.Intent
@@ -45,6 +46,7 @@ import java.util.concurrent.Executors
 private const val PREFS_NAME = "toelating_kiosk"
 private const val KEY_SERVER = "server_address"
 private const val KEY_SCREEN = "screen_path"
+private const val KEY_KIOSK = "kiosk_mode"
 private const val SCREEN_HOST = "/"
 private const val SCREEN_ADMIN = "/admin/"
 
@@ -229,6 +231,9 @@ class MainActivity : AppCompatActivity() {
 
     override fun onResume() {
         super.onResume()
+        // Gepost i.p.v. meteen: startLockTask() faalt op sommige toestellen
+        // als het venster nog niet volledig op de voorgrond staat.
+        mainHandler.post { enterKioskIfEnabled() }
         startHealthChecks()
         val adapter = nfcAdapter ?: return
         if (!adapter.isEnabled) {
@@ -634,7 +639,19 @@ class MainActivity : AppCompatActivity() {
             },
         )
 
+        // Niet in het verplichte venster (eerste start, of vanuit "Geen
+        // verbinding"): daar moet eerst een werkend serveradres komen.
         if (!forceShow) {
+            val kioskOn = prefs.getBoolean(KEY_KIOSK, false)
+            panel.addView(
+                darkButton(if (kioskOn) "App losmaken" else "App vastzetten", bottomMarginDp = 10).apply {
+                    setOnClickListener {
+                        prefs.edit().putBoolean(KEY_KIOSK, !kioskOn).apply()
+                        dialog.dismiss()
+                        if (kioskOn) exitKiosk() else mainHandler.post { enterKioskIfEnabled() }
+                    }
+                },
+            )
             panel.addView(
                 Button(this).apply {
                     text = "Annuleer"
@@ -657,6 +674,40 @@ class MainActivity : AppCompatActivity() {
         // buiten tikken bij niet-verplicht venster): de achtergrondcontrole
         // mag pas weer een "Geen verbinding"-venster tonen vanaf hier.
         dialog.setOnDismissListener { settingsDialogShowing = false }
+    }
+
+    // ---- Kioskmodus: Android's "app vastzetten" (screen pinning). Zolang dit
+    // aanstaat, kan niemand de app verlaten via de thuis- of recente-apps-
+    // knop. Losmaken kan enkel via de instellingen van deze app, of via het
+    // systeemgebaar (terug + overzicht ingedrukt houden) -- dat laatste kan
+    // je in de Android-instellingen extra beveiligen met de pincode van het
+    // toestel.
+
+    private fun isInLockTask(): Boolean =
+        (getSystemService(Context.ACTIVITY_SERVICE) as ActivityManager).lockTaskModeState !=
+            ActivityManager.LOCK_TASK_MODE_NONE
+
+    private fun enterKioskIfEnabled() {
+        if (!prefs.getBoolean(KEY_KIOSK, false) || isInLockTask() || isFinishing || isDestroyed) return
+        try {
+            startLockTask()
+        } catch (e: Exception) {
+            Toast.makeText(
+                this,
+                "Vastzetten lukt niet — zet \"App vastzetten\" aan in de Android-instellingen (Beveiliging).",
+                Toast.LENGTH_LONG,
+            ).show()
+        }
+    }
+
+    private fun exitKiosk() {
+        if (!isInLockTask()) return
+        try {
+            stopLockTask()
+            Toast.makeText(this, "App losgemaakt", Toast.LENGTH_SHORT).show()
+        } catch (e: Exception) {
+            Toast.makeText(this, "Losmaken lukte niet.", Toast.LENGTH_SHORT).show()
+        }
     }
 
     private fun loadServer(address: String, screenPath: String) {

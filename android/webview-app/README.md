@@ -132,6 +132,28 @@ het geel te zien). Kreeg de pc intussen een ander IP-adres (bv. na een
 herstart van de pc of de router), dan wordt het nieuwe adres vanzelf
 gevonden, opgeslagen en geladen — niemand hoeft iets over te typen.
 
+## Kioskmodus: app vastzetten
+
+Zodat medewerkers de app niet (per ongeluk) verlaten: open de instellingen
+(10 seconden drukken) → **App vastzetten**. Android vraagt één keer om te
+bevestigen ("App vastzetten?"). Vanaf dan werken de thuis- en
+recente-apps-knop niet meer, en de app zet zichzelf ook na een herstart
+van de app opnieuw vast. Losmaken: instellingen → **App losmaken**.
+
+Dit is Android's gewone "app vastzetten" (screen pinning), geen volledig
+beheerd toestel. Daardoor:
+- Kan iemand die het systeemgebaar kent de app ook losmaken (terug +
+  overzicht tegelijk ingedrukt houden, of bij gebaarnavigatie omhoog vegen
+  en vasthouden). Beveilig dat in de Android-instellingen met **"Vraag
+  pincode voor losmaken"** (Instellingen → Beveiliging → App vastzetten;
+  de naam verschilt per merk): dan vergrendelt de telefoon bij losmaken en
+  is de pincode van het toestel nodig.
+- Lukt vastzetten niet ("Vastzetten lukt niet…"), zet dan eerst "App
+  vastzetten" aan in diezelfde Android-instellingen — op sommige toestellen
+  staat dat standaard uit.
+
+Nog niet getest op een echt toestel.
+
 ## NFC scannen met de telefoon
 
 Bandje tegen de achterkant van de telefoon houden is genoeg: de app leest
