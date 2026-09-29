@@ -235,6 +235,105 @@ html, body {
   font-weight: 900;
 }
 
+/* ---- Eigen keuzelijst (zie picker.js) i.p.v. het grijze systeemvenster ---- */
+
+.picker-native {
+  display: none;
+}
+
+/* button.-prefix: moet winnen van ".stacked-form button" (verloopknop). */
+button.picker-trigger {
+  display: inline-flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  min-width: 12rem;
+  max-width: 100%;
+  font-size: 1rem;
+  padding: 0.6rem 0.75rem;
+  border-radius: 0.5rem;
+  background: white;
+  color: var(--kleur-achtergrond-diep);
+  font-weight: 600;
+  text-align: left;
+}
+
+.picker-label {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.picker-trigger svg {
+  flex-shrink: 0;
+  color: var(--sparkx-oranje);
+}
+
+.picker-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 300;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 1rem;
+  background: rgba(3, 14, 19, 0.7);
+}
+
+.picker-panel {
+  width: 100%;
+  max-width: 24rem;
+  max-height: 80vh;
+  overflow-y: auto;
+  box-sizing: border-box;
+  padding: 1rem;
+  border-radius: 1.25rem;
+  background: var(--kleur-achtergrond-paneel);
+  box-shadow: 0 1rem 2.5rem rgba(0, 0, 0, 0.5);
+}
+
+.picker-title {
+  color: var(--sparkx-geel);
+  font-weight: bold;
+  font-size: 1.1rem;
+  padding: 0.25rem 0.5rem 0.75rem;
+}
+
+.picker-option {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  width: 100%;
+  padding: 0.9rem 1rem;
+  margin-bottom: 0.35rem;
+  border-radius: 0.75rem;
+  background: var(--kleur-achtergrond-diep);
+  color: white;
+  font-size: 1.1rem;
+  text-align: left;
+}
+
+.picker-option:last-child {
+  margin-bottom: 0;
+}
+
+.picker-option:active,
+.picker-option:focus-visible {
+  outline: 2px solid var(--sparkx-oranje);
+  outline-offset: -2px;
+}
+
+.picker-option.selected {
+  color: var(--kleur-achtergrond-diep);
+  font-weight: 700;
+  background: var(--sparkx-gradient);
+}
+
+.picker-option.selected::after {
+  content: "✓";
+  font-weight: 900;
+}
+
 .stacked-form {
   display: flex;
   gap: 0.75rem;

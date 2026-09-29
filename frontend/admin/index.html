@@ -66,11 +66,11 @@
           <div class="card">
             <div class="card-title">Status handmatig zetten</div>
             <form id="override-form" class="stacked-form">
-              <select id="override-status">
-                <option value="NOG_NIET_GESPRONGEN">NOG_NIET_GESPRONGEN</option>
-                <option value="HERKANSING">HERKANSING</option>
-                <option value="GESLAAGD">GESLAAGD</option>
-                <option value="NIET_GESLAAGD">NIET_GESLAAGD</option>
+              <select id="override-status" data-title="Nieuwe status">
+                <option value="NOG_NIET_GESPRONGEN">Nog niet gesprongen</option>
+                <option value="HERKANSING">Herkansing</option>
+                <option value="GESLAAGD">Geslaagd</option>
+                <option value="NIET_GESLAAGD">Niet geslaagd</option>
               </select>
               <input id="override-reason" type="text" placeholder="Reden (optioneel)" />
               <button type="submit">Toepassen</button>
@@ -98,18 +98,19 @@
           <input id="logs-filter-date" type="date" />
           <input id="logs-filter-wristband" type="text" placeholder="Bandje-ID" />
           <input id="logs-filter-employee" type="number" placeholder="Medewerker-ID" />
-          <select id="logs-filter-type">
+          <select id="logs-filter-type" data-title="Type">
             <option value="">Alle types</option>
-            <option value="SCAN">SCAN</option>
-            <option value="OORDEEL">OORDEEL</option>
-            <option value="OEFENSPRONG">OEFENSPRONG</option>
-            <option value="GEANNULEERD">GEANNULEERD</option>
-            <option value="TIME_OUT">TIME_OUT</option>
-            <option value="TOEGANG_SKI_JUMP">TOEGANG_SKI_JUMP</option>
-            <option value="HANDMATIGE_WIJZIGING">HANDMATIGE_WIJZIGING</option>
-            <option value="INLOGGEN">INLOGGEN</option>
-            <option value="INLOGGEN_MISLUKT">INLOGGEN_MISLUKT</option>
-            <option value="UITLOGGEN">UITLOGGEN</option>
+            <option value="SCAN">Scan</option>
+            <option value="OORDEEL">Oordeel</option>
+            <option value="OEFENSPRONG">Oefensprong</option>
+            <option value="GEANNULEERD">Geannuleerd</option>
+            <option value="TIME_OUT">Time-out</option>
+            <option value="TOEGANG_SKI_JUMP">Toegang Ski Jump</option>
+            <option value="HANDMATIGE_WIJZIGING">Handmatige wijziging</option>
+            <option value="INLOGGEN">Inloggen</option>
+            <option value="INLOGGEN_MISLUKT">Inloggen mislukt</option>
+            <option value="UITLOGGEN">Uitloggen</option>
+            <option value="SYSTEEM_AFSLUITEN">Systeem afgesloten</option>
           </select>
           <button type="submit">Zoek</button>
           <button type="button" id="export-csv-btn" class="btn-secondary">Exporteer CSV</button>
@@ -149,9 +150,9 @@
           <form id="create-employee-form" class="inline-form wrap">
             <input id="new-employee-name" type="text" placeholder="Naam" required />
             <input id="new-employee-pincode" type="text" inputmode="numeric" placeholder="Pincode" required />
-            <select id="new-employee-role">
-              <option value="supervisor">supervisor</option>
-              <option value="admin">admin</option>
+            <select id="new-employee-role" data-title="Rol">
+              <option value="supervisor">Supervisor</option>
+              <option value="admin">Admin</option>
             </select>
             <button type="submit">Aanmaken</button>
           </form>

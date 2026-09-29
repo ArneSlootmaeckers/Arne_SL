@@ -1,5 +1,6 @@
 import { ADMIN_TOKEN_KEY, ApiError, api, startHealthPolling } from "../shared/api.js";
 import { KeyboardWedgeReader, NativeBridgeReader } from "../shared/reader.js";
+import { enhanceSelect } from "./picker.js";
 
 const POLLING_INTERVAL_MS = 3000;
 // Mirrors config.yaml's session_inactivity_timeout_seconds default; the
@@ -11,11 +12,66 @@ const INACTIVITY_CHECK_INTERVAL_MS = 5000;
 const EMPLOYEE_LABEL_KEY = "toelating_admin_employee";
 
 const STATUS_INFO = {
-  NOG_NIET_GESPRONGEN: { kleur: "groen", tekst: "NOG_NIET_GESPRONGEN" },
-  HERKANSING: { kleur: "oranje", tekst: "HERKANSING" },
-  GESLAAGD: { kleur: "groen", tekst: "GESLAAGD" },
-  NIET_GESLAAGD: { kleur: "rood", tekst: "NIET_GESLAAGD" },
+  NOG_NIET_GESPRONGEN: { kleur: "groen", tekst: "Nog niet gesprongen" },
+  HERKANSING: { kleur: "oranje", tekst: "Herkansing" },
+  GESLAAGD: { kleur: "groen", tekst: "Geslaagd" },
+  NIET_GESLAAGD: { kleur: "rood", tekst: "Niet geslaagd" },
 };
+
+const EVENT_LABELS = {
+  SCAN: "Scan",
+  OORDEEL: "Oordeel",
+  OEFENSPRONG: "Oefensprong",
+  GEANNULEERD: "Geannuleerd",
+  TIME_OUT: "Time-out",
+  TOEGANG_SKI_JUMP: "Toegang Ski Jump",
+  HANDMATIGE_WIJZIGING: "Handmatige wijziging",
+  INLOGGEN: "Inloggen",
+  INLOGGEN_MISLUKT: "Inloggen mislukt",
+  UITLOGGEN: "Uitloggen",
+  SYSTEEM_AFSLUITEN: "Systeem afgesloten",
+};
+
+const VERDICT_LABELS = { GROEN: "geslaagd", ROOD: "gefaald" };
+
+/** "SOME_CODE" -> "Some code", voor codes die (nog) geen eigen label hebben. */
+function humanize(code) {
+  const text = String(code).replaceAll("_", " ").toLowerCase();
+  return text.charAt(0).toUpperCase() + text.slice(1);
+}
+
+function eventLabel(eventType) {
+  return EVENT_LABELS[eventType] ?? humanize(eventType);
+}
+
+/** {"oude_status": "HERKANSING", "reden": "..."} -> "oude status: Herkansing · reden: ..."
+ * Vrije tekst (zoals een reden) blijft ongewijzigd; enkel gekende codes worden vertaald. */
+function formatDetail(detail) {
+  if (!detail) return "";
+  return Object.entries(detail)
+    .map(([key, value]) => {
+      let text;
+      if (value === null || value === undefined) text = "—";
+      else if (typeof value === "boolean") text = value ? "ja" : "nee";
+      else if (STATUS_INFO[value]) text = STATUS_INFO[value].tekst;
+      else if (VERDICT_LABELS[value]) text = VERDICT_LABELS[value];
+      else text = String(value);
+      return `${key.replaceAll("_", " ")}: ${text}`;
+    })
+    .join(" · ");
+}
+
+/** Tabelrij via textContent, zodat tekst uit de logs (bandje-ID's, redenen)
+ * nooit als HTML geïnterpreteerd wordt. */
+function tableRow(cells) {
+  const row = document.createElement("tr");
+  for (const value of cells) {
+    const cell = document.createElement("td");
+    cell.textContent = value;
+    row.append(cell);
+  }
+  return row;
+}
 
 const els = {
   banner: document.getElementById("connection-banner"),
@@ -215,14 +271,9 @@ async function loadWristbandHistory(wristbandId) {
   const events = await api.logs({ wristband_id: wristbandId, event_date: todayIso(), limit: 100 });
   els.wristbandHistoryBody.innerHTML = "";
   for (const event of events) {
-    const row = document.createElement("tr");
-    row.innerHTML = `
-      <td>${formatTimestamp(event.timestamp)}</td>
-      <td>${event.event_type}</td>
-      <td>${event.source}</td>
-      <td>${JSON.stringify(event.detail)}</td>
-    `;
-    els.wristbandHistoryBody.appendChild(row);
+    els.wristbandHistoryBody.append(
+      tableRow([formatTimestamp(event.timestamp), eventLabel(event.event_type), event.source, formatDetail(event.detail)])
+    );
   }
 }
 
@@ -276,16 +327,16 @@ async function searchLogs() {
     const events = await api.logs(currentLogFilters());
     els.logsTableBody.innerHTML = "";
     for (const event of events) {
-      const row = document.createElement("tr");
-      row.innerHTML = `
-        <td>${formatTimestamp(event.timestamp)}</td>
-        <td>${event.event_type}</td>
-        <td>${event.wristband_id || ""}</td>
-        <td>${event.source}</td>
-        <td>${event.employee_id ?? ""}</td>
-        <td>${JSON.stringify(event.detail)}</td>
-      `;
-      els.logsTableBody.appendChild(row);
+      els.logsTableBody.append(
+        tableRow([
+          formatTimestamp(event.timestamp),
+          eventLabel(event.event_type),
+          event.wristband_id || "",
+          event.source,
+          event.employee_id ?? "",
+          formatDetail(event.detail),
+        ])
+      );
     }
   } catch (err) {
     if (err instanceof ApiError && err.status === 401) return handleUnauthorized();
@@ -495,6 +546,10 @@ els.shutdownBtn.addEventListener("click", async () => {
 });
 
 // ---- Bootstrap --------------------------------------------------------
+
+for (const select of document.querySelectorAll("#admin-view select")) {
+  enhanceSelect(select);
+}
 
 els.reportDate.value = todayIso();
 
