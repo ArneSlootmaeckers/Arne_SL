@@ -10,9 +10,6 @@ import android.graphics.Color
 import android.graphics.Typeface
 import android.graphics.drawable.GradientDrawable
 import android.net.ConnectivityManager
-import android.net.Network
-import android.net.NetworkCapabilities
-import android.net.NetworkRequest
 import android.nfc.NfcAdapter
 import android.nfc.Tag
 import android.os.Build
@@ -148,29 +145,7 @@ class MainActivity : AppCompatActivity() {
 
     private lateinit var webView: WebView
     private lateinit var prefs: SharedPreferences
-    private lateinit var connectivityManager: ConnectivityManager
     private lateinit var serverDiscovery: ServerDiscovery
-
-    // Een reisroutertje zonder internet: Android markeert dat wifi als "geen
-    // internet" en stuurt, als mobiele data aanstaat, al het verkeer van apps
-    // via mobiele data -- waarlangs de pc op het lokale netwerk onbereikbaar
-    // is. Door het hele app-proces aan het wifi te binden gaat alles (de
-    // WebView, de verbindingscontrole) altijd via wifi. De app heeft zelf
-    // geen internet nodig, dus dit kost niets.
-    @Volatile private var boundWifiNetwork: Network? = null
-    private val wifiCallback = object : ConnectivityManager.NetworkCallback() {
-        override fun onAvailable(network: Network) {
-            connectivityManager.bindProcessToNetwork(network)
-            boundWifiNetwork = network
-        }
-
-        override fun onLost(network: Network) {
-            if (network == boundWifiNetwork) {
-                connectivityManager.bindProcessToNetwork(null)
-                boundWifiNetwork = null
-            }
-        }
-    }
     private var nfcAdapter: NfcAdapter? = null
     private var lastNfcTagId: String? = null
     private var lastNfcTagAtMs: Long = 0L
@@ -196,16 +171,7 @@ class MainActivity : AppCompatActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         prefs = getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
-        connectivityManager = getSystemService(Context.CONNECTIVITY_SERVICE) as ConnectivityManager
-        serverDiscovery = ServerDiscovery(connectivityManager)
-        // Zonder INTERNET-vereiste: ook een wifi zonder internet moet tellen.
-        connectivityManager.registerNetworkCallback(
-            NetworkRequest.Builder()
-                .addTransportType(NetworkCapabilities.TRANSPORT_WIFI)
-                .removeCapability(NetworkCapabilities.NET_CAPABILITY_INTERNET)
-                .build(),
-            wifiCallback,
-        )
+        serverDiscovery = ServerDiscovery(getSystemService(Context.CONNECTIVITY_SERVICE) as ConnectivityManager)
         nfcAdapter = NfcAdapter.getDefaultAdapter(this)
 
         webView = WebView(this).apply {
@@ -291,8 +257,6 @@ class MainActivity : AppCompatActivity() {
 
     override fun onDestroy() {
         super.onDestroy()
-        connectivityManager.unregisterNetworkCallback(wifiCallback)
-        connectivityManager.bindProcessToNetwork(null)
         healthCheckExecutor.shutdown()
         discoveryExecutor.shutdownNow()
     }

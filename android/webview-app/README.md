@@ -132,24 +132,6 @@ het geel te zien). Kreeg de pc intussen een ander IP-adres (bv. na een
 herstart van de pc of de router), dan wordt het nieuwe adres vanzelf
 gevonden, opgeslagen en geladen — niemand hoeft iets over te typen.
 
-## Wifi zonder internet (bv. een reisroutertje)
-
-Een wifi zonder internet markeert Android als "geen internet", en als
-mobiele data aanstaat stuurt Android het verkeer van apps dan via mobiele
-data — waarlangs de pc op het lokale netwerk onbereikbaar is. De app bindt
-zich daarom zelf aan het wifi-netwerk (`bindProcessToNetwork` in
-`MainActivity.kt`): de pagina, de verbindingscontrole en het automatisch
-zoeken lopen altijd via wifi, ook met mobiele data aan. De app heeft zelf
-geen internet nodig. Valt het wifi weg, dan wordt die binding losgelaten,
-en bij het terugkomen van het wifi meteen opnieuw gelegd.
-
-Wat de app niet kan beletten: vraagt Android bij het verbinden "Dit netwerk
-heeft geen internettoegang. Verbonden blijven?", kies dan **Ja** (en vink
-indien mogelijk "niet meer vragen" aan). Anders kan Android het wifi zelf
-verbreken.
-
-Nog niet getest op een echt toestel met een wifi zonder internet.
-
 ## NFC scannen met de telefoon
 
 Bandje tegen de achterkant van de telefoon houden is genoeg: de app leest
