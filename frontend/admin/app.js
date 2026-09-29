@@ -44,6 +44,11 @@ function eventLabel(eventType) {
   return EVENT_LABELS[eventType] ?? humanize(eventType);
 }
 
+/** Naam van de telefoon ("Host 1") als die ingesteld is, anders de code. */
+function sourceLabel(event) {
+  return event.device_name || event.source;
+}
+
 /** {"oude_status": "HERKANSING", "reden": "..."} -> "oude status: Herkansing · reden: ..."
  * Vrije tekst (zoals een reden) blijft ongewijzigd; enkel gekende codes worden vertaald. */
 function formatDetail(detail) {
@@ -272,7 +277,7 @@ async function loadWristbandHistory(wristbandId) {
   els.wristbandHistoryBody.innerHTML = "";
   for (const event of events) {
     els.wristbandHistoryBody.append(
-      tableRow([formatTimestamp(event.timestamp), eventLabel(event.event_type), event.source, formatDetail(event.detail)])
+      tableRow([formatTimestamp(event.timestamp), eventLabel(event.event_type), sourceLabel(event), formatDetail(event.detail)])
     );
   }
 }
@@ -332,7 +337,7 @@ async function searchLogs() {
           formatTimestamp(event.timestamp),
           eventLabel(event.event_type),
           event.wristband_id || "",
-          event.source,
+          sourceLabel(event),
           event.employee_id ?? "",
           formatDetail(event.detail),
         ])

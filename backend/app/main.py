@@ -151,7 +151,9 @@ def create_app(settings: Settings | None = None) -> FastAPI:
 
     # The app always opens on the host screen — no separate chooser page.
     @app.get("/", include_in_schema=False)
-    def root() -> RedirectResponse:
-        return RedirectResponse(url="/host/")
+    def root(request: Request) -> RedirectResponse:
+        # Querystring meegeven: de Android-app opent "/?toestel=Host+1".
+        query = request.url.query
+        return RedirectResponse(url=f"/host/?{query}" if query else "/host/")
 
     return app

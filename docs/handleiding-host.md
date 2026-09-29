@@ -105,6 +105,9 @@ Er is bewust geen instellingenknop op het scherm. Houd je vinger **10
 seconden ononderbroken** ergens op het scherm, tot het venster
 **Serverinstellingen** opent. Daar kan je:
 - het adres van de pc wijzigen of automatisch laten zoeken;
+- de **naam van dit toestel** invullen (bv. "Host 1") — die naam zie je
+  later in de logs op het beheerscherm, zodat je weet welke telefoon wat
+  gedaan heeft;
 - kiezen of de app het **Hostscherm** of het **Beheerscherm** toont;
 - de app **vastzetten** of **losmaken** (zie hieronder).
 

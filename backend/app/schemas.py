@@ -3,7 +3,7 @@ from __future__ import annotations
 
 from datetime import datetime
 
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 
 from app.domain.status import Status, Verdict
 
@@ -42,6 +42,11 @@ class DeviceRequest(BaseModel):
     practice-jump acknowledgement, cancelling a pending scan)."""
 
     device_id: str
+
+
+class DeviceNameRequest(BaseModel):
+    device_id: str
+    name: str = Field(max_length=40)
 
 
 class GateScanRequest(BaseModel):
@@ -105,5 +110,7 @@ class EventResponse(BaseModel):
     event_type: str
     wristband_id: str | None
     source: str
+    # Leesbare naam van het toestel achter `source`, als die ingesteld is.
+    device_name: str | None = None
     employee_id: int | None
     detail: dict

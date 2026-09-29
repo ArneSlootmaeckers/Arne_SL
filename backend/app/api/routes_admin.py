@@ -18,7 +18,7 @@ from app.schemas import (
     ManualStatusRequest,
     WristbandStatusResponse,
 )
-from app.services import employee_service, log_service, network_service, report_service
+from app.services import device_service, employee_service, log_service, network_service, report_service
 from app.services.common import get_or_create_wristband, log_event, now_utc, read_effective_status
 
 router = APIRouter(prefix="/api/admin", tags=["admin"])
@@ -114,7 +114,8 @@ def get_logs(
         db, tz=settings.tz, event_date=event_date, wristband_id=wristband_id,
         employee_id=employee_id, event_type=event_type, limit=limit, offset=offset,
     )
-    return [log_service.event_to_dict(event) for event in events]
+    names = device_service.device_names(db)
+    return [log_service.event_to_dict(event, names) for event in events]
 
 
 @router.get("/logs/export.csv")
@@ -131,7 +132,7 @@ def export_logs_csv(
         db, tz=settings.tz, event_date=event_date, wristband_id=wristband_id,
         employee_id=employee_id, event_type=event_type, limit=100_000, offset=0,
     )
-    csv_content = log_service.events_to_csv(events)
+    csv_content = log_service.events_to_csv(events, device_service.device_names(db))
     return Response(
         content=csv_content, media_type="text/csv",
         headers={"Content-Disposition": "attachment; filename=logs.csv"},

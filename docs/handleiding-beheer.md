@@ -30,7 +30,9 @@ het nummer wordt dan vanzelf ingevuld.
 ## Tabblad "Logs"
 
 Filter op datum, bandje-ID, medewerker en/of type gebeurtenis, en klik
-**Zoek**. Met **Exporteer CSV** download je precies de gefilterde lijst als
+**Zoek**. De kolom **Bron** toont welke telefoon iets deed: de naam die op
+die telefoon ingesteld is (bv. "Host 1"), of anders een code zoals
+"toestel-a8f3k2". Met **Exporteer CSV** download je precies de gefilterde lijst als
 CSV-bestand, bijvoorbeeld voor een incidentonderzoek of rapportage.
 
 ## Tabblad "Dagoverzicht"
@@ -88,10 +90,13 @@ afsluiten.
 Per telefoon, één keer:
 1. Installeer de app en open ze. Ze zoekt de pc zelf en opent het
    hostscherm.
-2. Zet in de Android-instellingen een **pincode** op de telefoon, en zet
+2. Geef de telefoon een naam: 10 seconden drukken → vul **"Naam van dit
+   toestel"** in (bv. "Host 1") → **Opslaan**. Zo zie je in de logs welke
+   telefoon wat gedaan heeft. Geef elke telefoon een andere naam.
+3. Zet in de Android-instellingen een **pincode** op de telefoon, en zet
    **"Pincode vragen voor losmaken"** aan (Instellingen → Beveiliging →
    App vastzetten; de naam verschilt per merk).
-3. In de app: 10 seconden drukken → **App vastzetten** → **Ik snap het**.
+4. In de app: 10 seconden drukken → **App vastzetten** → **Ik snap het**.
    De hosts kunnen de app nu niet meer verlaten.
 
 ## Technisch onderhoud

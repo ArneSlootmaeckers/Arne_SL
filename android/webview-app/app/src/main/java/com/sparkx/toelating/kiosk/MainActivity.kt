@@ -17,6 +17,7 @@ import android.os.Build
 import android.os.Bundle
 import android.os.Handler
 import android.os.Looper
+import android.text.InputFilter
 import android.text.InputType
 import android.view.Gravity
 import android.view.MotionEvent
@@ -40,6 +41,7 @@ import androidx.appcompat.app.AppCompatActivity
 import org.json.JSONObject
 import java.net.HttpURLConnection
 import java.net.URL
+import java.net.URLEncoder
 import java.util.concurrent.ExecutorService
 import java.util.concurrent.Executors
 
@@ -47,6 +49,7 @@ private const val PREFS_NAME = "toelating_kiosk"
 private const val KEY_SERVER = "server_address"
 private const val KEY_SCREEN = "screen_path"
 private const val KEY_KIOSK = "kiosk_mode"
+private const val KEY_DEVICE_NAME = "device_name"
 private const val SCREEN_HOST = "/"
 private const val SCREEN_ADMIN = "/admin/"
 
@@ -593,6 +596,23 @@ class MainActivity : AppCompatActivity() {
         }
         panel.addView(searchButton)
 
+        // Verschijnt in de logs op het beheerscherm i.p.v. een toestel-code.
+        val nameInput = EditText(this).apply {
+            hint = "Naam van dit toestel (bv. Host 1)"
+            setHintTextColor(Color.parseColor(COLOR_TEKST_GEDEMPT))
+            setTextColor(Color.WHITE)
+            inputType = InputType.TYPE_CLASS_TEXT or InputType.TYPE_TEXT_FLAG_CAP_SENTENCES
+            filters = arrayOf(InputFilter.LengthFilter(40))
+            setText(prefs.getString(KEY_DEVICE_NAME, ""))
+            setPadding(dp(16), dp(14), dp(16), dp(14))
+            background = GradientDrawable().apply {
+                cornerRadius = dp(12).toFloat()
+                setColor(Color.parseColor(COLOR_ACHTERGROND_DIEP))
+            }
+            layoutParams = fullWidth(bottomMarginDp = 18)
+        }
+        panel.addView(nameInput)
+
         val accentTint = ColorStateList.valueOf(Color.parseColor(COLOR_SPARKX_GEEL))
         val radioGroup = RadioGroup(this).apply {
             orientation = RadioGroup.VERTICAL
@@ -632,7 +652,11 @@ class MainActivity : AppCompatActivity() {
                 setOnClickListener {
                     val address = serverInput.text.toString().trim()
                     val screenPath = if (adminRadio.isChecked) SCREEN_ADMIN else SCREEN_HOST
-                    prefs.edit().putString(KEY_SERVER, address).putString(KEY_SCREEN, screenPath).apply()
+                    prefs.edit()
+                        .putString(KEY_SERVER, address)
+                        .putString(KEY_SCREEN, screenPath)
+                        .putString(KEY_DEVICE_NAME, nameInput.text.toString().trim())
+                        .apply()
                     dialog.dismiss()
                     loadServer(address, screenPath)
                 }
@@ -713,12 +737,15 @@ class MainActivity : AppCompatActivity() {
     private fun loadServer(address: String, screenPath: String) {
         showingFallbackPage = false
         val cleanAddress = address.trim().removeSuffix("/")
-        val url = if (cleanAddress.startsWith("http://") || cleanAddress.startsWith("https://")) {
+        val base = if (cleanAddress.startsWith("http://") || cleanAddress.startsWith("https://")) {
             "$cleanAddress$screenPath"
         } else {
             "http://$cleanAddress$screenPath"
         }
-        webView.loadUrl(url)
+        // Het hostscherm onthoudt deze naam en geeft hem door aan de server
+        // (zie frontend/host/app.js); ook leeg, zodat wissen ook doorkomt.
+        val deviceName = URLEncoder.encode(prefs.getString(KEY_DEVICE_NAME, "") ?: "", "UTF-8")
+        webView.loadUrl("$base?toestel=$deviceName")
     }
 
     private fun showConnectionError() {

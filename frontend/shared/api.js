@@ -12,6 +12,17 @@ export function getDeviceId() {
   return id;
 }
 
+const DEVICE_NAME_KEY = "toelating_device_name";
+
+/** Leesbare naam van dit toestel, of null als die nooit ingesteld werd. */
+export function getDeviceName() {
+  return localStorage.getItem(DEVICE_NAME_KEY);
+}
+
+export function setDeviceName(name) {
+  localStorage.setItem(DEVICE_NAME_KEY, name.trim().slice(0, 40));
+}
+
 export class ApiError extends Error {
   constructor(message, status) {
     super(message);
@@ -71,6 +82,7 @@ export const api = {
   verdict: (deviceId, verdict) => request("POST", "/api/host/verdict", { device_id: deviceId, verdict }),
   practiceAck: (deviceId) => request("POST", "/api/host/practice-ack", { device_id: deviceId }),
   cancelScan: (deviceId) => request("POST", "/api/host/cancel", { device_id: deviceId }),
+  setDeviceName: (deviceId, name) => request("PUT", "/api/host/device-name", { device_id: deviceId, name }),
   gateScan: (wristbandId, deviceId) =>
     request("POST", "/api/gate/scan", { wristband_id: wristbandId, device_id: deviceId }),
 

@@ -15,8 +15,15 @@ from app.config import Settings
 from app.dependencies import get_db, get_gate_controller, get_settings
 from app.domain.status import Status
 from app.hardware.gate_controller import GateController
-from app.schemas import DeviceRequest, ScanRequest, ScanResponse, VerdictRequest, VerdictResponse
-from app.services import gate_service, scan_service
+from app.schemas import (
+    DeviceNameRequest,
+    DeviceRequest,
+    ScanRequest,
+    ScanResponse,
+    VerdictRequest,
+    VerdictResponse,
+)
+from app.services import device_service, gate_service, scan_service
 
 router = APIRouter(prefix="/api/host", tags=["host"])
 
@@ -96,4 +103,10 @@ def practice_ack(payload: DeviceRequest, db: Session = Depends(get_db)) -> dict:
 @router.post("/cancel")
 def cancel_scan(payload: DeviceRequest, db: Session = Depends(get_db)) -> dict:
     scan_service.cancel_scan(db, device_id=payload.device_id)
+    return {"ok": True}
+
+
+@router.put("/device-name")
+def set_device_name(payload: DeviceNameRequest, db: Session = Depends(get_db)) -> dict:
+    device_service.set_device_name(db, device_id=payload.device_id, name=payload.name)
     return {"ok": True}

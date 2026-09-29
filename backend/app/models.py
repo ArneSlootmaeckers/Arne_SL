@@ -60,6 +60,19 @@ class PendingScanModel(Base):
     expires_at: Mapped[datetime] = mapped_column(UTCDateTime)
 
 
+class DeviceModel(Base):
+    """Leesbare naam per toestel (bv. "Host 1"), ingesteld op de telefoon zelf.
+    Enkel voor weergave: de logs en openstaande scans blijven de unieke
+    device_id gebruiken, zodat twee toestellen met dezelfde naam elkaar nooit
+    in de weg zitten."""
+
+    __tablename__ = "devices"
+
+    device_id: Mapped[str] = mapped_column(String(64), primary_key=True)
+    name: Mapped[str] = mapped_column(String(40))
+    updated_at: Mapped[datetime] = mapped_column(UTCDateTime)
+
+
 class EventModel(Base):
     __tablename__ = "events"
 

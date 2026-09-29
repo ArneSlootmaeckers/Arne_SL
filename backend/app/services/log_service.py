@@ -40,26 +40,30 @@ def query_events(
     return list(db.execute(stmt).scalars())
 
 
-def event_to_dict(event: EventModel) -> dict:
+def event_to_dict(event: EventModel, device_names: dict[str, str]) -> dict:
     return {
         "id": event.id,
         "timestamp": event.timestamp,
         "event_type": event.event_type,
         "wristband_id": event.wristband_id,
         "source": event.source,
+        "device_name": device_names.get(event.source),
         "employee_id": event.employee_id,
         "detail": json.loads(event.detail) if event.detail else {},
     }
 
 
-def events_to_csv(events: list[EventModel]) -> str:
+def events_to_csv(events: list[EventModel], device_names: dict[str, str]) -> str:
     buffer = io.StringIO()
     writer = csv.writer(buffer)
-    writer.writerow(["id", "tijdstip_utc", "type", "bandje_id", "bron", "medewerker_id", "detail"])
+    writer.writerow(
+        ["id", "tijdstip_utc", "type", "bandje_id", "bron", "toestelnaam", "medewerker_id", "detail"]
+    )
     for event in events:
         writer.writerow([
             event.id, event.timestamp.isoformat(), event.event_type,
-            event.wristband_id or "", event.source, event.employee_id or "", event.detail,
+            event.wristband_id or "", event.source, device_names.get(event.source, ""),
+            event.employee_id or "", event.detail,
         ])
     return buffer.getvalue()
 

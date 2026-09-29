@@ -1,4 +1,4 @@
-import { ApiError, api, getDeviceId, startHealthPolling } from "../shared/api.js";
+import { ApiError, api, getDeviceId, getDeviceName, setDeviceName, startHealthPolling } from "../shared/api.js";
 import { KeyboardWedgeReader, NativeBridgeReader, SimulatedReader } from "../shared/reader.js";
 import { playFailureSound, playNeutralSound, playSuccessSound } from "../shared/sound.js";
 
@@ -213,6 +213,16 @@ if (params.get("sim") === "1") {
   new SimulatedReader(els.simPanel, TEST_WRISTBANDS).start(handleScan);
 }
 
+// De Android-app geeft de naam van dit toestel mee in het adres
+// (?toestel=Host%201). Onthouden, want via "Profiel" → "← Host" komt de
+// pagina ook zonder die parameter terug.
+if (params.has("toestel")) setDeviceName(params.get("toestel"));
+
 startHealthPolling(POLLING_INTERVAL_MS, (online) => {
   els.banner.classList.toggle("hidden", online);
+  // Bij elke (her)verbinding opnieuw doorgeven: zo kent de server de naam
+  // ook als hij onbereikbaar was toen de naam ingesteld werd.
+  if (online && getDeviceName() !== null) {
+    api.setDeviceName(deviceId, getDeviceName()).catch(() => {});
+  }
 });
