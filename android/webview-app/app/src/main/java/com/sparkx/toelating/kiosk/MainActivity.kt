@@ -34,6 +34,8 @@ import android.widget.LinearLayout
 import android.widget.ProgressBar
 import android.widget.RadioButton
 import android.widget.RadioGroup
+import android.widget.ScrollView
+import android.widget.Switch
 import android.widget.TextView
 import android.widget.Toast
 import androidx.appcompat.app.AlertDialog
@@ -540,8 +542,11 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun showBrandedDialog(panel: View, cancelable: Boolean): AlertDialog {
+        // Scrollbaar: het instellingenvenster is op een kleine telefoon (of
+        // met het toetsenbord open) hoger dan het scherm.
+        val content = ScrollView(this).apply { addView(panel) }
         val dialog = AlertDialog.Builder(this)
-            .setView(panel)
+            .setView(content)
             .setCancelable(cancelable)
             .create()
         // Transparante venster-achtergrond nodig, anders overschrijft Android's
@@ -551,32 +556,53 @@ class MainActivity : AppCompatActivity() {
         return dialog
     }
 
+    private fun sectionHeader(label: String): TextView = TextView(this).apply {
+        text = label
+        textSize = 15f
+        setTextColor(Color.parseColor(COLOR_SPARKX_GEEL))
+        typeface = Typeface.DEFAULT_BOLD
+        gravity = Gravity.START
+        layoutParams = fullWidth(bottomMarginDp = 8)
+    }
+
+    private fun brandedInput(hintText: String, value: String, type: Int, bottomMarginDp: Int): EditText =
+        EditText(this).apply {
+            hint = hintText
+            setHintTextColor(Color.parseColor(COLOR_TEKST_GEDEMPT))
+            setTextColor(Color.WHITE)
+            inputType = type
+            setText(value)
+            setPadding(dp(16), dp(14), dp(16), dp(14))
+            background = GradientDrawable().apply {
+                cornerRadius = dp(12).toFloat()
+                setColor(Color.parseColor(COLOR_ACHTERGROND_DIEP))
+            }
+            layoutParams = fullWidth(bottomMarginDp)
+        }
+
+    /** Twee delen: "Server" (waar staat de pc) en "Dit toestel" (naam, welk
+     * scherm, vastzetten). Alles wordt pas toegepast bij Opslaan. */
     private fun showSettingsDialog(forceShow: Boolean = false, notice: String? = null) {
         settingsDialogShowing = true
         val panel = brandedPanel()
-        panel.addView(brandedTitle("Serverinstellingen", bottomMarginDp = 18))
+        panel.addView(brandedTitle("Instellingen", bottomMarginDp = 18))
 
         val status = brandedText(notice ?: "", bottomMarginDp = 14, sizeSp = 14f).apply {
             visibility = if (notice == null) View.GONE else View.VISIBLE
         }
         panel.addView(status)
 
-        val serverInput = EditText(this).apply {
-            hint = "bv. 192.168.1.50:8000"
-            setHintTextColor(Color.parseColor(COLOR_TEKST_GEDEMPT))
-            setTextColor(Color.WHITE)
-            inputType = InputType.TYPE_CLASS_TEXT or InputType.TYPE_TEXT_VARIATION_URI
-            setText(prefs.getString(KEY_SERVER, ""))
-            setPadding(dp(16), dp(14), dp(16), dp(14))
-            background = GradientDrawable().apply {
-                cornerRadius = dp(12).toFloat()
-                setColor(Color.parseColor(COLOR_ACHTERGROND_DIEP))
-            }
-            layoutParams = fullWidth(bottomMarginDp = 10)
-        }
+        // ---- Server
+        panel.addView(sectionHeader("Server"))
+        val serverInput = brandedInput(
+            "Adres van de pc, bv. 192.168.1.50:8000",
+            prefs.getString(KEY_SERVER, "") ?: "",
+            InputType.TYPE_CLASS_TEXT or InputType.TYPE_TEXT_VARIATION_URI,
+            bottomMarginDp = 10,
+        )
         panel.addView(serverInput)
 
-        val searchButton = darkButton("Automatisch zoeken", bottomMarginDp = 18)
+        val searchButton = darkButton("Automatisch zoeken", bottomMarginDp = 26)
         searchButton.setOnClickListener {
             searchButton.isEnabled = false
             searchButton.text = "Zoeken…"
@@ -596,21 +622,15 @@ class MainActivity : AppCompatActivity() {
         }
         panel.addView(searchButton)
 
+        // ---- Dit toestel
+        panel.addView(sectionHeader("Dit toestel"))
         // Verschijnt in de logs op het beheerscherm i.p.v. een toestel-code.
-        val nameInput = EditText(this).apply {
-            hint = "Naam van dit toestel (bv. Host 1)"
-            setHintTextColor(Color.parseColor(COLOR_TEKST_GEDEMPT))
-            setTextColor(Color.WHITE)
-            inputType = InputType.TYPE_CLASS_TEXT or InputType.TYPE_TEXT_FLAG_CAP_SENTENCES
-            filters = arrayOf(InputFilter.LengthFilter(40))
-            setText(prefs.getString(KEY_DEVICE_NAME, ""))
-            setPadding(dp(16), dp(14), dp(16), dp(14))
-            background = GradientDrawable().apply {
-                cornerRadius = dp(12).toFloat()
-                setColor(Color.parseColor(COLOR_ACHTERGROND_DIEP))
-            }
-            layoutParams = fullWidth(bottomMarginDp = 18)
-        }
+        val nameInput = brandedInput(
+            "Naam, bv. Host 1",
+            prefs.getString(KEY_DEVICE_NAME, "") ?: "",
+            InputType.TYPE_CLASS_TEXT or InputType.TYPE_TEXT_FLAG_CAP_SENTENCES,
+            bottomMarginDp = 12,
+        ).apply { filters = arrayOf(InputFilter.LengthFilter(40)) }
         panel.addView(nameInput)
 
         val accentTint = ColorStateList.valueOf(Color.parseColor(COLOR_SPARKX_GEEL))
@@ -621,7 +641,7 @@ class MainActivity : AppCompatActivity() {
                 LinearLayout.LayoutParams.WRAP_CONTENT,
             ).apply {
                 gravity = Gravity.START
-                bottomMargin = dp(22)
+                bottomMargin = dp(if (forceShow) 22 else 8)
             }
         }
         val hostRadio = RadioButton(this).apply {
@@ -645,6 +665,31 @@ class MainActivity : AppCompatActivity() {
         }
         panel.addView(radioGroup)
 
+        // Niet in het verplichte venster (eerste start, of vanuit "Geen
+        // verbinding"): daar moet eerst een werkend serveradres komen.
+        val kioskWas = prefs.getBoolean(KEY_KIOSK, false)
+        var kioskSwitch: Switch? = null
+        if (!forceShow) {
+            val states = arrayOf(intArrayOf(android.R.attr.state_checked), intArrayOf())
+            kioskSwitch = Switch(this).apply {
+                text = "App vastzetten"
+                textSize = 16f
+                setTextColor(Color.WHITE)
+                isChecked = kioskWas
+                thumbTintList = ColorStateList(
+                    states,
+                    intArrayOf(Color.parseColor(COLOR_SPARKX_GEEL), Color.parseColor(COLOR_TEKST_GEDEMPT)),
+                )
+                trackTintList = ColorStateList(
+                    states,
+                    intArrayOf(Color.parseColor(COLOR_SPARKX_ORANJE), Color.parseColor(COLOR_ACHTERGROND_DIEP)),
+                )
+                setPadding(dp(4), dp(8), 0, dp(8))
+                layoutParams = fullWidth(bottomMarginDp = 22)
+            }
+            panel.addView(kioskSwitch)
+        }
+
         lateinit var dialog: AlertDialog
 
         panel.addView(
@@ -652,30 +697,22 @@ class MainActivity : AppCompatActivity() {
                 setOnClickListener {
                     val address = serverInput.text.toString().trim()
                     val screenPath = if (adminRadio.isChecked) SCREEN_ADMIN else SCREEN_HOST
+                    val kioskWanted = kioskSwitch?.isChecked ?: kioskWas
                     prefs.edit()
                         .putString(KEY_SERVER, address)
                         .putString(KEY_SCREEN, screenPath)
                         .putString(KEY_DEVICE_NAME, nameInput.text.toString().trim())
+                        .putBoolean(KEY_KIOSK, kioskWanted)
                         .apply()
                     dialog.dismiss()
                     loadServer(address, screenPath)
+                    if (kioskWanted && !kioskWas) mainHandler.post { enterKioskIfEnabled() }
+                    if (!kioskWanted && kioskWas) exitKiosk()
                 }
             },
         )
 
-        // Niet in het verplichte venster (eerste start, of vanuit "Geen
-        // verbinding"): daar moet eerst een werkend serveradres komen.
         if (!forceShow) {
-            val kioskOn = prefs.getBoolean(KEY_KIOSK, false)
-            panel.addView(
-                darkButton(if (kioskOn) "App losmaken" else "App vastzetten", bottomMarginDp = 10).apply {
-                    setOnClickListener {
-                        prefs.edit().putBoolean(KEY_KIOSK, !kioskOn).apply()
-                        dialog.dismiss()
-                        if (kioskOn) exitKiosk() else mainHandler.post { enterKioskIfEnabled() }
-                    }
-                },
-            )
             panel.addView(
                 Button(this).apply {
                     text = "Annuleer"

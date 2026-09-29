@@ -17,7 +17,7 @@ zitten als de pc.
 - **De eerste keer** zoekt de app de pc zelf op het netwerk ("Server
   zoeken…", enkele seconden) en opent daarna het hostscherm. Je hoeft
   niets in te typen.
-- Vindt de app de pc niet, dan opent het venster **Serverinstellingen**.
+- Vindt de app de pc niet, dan opent het venster **Instellingen**.
   Tik op **Automatisch zoeken**, of vul het adres in dat op de pc staat
   (beheerscherm → tabblad **Systeem** → "Verbinden met de telefoon-app",
   bv. `10.18.0.155:8000`) en tik op **Opslaan**.
@@ -103,21 +103,23 @@ aanpassen (zie "Opstarten" hierboven).
 
 Er is bewust geen instellingenknop op het scherm. Houd je vinger **10
 seconden ononderbroken** ergens op het scherm, tot het venster
-**Serverinstellingen** opent. Daar kan je:
-- het adres van de pc wijzigen of automatisch laten zoeken;
-- de **naam van dit toestel** invullen (bv. "Host 1") — die naam zie je
-  later in de logs op het beheerscherm, zodat je weet welke telefoon wat
-  gedaan heeft;
-- kiezen of de app het **Hostscherm** of het **Beheerscherm** toont;
-- de app **vastzetten** of **losmaken** (zie hieronder).
+**Instellingen** opent. Het heeft twee delen:
+- **Server:** het adres van de pc wijzigen, of **Automatisch zoeken**.
+- **Dit toestel:**
+  - de **naam** van deze telefoon (bv. "Host 1") — die zie je later in de
+    logs op het beheerscherm, zodat je weet welke telefoon wat gedaan heeft;
+  - of de app het **Hostscherm** of het **Beheerscherm** toont;
+  - **App vastzetten** aan of uit (zie hieronder).
+
+Wijzigingen gelden pas na **Opslaan**.
 
 ## App vastzetten (enkel voor de beheerder)
 
 Zodat niemand de app per ongeluk verlaat: instellingen (10 seconden
-drukken) → **App vastzetten** → in het venster van Android **Ik snap het**.
-De thuisknop en de knop voor recente apps werken dan niet meer, en de app
-zet zichzelf ook na een herstart opnieuw vast. Losmaken: instellingen →
-**App losmaken**.
+drukken) → zet **App vastzetten** aan → **Opslaan** → in het venster van
+Android **Ik snap het**. De thuisknop en de knop voor recente apps werken
+dan niet meer, en de app zet zichzelf ook na een herstart opnieuw vast.
+Losmaken: instellingen → zet **App vastzetten** uit → **Opslaan**.
 
 Zet op de telefoon ook **"Pincode vragen voor losmaken"** aan
 (Instellingen → Beveiliging → App vastzetten; de naam verschilt per merk).

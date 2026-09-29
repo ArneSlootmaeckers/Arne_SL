@@ -61,7 +61,9 @@ ze niets, dan vraagt ze om:
 2. **Hostscherm of Beheerscherm**: welke van de twee pagina's deze app
    toont.
 
-Het instellingenvenster heeft ook een knop **Automatisch zoeken**.
+Het instellingenvenster heeft twee delen: **Server** (adres van de pc, met
+een knop **Automatisch zoeken**) en **Dit toestel** (naam van de telefoon,
+host- of beheerscherm, app vastzetten). Alles geldt pas na **Opslaan**.
 
 ### Hoe het automatisch zoeken werkt
 
@@ -135,10 +137,11 @@ gevonden, opgeslagen en geladen — niemand hoeft iets over te typen.
 ## Kioskmodus: app vastzetten
 
 Zodat medewerkers de app niet (per ongeluk) verlaten: open de instellingen
-(10 seconden drukken) → **App vastzetten**. Android vraagt één keer om te
-bevestigen ("App vastzetten?"). Vanaf dan werken de thuis- en
-recente-apps-knop niet meer, en de app zet zichzelf ook na een herstart
-van de app opnieuw vast. Losmaken: instellingen → **App losmaken**.
+(10 seconden drukken) → onder **Dit toestel** de schakelaar **App
+vastzetten** aan → **Opslaan**. Android vraagt één keer om te bevestigen
+("App vastzetten?"). Vanaf dan werken de thuis- en recente-apps-knop niet
+meer, en de app zet zichzelf ook na een herstart van de app opnieuw vast.
+Losmaken: dezelfde schakelaar uit → **Opslaan**.
 
 Dit is Android's gewone "app vastzetten" (screen pinning), geen volledig
 beheerd toestel. Daardoor:

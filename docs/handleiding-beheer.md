@@ -90,13 +90,14 @@ afsluiten.
 Per telefoon, één keer:
 1. Installeer de app en open ze. Ze zoekt de pc zelf en opent het
    hostscherm.
-2. Geef de telefoon een naam: 10 seconden drukken → vul **"Naam van dit
-   toestel"** in (bv. "Host 1") → **Opslaan**. Zo zie je in de logs welke
-   telefoon wat gedaan heeft. Geef elke telefoon een andere naam.
+2. Geef de telefoon een naam: 10 seconden drukken → onder **Dit toestel**
+   de naam invullen (bv. "Host 1") → **Opslaan**. Zo zie je in de logs
+   welke telefoon wat gedaan heeft. Geef elke telefoon een andere naam.
 3. Zet in de Android-instellingen een **pincode** op de telefoon, en zet
    **"Pincode vragen voor losmaken"** aan (Instellingen → Beveiliging →
    App vastzetten; de naam verschilt per merk).
-4. In de app: 10 seconden drukken → **App vastzetten** → **Ik snap het**.
+4. In de app: 10 seconden drukken → zet **App vastzetten** aan →
+   **Opslaan** → **Ik snap het**.
    De hosts kunnen de app nu niet meer verlaten.
 
 ## Technisch onderhoud
