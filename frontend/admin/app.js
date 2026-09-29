@@ -397,18 +397,24 @@ async function loadEmployees() {
     const employees = await api.employees();
     els.employeesTableBody.innerHTML = "";
     for (const employee of employees) {
-      const row = document.createElement("tr");
-      const actionLabel = employee.active ? "Intrekken" : "Heractiveren";
-      row.innerHTML = `
-        <td>${employee.name}</td>
-        <td>${employee.role}</td>
-        <td>${employee.active ? "Ja" : "Nee"}</td>
-        <td>
-          <button type="button" class="btn-secondary" data-action="toggle" data-id="${employee.id}" data-active="${employee.active}">${actionLabel}</button>
-          <button type="button" class="btn-secondary" data-action="pincode" data-id="${employee.id}">Nieuwe pincode</button>
-        </td>
-      `;
-      els.employeesTableBody.appendChild(row);
+      const row = tableRow([employee.name, humanize(employee.role), employee.active ? "Ja" : "Nee"]);
+      const actions = document.createElement("td");
+      const toggleBtn = document.createElement("button");
+      toggleBtn.type = "button";
+      toggleBtn.className = "btn-secondary";
+      toggleBtn.dataset.action = "toggle";
+      toggleBtn.dataset.id = employee.id;
+      toggleBtn.dataset.active = employee.active;
+      toggleBtn.textContent = employee.active ? "Intrekken" : "Heractiveren";
+      const pincodeBtn = document.createElement("button");
+      pincodeBtn.type = "button";
+      pincodeBtn.className = "btn-secondary";
+      pincodeBtn.dataset.action = "pincode";
+      pincodeBtn.dataset.id = employee.id;
+      pincodeBtn.textContent = "Nieuwe pincode";
+      actions.append(toggleBtn, " ", pincodeBtn);
+      row.append(actions);
+      els.employeesTableBody.append(row);
     }
   } catch (err) {
     if (err instanceof ApiError && err.status === 401) return handleUnauthorized();

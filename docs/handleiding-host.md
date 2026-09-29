@@ -1,9 +1,33 @@
 # Handleiding — hostscherm (testsprong & Ski Jump)
 
+Het hostscherm draait op de **telefoon**, in de app "Toelatingssysteem".
 Dit ene scherm doet twee dingen: de testsprong beoordelen, én meteen ook
 tonen of de bezoeker naar de Ski Jump mag. Je hoeft dus nergens anders
-opnieuw te scannen. Dit is meteen ook de pagina die opent zodra het
-systeem opstart (`http://<server>:8000/`).
+opnieuw te scannen.
+
+De pc waar het systeem op draait, toont het beheerscherm (zie
+`handleiding-beheer.md`). De pc moet aan staan en het systeem moet draaien,
+anders werkt de telefoon niet.
+
+## Opstarten
+
+Open de app op de telefoon. De telefoon moet op **hetzelfde wifinetwerk**
+zitten als de pc.
+
+- **De eerste keer** zoekt de app de pc zelf op het netwerk ("Server
+  zoeken…", enkele seconden) en opent daarna het hostscherm. Je hoeft
+  niets in te typen.
+- Vindt de app de pc niet, dan opent het venster **Serverinstellingen**.
+  Tik op **Automatisch zoeken**, of vul het adres in dat op de pc staat
+  (beheerscherm → tabblad **Systeem** → "Verbinden met de telefoon-app",
+  bv. `10.18.0.155:8000`) en tik op **Opslaan**.
+- De app onthoudt dit. De volgende keren opent ze meteen het hostscherm.
+
+## Een bandje scannen
+
+Houd het bandje tegen de **achterkant van de telefoon**, tot het scherm
+reageert. De NFC-functie van de telefoon moet aan staan; staat ze uit, dan
+toont de app een melding.
 
 ## Werking
 
@@ -56,11 +80,49 @@ opnieuw gescand worden.
   indrukt, kan dat enkel gecorrigeerd worden door bevoegd personeel via de
   knop **"Profiel"** rechtsboven — die opent het beheerscherm, waar je met
   een pincode inlogt om de status van een bandje aan te passen.
-- Verschijnt er een **rode balk bovenaan** ("Geen verbinding met de
-  server")? Laat dan niemand springen of naar de Ski Jump gaan tot de balk
-  verdwijnt — de status kan dan niet betrouwbaar opgeslagen worden.
+
+## Geen verbinding
+
+Verliest de telefoon de verbinding met de pc (wifi weg, pc uit, …), dan
+verschijnt meteen het venster **"Geen verbinding"**. **Laat dan niemand
+springen of naar de Ski Jump gaan** — de status kan niet opgeslagen worden.
+
+Je hoeft meestal niets te doen:
+- Komt de verbinding terug, dan verdwijnt het venster vanzelf ("Verbinding
+  hersteld").
+- Kreeg de pc intussen een ander adres, dan zoekt de app hem zelf opnieuw
+  op het netwerk (onderaan in het geel: "Server wordt automatisch
+  gezocht…") en laadt alles vanzelf ("Server gevonden op …").
+
+Blijft het venster staan: controleer of de pc aan staat en het systeem
+draait, en of de telefoon op het juiste wifi zit. Met **Opnieuw proberen**
+probeer je meteen opnieuw; met **Instellingen** kan je het adres zelf
+aanpassen (zie "Opstarten" hierboven).
+
+## Instellingen openen
+
+Er is bewust geen instellingenknop op het scherm. Houd je vinger **10
+seconden ononderbroken** ergens op het scherm, tot het venster
+**Serverinstellingen** opent. Daar kan je:
+- het adres van de pc wijzigen of automatisch laten zoeken;
+- kiezen of de app het **Hostscherm** of het **Beheerscherm** toont;
+- de app **vastzetten** of **losmaken** (zie hieronder).
+
+## App vastzetten (enkel voor de beheerder)
+
+Zodat niemand de app per ongeluk verlaat: instellingen (10 seconden
+drukken) → **App vastzetten** → in het venster van Android **Ik snap het**.
+De thuisknop en de knop voor recente apps werken dan niet meer, en de app
+zet zichzelf ook na een herstart opnieuw vast. Losmaken: instellingen →
+**App losmaken**.
+
+Zet op de telefoon ook **"Pincode vragen voor losmaken"** aan
+(Instellingen → Beveiliging → App vastzetten; de naam verschilt per merk).
+Probeert iemand dan de app los te maken met het gebaar dat Android toont,
+dan gaat de telefoon op slot en is de pincode van de telefoon nodig.
 
 ## Testen zonder bandje (demo)
 
-Voeg `?sim=1` toe aan de link in de adresbalk om een paneel met testbandjes
-te krijgen, handig om het scherm uit te proberen zonder een echte lezer.
+Op het beheerscherm, tabblad **Systeem**, opent **Simulatiemodus** het
+hostscherm met een paneel met testbandjes — handig om het scherm uit te
+proberen zonder een echt bandje.
