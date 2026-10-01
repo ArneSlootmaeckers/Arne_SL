@@ -43,6 +43,11 @@ let returnTimeout = null;
 // (die is al opgelost) — de knop keert dan gewoon meteen terug naar
 // "wacht op scan" zonder de server aan te spreken.
 let hasPendingScanToCancel = false;
+// Telt elke getoonde scan. Een nieuw bandje mag altijd gescand worden, ook
+// terwijl een vorig nog op een oordeel of bevestiging wacht: een antwoord
+// van de server dat nog bij die vorige scan hoort, mag het scherm van de
+// nieuwe scan dan niet meer wegnemen.
+let scanSeq = 0;
 
 function clearTimers() {
   if (countdownInterval) clearInterval(countdownInterval);
@@ -70,26 +75,15 @@ function applyStatusBanner(status, tekstOverride) {
   els.statusText.textContent = tekstOverride ?? info.tekst;
 }
 
-/** Stille veiligheidstimeout tijdens het beoordelen (testsprong/herkansing):
- * geen zichtbare balk — de sprong mag langer dan 30 seconden duren — maar
- * als de host echt geen oordeel geeft binnen scan_timeout_seconds, keert
- * het scherm alsnog terug naar "wacht op scan". */
-function watchVerdictExpiry(expiresAtIso) {
-  const expiresAt = new Date(expiresAtIso).getTime();
-  clearTimers();
-  countdownInterval = setInterval(() => {
-    if (Date.now() >= expiresAt) showWaiting();
-  }, 1000);
-}
-
 async function autoAcknowledgePractice() {
+  const seq = scanSeq;
   try {
     await api.practiceAck(deviceId);
     playNeutralSound();
   } catch (err) {
     console.error(err);
   } finally {
-    showWaiting();
+    if (seq === scanSeq) showWaiting();
   }
 }
 
@@ -117,6 +111,8 @@ function startFinalResultCountdown(durationMs, onExpire) {
 }
 
 function renderScanResult(body) {
+  scanSeq += 1;
+  clearTimers();
   els.wristbandId.textContent = body.wristband_id;
   applyStatusBanner(body.status);
 
@@ -129,7 +125,8 @@ function renderScanResult(body) {
   els.resultView.classList.remove("hidden");
 
   if (body.requires_verdict) {
-    watchVerdictExpiry(body.expires_at);
+    // 1e/2e poging: geen timer — het scherm blijft staan tot er een oordeel
+    // is, "Geen sprong / annuleer" gedrukt wordt, of een nieuw bandje scant.
   } else if (body.requires_practice_ack) {
     // GESLAAGD: bevoegd personeel hoeft niets te doen, dit sluit zichzelf af.
     startFinalResultCountdown(FINAL_RESULT_DISPLAY_MS, autoAcknowledgePractice);
@@ -144,19 +141,17 @@ async function handleScan(wristbandId) {
     const body = await api.scan(wristbandId, deviceId);
     renderScanResult(body);
   } catch (err) {
-    if (err instanceof ApiError && err.status === 409) {
-      showRejectedToast(err.message);
-    } else {
-      console.error(err);
-      showRejectedToast("Er ging iets mis. Probeer opnieuw.");
-    }
+    if (!(err instanceof ApiError)) console.error(err);
+    showRejectedToast(err instanceof ApiError ? err.message : "Er ging iets mis. Probeer opnieuw.");
   }
 }
 
 async function handleVerdict(verdict) {
   clearTimers();
+  const seq = scanSeq;
   try {
     const result = await api.verdict(deviceId, verdict);
+    if (seq !== scanSeq) return;
     playSuccessSound();
     applyStatusBanner(result.status);
     els.verdictActions.classList.add("hidden");
@@ -173,6 +168,7 @@ async function handleVerdict(verdict) {
       returnTimeout = setTimeout(showWaiting, CONFIRMATION_DISPLAY_MS);
     }
   } catch (err) {
+    if (seq !== scanSeq) return;
     showRejectedToast(err instanceof ApiError ? err.message : "Er ging iets mis.");
     showWaiting();
   }
@@ -190,13 +186,14 @@ async function handleCancel() {
     showWaiting();
     return;
   }
+  const seq = scanSeq;
   try {
     await api.cancelScan(deviceId);
     playNeutralSound();
   } catch (err) {
-    showRejectedToast(err instanceof ApiError ? err.message : "Er ging iets mis.");
+    if (seq === scanSeq) showRejectedToast(err instanceof ApiError ? err.message : "Er ging iets mis.");
   } finally {
-    showWaiting();
+    if (seq === scanSeq) showWaiting();
   }
 }
 

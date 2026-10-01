@@ -1,6 +1,7 @@
 timezone: "Europe/Brussels"
 port: 8000
-# Hoeveel seconden een scan op een oordeel/bevestiging mag wachten voor die vervalt.
+# Hoeveel seconden een oefensprong op bevestiging mag wachten voor die vervalt.
+# (Een scan die op een oordeel wacht, de 1e/2e poging, vervalt nooit.)
 scan_timeout_seconds: 60
 # Hoeveel seconden inactiviteit voor een beheerdersessie automatisch uitlogt.
 session_inactivity_timeout_seconds: 120

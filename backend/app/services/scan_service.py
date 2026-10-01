@@ -1,7 +1,12 @@
 """Scan and verdict handling for the testsprong host screen.
 
-Wires the pure domain rules (app.domain.status) to the database, enforcing
-"één scan = één oordeel" per device and logging every step.
+Wires the pure domain rules (app.domain.status) to the database, keeping at
+most one open scan per device and logging every step.
+
+Een oordeel (1e/2e poging) heeft geen tijdslimiet: de host mag er zo lang
+over doen als nodig. Scant de host intussen een nieuw bandje, dan vervangt
+die scan de openstaande: het vorige bandje kreeg geen oordeel en behoudt
+dus gewoon zijn status (gelogd als GEANNULEERD).
 """
 from __future__ import annotations
 
@@ -16,13 +21,14 @@ from app.domain.calendar import local_today
 from app.domain.status import Status, Verdict, apply_verdict
 from app.models import DailyStatusModel, PendingScanModel
 from app.services.common import get_or_create_wristband, log_event, now_utc, read_effective_status
-from app.services.errors import NoPendingScanError, ScanRejectedError, WrongResolutionPathError
+from app.services.errors import NoPendingScanError, WrongResolutionPathError
 
-# A scan opens a pending interaction that must be resolved before the next one:
-# NOG_NIET_GESPRONGEN/HERKANSING need a verdict, GESLAAGD needs a practice-jump
-# acknowledgement. NIET_GESLAAGD needs neither, so it never blocks the next scan.
+# A scan opens a pending interaction: NOG_NIET_GESPRONGEN/HERKANSING wait for
+# a verdict, GESLAAGD for a practice-jump acknowledgement. NIET_GESLAAGD needs
+# neither, so it opens nothing.
 _PENDING_STATUSES = {Status.NOG_NIET_GESPRONGEN, Status.HERKANSING, Status.GESLAAGD}
 _VERDICT_STATUSES = {Status.NOG_NIET_GESPRONGEN, Status.HERKANSING}
+_VERDICT_STATUS_VALUES = {s.value for s in _VERDICT_STATUSES}
 
 
 @dataclass(frozen=True)
@@ -34,15 +40,35 @@ class ScanResult:
     expires_at: datetime | None
 
 
+def _expires(pending: PendingScanModel) -> bool:
+    """Enkel een oefensprong verloopt (vangnet als het toestel uitvalt voor de
+    automatische bevestiging); een scan die op een oordeel wacht nooit."""
+    return pending.status_snapshot not in _VERDICT_STATUS_VALUES
+
+
 def _expire_if_stale(db: Session, device_id: str) -> PendingScanModel | None:
     """Return the device's pending scan if still valid, otherwise clear+log it and return None."""
     pending = db.get(PendingScanModel, device_id)
-    if pending is not None and pending.expires_at <= now_utc():
+    if pending is not None and _expires(pending) and pending.expires_at <= now_utc():
         log_event(db, event_type="TIME_OUT", wristband_id=pending.wristband_id, source=device_id)
         db.delete(pending)
         db.flush()
         return None
     return pending
+
+
+def _close_for_new_scan(db: Session, pending: PendingScanModel) -> None:
+    if pending.status_snapshot in _VERDICT_STATUS_VALUES:
+        log_event(
+            db, event_type="GEANNULEERD", wristband_id=pending.wristband_id, source=pending.device_id,
+            detail={"reden": "nieuwe scan zonder oordeel"},
+        )
+    else:
+        # Het hostscherm bevestigt een oefensprong anders zelf na enkele
+        # seconden; een nieuwe scan in die tijd telt dus als bevestigd.
+        log_event(db, event_type="OEFENSPRONG", wristband_id=pending.wristband_id, source=pending.device_id)
+    db.delete(pending)
+    db.flush()
 
 
 def register_scan(
@@ -51,11 +77,9 @@ def register_scan(
     now = now_utc()
     today = local_today(now, tz)
 
-    if _expire_if_stale(db, device_id) is not None:
-        db.commit()
-        raise ScanRejectedError(
-            "Er is nog geen oordeel voor de vorige scan ingegeven. Rond dat eerst af."
-        )
+    previous = _expire_if_stale(db, device_id)
+    if previous is not None:
+        _close_for_new_scan(db, previous)
 
     get_or_create_wristband(db, wristband_id)
     status, _ = read_effective_status(db, wristband_id, today)
@@ -68,6 +92,7 @@ def register_scan(
         db.commit()
         return ScanResult(wristband_id, status, False, False, None)
 
+    # De kolom is verplicht, maar wordt bij een oordeel-scan genegeerd (zie _expires).
     expires_at = now + timedelta(seconds=timeout_seconds)
     db.add(PendingScanModel(
         device_id=device_id, wristband_id=wristband_id,
@@ -75,12 +100,13 @@ def register_scan(
     ))
     db.commit()
 
+    requires_verdict = status in _VERDICT_STATUSES
     return ScanResult(
         wristband_id=wristband_id,
         status=status,
-        requires_verdict=status in _VERDICT_STATUSES,
+        requires_verdict=requires_verdict,
         requires_practice_ack=(status is Status.GESLAAGD),
-        expires_at=expires_at,
+        expires_at=None if requires_verdict else expires_at,
     )
 
 
@@ -98,7 +124,7 @@ def submit_verdict(db: Session, *, device_id: str, verdict: Verdict, tz: ZoneInf
     if pending is None:
         db.commit()
         raise NoPendingScanError("Geen openstaande scan (of deze is verlopen).")
-    if pending.status_snapshot not in {s.value for s in _VERDICT_STATUSES}:
+    if pending.status_snapshot not in _VERDICT_STATUS_VALUES:
         raise WrongResolutionPathError(
             "Dit bandje wacht niet op een oordeel; gebruik de bevestigingsknop."
         )
@@ -145,8 +171,7 @@ def submit_practice_ack(db: Session, *, device_id: str) -> None:
 def cancel_scan(db: Session, *, device_id: str) -> None:
     """Discard the device's pending scan without any status change — for when
     the visitor scanned but didn't actually jump (changed their mind, called
-    away, ...). Same effect as a time-out, just host-initiated and instant
-    instead of waiting out the full scan_timeout_seconds.
+    away, ...).
     """
     pending = _expire_if_stale(db, device_id)
     if pending is None:
@@ -163,7 +188,12 @@ def reap_expired_pending_scans(db: Session) -> int:
     """Background sweep so a time-out gets logged promptly even without a next scan."""
     now = now_utc()
     expired = list(
-        db.execute(select(PendingScanModel).where(PendingScanModel.expires_at <= now)).scalars()
+        db.execute(
+            select(PendingScanModel).where(
+                PendingScanModel.expires_at <= now,
+                PendingScanModel.status_snapshot.not_in(_VERDICT_STATUS_VALUES),
+            )
+        ).scalars()
     )
     for pending in expired:
         log_event(db, event_type="TIME_OUT", wristband_id=pending.wristband_id, source=pending.device_id)

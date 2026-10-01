@@ -44,8 +44,8 @@ toont de app een melding.
 
 3. **Bij oranje of het eerste groen** (1e/2e poging): beoordeel de sprong en
    druk op de grote knop **GESLAAGD** (goed) of **GEFAALD** (fout). Hier
-   staat geen tijdslimiet op het scherm — de testsprong duurt vaak langer
-   dan 30 seconden.
+   is **geen tijdslimiet**: het scherm blijft staan tot je een oordeel
+   geeft, hoe lang de sprong ook duurt.
    - Wordt de sprong goedgekeurd? Dan toont het scherm meteen "Geslaagd —
      oefensprong" met een leeglopende balk, en sluit zichzelf na
      5 seconden automatisch af.
@@ -69,13 +69,13 @@ opnieuw gescand worden.
 
 ## Belangrijk
 
-- **Eén scan = één oordeel.** Zolang je nog geen GESLAAGD/GEFAALD hebt
-  gegeven, weigert het scherm een nieuwe scan — je ziet dan kort een
-  melding bovenaan. Rond eerst de vorige scan af (oordeel geven, of "Geen
-  sprong / annuleer").
-- Geeft de host heel lang geen oordeel, dan vervalt de scan op de
-  achtergrond vanzelf zonder dat de status verandert. Scan dan gewoon
-  opnieuw.
+- **Een nieuw bandje scannen kan altijd**, ook als het vorige nog op een
+  oordeel wacht. Het scherm toont dan meteen het nieuwe bandje. Het vorige
+  bandje kreeg dan geen oordeel en behoudt gewoon zijn status (net alsof
+  je "Geen sprong / annuleer" had gedrukt) — het mag dus later opnieuw.
+  Let er dus op dat je het oordeel geeft vóór je het volgende bandje scant.
+- Scan je tijdens een oefensprong (de balk van 5 seconden) al het
+  volgende bandje, dan telt die oefensprong gewoon mee.
 - **Je kan hier niets terugdraaien.** Als je per ongeluk de verkeerde knop
   indrukt, kan dat enkel gecorrigeerd worden door bevoegd personeel via de
   knop **"Profiel"** rechtsboven — die opent het beheerscherm, waar je met

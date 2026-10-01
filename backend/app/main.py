@@ -25,7 +25,6 @@ from app.services.errors import (
     InvalidPincodeError,
     NoPendingScanError,
     PermissionDeniedError,
-    ScanRejectedError,
     SessionExpiredError,
     WrongResolutionPathError,
 )
@@ -36,7 +35,6 @@ from app.services.scan_service import reap_expired_pending_scans
 logger = logging.getLogger("maintenance")
 
 _ERROR_STATUS_CODES: dict[type[DomainServiceError], int] = {
-    ScanRejectedError: 409,
     NoPendingScanError: 409,
     WrongResolutionPathError: 400,
     InvalidPincodeError: 401,

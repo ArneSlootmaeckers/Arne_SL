@@ -64,34 +64,72 @@ def test_geslaagd_scan_requires_practice_ack_not_verdict(client):
     assert ack.status_code == 200
 
 
-def test_second_scan_is_rejected_while_a_verdict_is_pending(client):
-    _scan(client)
-    response = _scan(client, wristband_id="B002")
-    assert response.status_code == 409
-
-
-def test_scan_is_accepted_again_after_timeout(client):
-    _scan(client)
-    time.sleep(1.2)  # test_settings.scan_timeout_seconds == 1
+def test_new_scan_replaces_a_scan_still_waiting_for_a_verdict(client, db_session):
+    _scan(client, wristband_id="B001")
     response = _scan(client, wristband_id="B002")
     assert response.status_code == 200
+    assert response.json()["wristband_id"] == "B002"
+
+    # Het oordeel gaat nu naar het nieuwe bandje...
+    client.post("/api/host/verdict", json={"device_id": "host-1", "verdict": "GROEN"})
+    assert _scan(client, wristband_id="B002").json()["status"] == "GESLAAGD"
+    # ...en het vervangen bandje kreeg geen oordeel: status ongewijzigd.
+    assert _scan(client, wristband_id="B001").json()["status"] == "NOG_NIET_GESPRONGEN"
+
+    from app.models import EventModel
+
+    replaced = db_session.query(EventModel).filter_by(event_type="GEANNULEERD").all()
+    assert [e.wristband_id for e in replaced] == ["B001"]
+    assert "nieuwe scan zonder oordeel" in replaced[0].detail
+
+
+def test_new_scan_during_practice_jump_counts_as_practice_jump(client, db_session):
+    _scan(client)
+    client.post("/api/host/verdict", json={"device_id": "host-1", "verdict": "GROEN"})
+    assert _scan(client).json()["requires_practice_ack"] is True
+
+    assert _scan(client, wristband_id="B002").status_code == 200
+
+    from app.models import EventModel
+
+    practice = db_session.query(EventModel).filter_by(event_type="OEFENSPRONG").all()
+    assert [e.wristband_id for e in practice] == ["B001"]
+
+
+def test_verdict_has_no_time_limit(client, db_session):
+    scan = _scan(client)
+    assert scan.json()["expires_at"] is None
+    time.sleep(1.2)  # langer dan test_settings.scan_timeout_seconds == 1
+
+    from app.main import reap_expired_pending_scans
+
+    assert reap_expired_pending_scans(client.app.state.session_factory()) == 0
+    response = client.post("/api/host/verdict", json={"device_id": "host-1", "verdict": "GROEN"})
+    assert response.status_code == 200
+    assert response.json()["status"] == "GESLAAGD"
+
+    from app.models import EventModel
+
+    assert db_session.query(EventModel).filter_by(event_type="TIME_OUT").count() == 0
+
+
+def test_practice_jump_still_times_out(client, db_session):
+    _scan(client)
+    client.post("/api/host/verdict", json={"device_id": "host-1", "verdict": "GROEN"})
+    assert _scan(client).json()["expires_at"] is not None
+    time.sleep(1.2)
+
+    response = client.post("/api/host/practice-ack", json={"device_id": "host-1"})
+    assert response.status_code == 409
+
+    from app.models import EventModel
+
+    assert db_session.query(EventModel).filter_by(event_type="TIME_OUT").count() == 1
 
 
 def test_verdict_without_pending_scan_is_rejected(client):
     response = client.post("/api/host/verdict", json={"device_id": "no-such-device", "verdict": "GROEN"})
     assert response.status_code == 409
-
-
-def test_verdict_after_timeout_is_rejected_and_logged(client, db_session):
-    _scan(client)
-    time.sleep(1.2)
-    response = client.post("/api/host/verdict", json={"device_id": "host-1", "verdict": "GROEN"})
-    assert response.status_code == 409
-
-    from app.models import EventModel
-
-    timeouts = db_session.query(EventModel).filter_by(event_type="TIME_OUT").all()
-    assert len(timeouts) >= 1
 
 
 def test_practice_ack_via_verdict_endpoint_is_rejected(client):

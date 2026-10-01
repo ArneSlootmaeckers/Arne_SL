@@ -188,7 +188,7 @@ Alle instelbare waarden staan in één bestand, `backend/config.yaml`:
 |---|---|---|
 | `timezone` | Tijdzone voor de dagwissel | `Europe/Brussels` |
 | `port` | Poort van de server | `8000` |
-| `scan_timeout_seconds` | Hoelang een scan op een oordeel wacht | `60` |
+| `scan_timeout_seconds` | Hoelang een oefensprong op bevestiging wacht (een oordeel bij de 1e/2e poging heeft geen tijdslimiet) | `60` |
 | `session_inactivity_timeout_seconds` | Auto-uitloggen na inactiviteit (beheer) | `120` |
 | `log_retention_days` | Bewaartermijn van logs | `365` |
 | `polling_interval_seconds` | Hoe vaak schermen de server pollen | `3` |
@@ -211,7 +211,8 @@ python3 -m pytest
 
 Dit draait alle unit- en integratietests: de volledige statuslogica
 (overgangen, dagwissel inclusief zomer-/wintertijd), de scan-/oordeelflow
-("één scan = één oordeel", time-outs), pincodes en rollen, handmatige
+(geen tijdslimiet op een oordeel, een nieuwe scan vervangt een
+openstaande), pincodes en rollen, handmatige
 wijzigingen met logging, en een integratietest die een volledige dag met
 meerdere bezoekers simuleert.
 

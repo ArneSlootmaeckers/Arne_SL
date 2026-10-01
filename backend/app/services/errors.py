@@ -8,10 +8,6 @@ class DomainServiceError(Exception):
     """Base class for service errors that the API layer translates to HTTP responses."""
 
 
-class ScanRejectedError(DomainServiceError):
-    """A new scan was refused because the device still has an unresolved one."""
-
-
 class NoPendingScanError(DomainServiceError):
     """A verdict/acknowledgement was submitted with no matching open scan."""
 
