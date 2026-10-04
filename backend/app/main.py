@@ -121,6 +121,16 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     for exc_class, status_code in _ERROR_STATUS_CODES.items():
         app.add_exception_handler(exc_class, _make_handler(status_code))
 
+    # Zonder Cache-Control mag een browser/WebView een oude app.js blijven
+    # gebruiken na een update, en een oude pagina met een nieuwe server laat
+    # scans meteen weer verdwijnen. "no-cache" = altijd even navragen (een
+    # goedkope 304 via de ETag als er niets veranderd is).
+    @app.middleware("http")
+    async def _no_stale_frontend(request: Request, call_next):
+        response = await call_next(request)
+        response.headers.setdefault("Cache-Control", "no-cache")
+        return response
+
     from app.api.routes_admin import router as admin_router
     from app.api.routes_auth import router as auth_router
     from app.api.routes_gate import router as gate_router
