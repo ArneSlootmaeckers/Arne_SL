@@ -12,6 +12,24 @@ def test_health_is_public_and_identifies_the_server(client):
     assert body["app"] == "toelatingssysteem"
 
 
+def test_health_reports_a_stable_frontend_version(client):
+    first = client.get("/api/health").json()["frontend_version"]
+    assert len(first) == 12
+    assert client.get("/api/health").json()["frontend_version"] == first
+
+
+def test_frontend_version_changes_when_a_screen_file_changes(tmp_path, monkeypatch):
+    from app import main
+
+    (tmp_path / "host").mkdir()
+    page = tmp_path / "host" / "app.js"
+    page.write_text("oud")
+    monkeypatch.setattr(main, "_FRONTEND_DIR", tmp_path)
+    before = main._frontend_version()
+    page.write_text("nieuw")
+    assert main._frontend_version() != before
+
+
 def test_frontend_files_are_never_served_from_a_stale_cache(client):
     # Een oude, opgeslagen app.js met een nieuwe server liet scans meteen
     # verdwijnen: telefoons moeten na een update altijd de nieuwe versie laden.

@@ -107,12 +107,24 @@ export const api = {
   shutdown: () => request("POST", "/api/admin/shutdown"),
 };
 
-/** Polls /api/health and calls onStatusChange(true|false) whenever connectivity flips. */
+/** Polls /api/health and calls onStatusChange(true|false) whenever connectivity flips.
+ *
+ * Herlaadt ook de pagina zodra de server een nieuwe versie van de
+ * schermbestanden heeft (na een update): een scherm dat open blijft staan,
+ * zoals in de Android-app, zou anders oude code blijven draaien tegen een
+ * nieuwe server. */
 export function startHealthPolling(intervalMs, onStatusChange) {
   let online = null;
+  let loadedVersion = null;
   async function check() {
     try {
-      await api.health();
+      const health = await api.health();
+      if (loadedVersion === null) {
+        loadedVersion = health.frontend_version;
+      } else if (health.frontend_version !== loadedVersion) {
+        location.reload();
+        return;
+      }
       if (online !== true) {
         online = true;
         onStatusChange(true);

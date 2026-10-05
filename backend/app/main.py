@@ -8,6 +8,7 @@ from __future__ import annotations
 
 import asyncio
 import contextlib
+import hashlib
 import logging
 from pathlib import Path
 
@@ -46,6 +47,18 @@ _ERROR_STATUS_CODES: dict[type[DomainServiceError], int] = {
 
 _REAPER_INTERVAL_SECONDS = 5.0
 _FRONTEND_DIR = Path(__file__).resolve().parent.parent.parent / "frontend"
+
+
+def _frontend_version() -> str:
+    """Vingerafdruk van alle schermbestanden: verandert enkel na een update.
+    Een open scherm dat een andere waarde terugkrijgt van /api/health draait
+    nog oude code en herlaadt zichzelf (zie frontend/shared/api.js)."""
+    digest = hashlib.sha256()
+    if _FRONTEND_DIR.is_dir():
+        for path in sorted(p for p in _FRONTEND_DIR.rglob("*") if p.is_file()):
+            digest.update(str(path.relative_to(_FRONTEND_DIR)).encode())
+            digest.update(path.read_bytes())
+    return digest.hexdigest()[:12]
 
 
 async def _reap_expired_scans_periodically(app: FastAPI) -> None:
@@ -111,6 +124,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
                 await maintenance_task
 
     app = FastAPI(title="Toelatingssysteem veiligheidssprong", lifespan=lifespan)
+    app.state.frontend_version = _frontend_version()
 
     def _make_handler(status_code: int):
         async def _handler(request: Request, exc: DomainServiceError) -> JSONResponse:

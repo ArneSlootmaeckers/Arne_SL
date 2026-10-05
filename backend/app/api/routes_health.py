@@ -1,6 +1,6 @@
 from datetime import datetime, timezone
 
-from fastapi import APIRouter
+from fastapi import APIRouter, Request
 
 router = APIRouter(prefix="/api", tags=["health"])
 
@@ -11,9 +11,10 @@ SERVER_APP_ID = "toelatingssysteem"
 
 
 @router.get("/health")
-def health() -> dict:
+def health(request: Request) -> dict:
     return {
         "status": "ok",
         "app": SERVER_APP_ID,
+        "frontend_version": request.app.state.frontend_version,
         "server_time": datetime.now(timezone.utc).isoformat(),
     }
