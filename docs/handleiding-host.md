@@ -23,6 +23,26 @@ zitten als de pc.
   bv. `10.18.0.155:8000`) en tik op **Opslaan**.
 - De app onthoudt dit. De volgende keren opent ze meteen het hostscherm.
 
+## Toestel koppelen (eenmalig)
+
+Een nieuwe telefoon mag nog niet scannen: het hostscherm toont dan
+**"Toestel koppelen"**. Zo kan geen enkel ander toestel op het netwerk
+bandjes goedkeuren.
+
+1. Vraag een beheerder om een **koppelcode**. Die maakt ze aan op de pc:
+   beheerscherm → tabblad **Systeem** → **Nieuwe koppelcode** (6 cijfers,
+   10 minuten geldig, voor één telefoon).
+2. Typ de code in bij **Koppelcode**.
+3. Controleer de **naam** van de telefoon (bv. "Host 1") en tik op
+   **Koppelen**.
+
+Dit hoeft maar één keer. Verschijnt "Toestel koppelen" later opnieuw, dan
+werd de telefoon ontkoppeld op het beheerscherm (bv. omdat hij verloren
+was): vraag dan een nieuwe code.
+
+Vijf keer een foute code na elkaar? Dan blokkeert het systeem de telefoon
+5 minuten. Wacht en probeer daarna opnieuw met een juiste code.
+
 ## Een bandje scannen
 
 Houd het bandje tegen de **achterkant van de telefoon**, tot het scherm
@@ -99,12 +119,25 @@ draait, en of de telefoon op het juiste wifi zit. Met **Opnieuw proberen**
 probeer je meteen opnieuw; met **Instellingen** kan je het adres zelf
 aanpassen (zie "Opstarten" hierboven).
 
+## Server niet vertrouwd
+
+Toont de app **"Server niet vertrouwd"**, dan antwoordt er wel iets op het
+adres van de pc, maar niet met de vaste herkenningscode van het systeem.
+**Laat dan niemand springen** en verwittig een beheerder. Dit gebeurt
+normaal enkel nadat het systeem op de pc volledig opnieuw geïnstalleerd
+werd; de beheerder kan het dan oplossen (zie "Instellingen openen").
+
 ## Instellingen openen
 
 Er is bewust geen instellingenknop op het scherm. Houd je vinger **10
 seconden ononderbroken** ergens op het scherm, tot het venster
 **Instellingen** opent. Het heeft twee delen:
 - **Server:** het adres van de pc wijzigen, of **Automatisch zoeken**.
+  Hier staat ook de **certificaatcode** (bv. `A6A9 E891 DBC2 04C5`): die
+  moet gelijk zijn aan de code op de pc (beheerscherm → **Systeem**). Na
+  "Server niet vertrouwd" staat hier de nieuwe code met de knop **Nieuw
+  certificaat vertrouwen**: enkel gebruiken als de code gelijk is aan die
+  op de pc.
 - **Dit toestel:**
   - de **naam** van deze telefoon (bv. "Host 1") — die zie je later in de
     logs op het beheerscherm, zodat je weet welke telefoon wat gedaan heeft;

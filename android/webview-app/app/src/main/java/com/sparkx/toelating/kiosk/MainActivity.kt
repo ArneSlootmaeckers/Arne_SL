@@ -7,10 +7,13 @@ import android.content.Context
 import android.content.Intent
 import android.content.SharedPreferences
 import android.content.res.ColorStateList
+import android.graphics.Bitmap
 import android.graphics.Color
 import android.graphics.Typeface
 import android.graphics.drawable.GradientDrawable
 import android.net.ConnectivityManager
+import android.net.Uri
+import android.net.http.SslError
 import android.nfc.NfcAdapter
 import android.nfc.Tag
 import android.os.Build
@@ -23,6 +26,8 @@ import android.view.Gravity
 import android.view.MotionEvent
 import android.view.View
 import android.view.WindowManager
+import android.webkit.JavascriptInterface
+import android.webkit.SslErrorHandler
 import android.webkit.WebResourceError
 import android.webkit.WebResourceRequest
 import android.webkit.WebSettings
@@ -41,17 +46,20 @@ import android.widget.Toast
 import androidx.appcompat.app.AlertDialog
 import androidx.appcompat.app.AppCompatActivity
 import org.json.JSONObject
-import java.net.HttpURLConnection
 import java.net.URL
 import java.net.URLEncoder
 import java.util.concurrent.ExecutorService
 import java.util.concurrent.Executors
+import javax.net.ssl.HttpsURLConnection
 
 private const val PREFS_NAME = "toelating_kiosk"
 private const val KEY_SERVER = "server_address"
 private const val KEY_SCREEN = "screen_path"
 private const val KEY_KIOSK = "kiosk_mode"
 private const val KEY_DEVICE_NAME = "device_name"
+// Geheime sleutel die het hostscherm krijgt bij het koppelen van dit toestel
+// (zie DeviceKeyBridge).
+private const val KEY_DEVICE_TOKEN = "device_token"
 private const val SCREEN_HOST = "/"
 private const val SCREEN_ADMIN = "/admin/"
 
@@ -147,12 +155,20 @@ private const val FALLBACK_PAGE_HTML =
  * app de server zelf op het wifinetwerk. Kreeg de pc een ander IP-adres, dan
  * wordt het nieuwe adres dus vanzelf gevonden, opgeslagen en geladen.
  * Handmatig invullen blijft altijd mogelijk via de instellingen.
+ *
+ * Beveiliging: alle verkeer met de server loopt over https, en de app
+ * vertrouwt enkel het eigen certificaat van de server (zie ServerCertificate).
+ * Het hostscherm mag pas scannen nadat een beheerder dit toestel gekoppeld
+ * heeft; de sleutel die het daarbij krijgt, bewaart de app zelf (zie
+ * DeviceKeyBridge), zodat hij niet verloren gaat als de pc een ander
+ * IP-adres krijgt.
  */
 class MainActivity : AppCompatActivity() {
 
     private lateinit var webView: WebView
     private lateinit var prefs: SharedPreferences
     private lateinit var serverDiscovery: ServerDiscovery
+    private lateinit var serverCertificate: ServerCertificate
     private var nfcAdapter: NfcAdapter? = null
     private var lastNfcTagId: String? = null
     private var lastNfcTagAtMs: Long = 0L
@@ -165,6 +181,8 @@ class MainActivity : AppCompatActivity() {
     private var connectionErrorShowing = false
     private var connectionErrorDialog: AlertDialog? = null
     private var connectionErrorStatus: TextView? = null
+    private var connectionErrorTitle: TextView? = null
+    private var connectionErrorMessage: TextView? = null
     private var pageLoaded = false
     private var showingFallbackPage = false
     private var settingsDialogShowing = false
@@ -174,11 +192,19 @@ class MainActivity : AppCompatActivity() {
     private var lastDiscoveryAtMs = 0L
     private val discoveryCallbacks = mutableListOf<(String?) -> Unit>()
 
+    // Gelezen vanop de achtergrondthread van DeviceKeyBridge.
+    @Volatile
+    private var currentPageUrl: String? = null
+
     @SuppressLint("SetJavaScriptEnabled")
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         prefs = getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
-        serverDiscovery = ServerDiscovery(getSystemService(Context.CONNECTIVITY_SERVICE) as ConnectivityManager)
+        serverCertificate = ServerCertificate(prefs)
+        serverDiscovery = ServerDiscovery(
+            getSystemService(Context.CONNECTIVITY_SERVICE) as ConnectivityManager,
+            serverCertificate,
+        )
         nfcAdapter = NfcAdapter.getDefaultAdapter(this)
 
         webView = WebView(this).apply {
@@ -201,7 +227,35 @@ class MainActivity : AppCompatActivity() {
             isLongClickable = true
             setOnLongClickListener { true }
             setOnTouchListener { _, event -> handleSettingsHoldTouch(event); false }
+            addJavascriptInterface(DeviceKeyBridge(), "ToelatingApp")
             webViewClient = object : WebViewClient() {
+                override fun onPageStarted(view: WebView?, url: String?, favicon: Bitmap?) {
+                    super.onPageStarted(view, url, favicon)
+                    currentPageUrl = url
+                }
+
+                // Enkel pagina's van de eigen server: geen enkele andere site
+                // mag in deze app geladen worden (en zo nooit aan de sleutel
+                // van DeviceKeyBridge kunnen).
+                override fun shouldOverrideUrlLoading(view: WebView?, request: WebResourceRequest?): Boolean =
+                    !isServerUrl(request?.url?.toString())
+
+                // Het servercertificaat is zelfgemaakt, dus de WebView meldt
+                // altijd een "fout": enkel doorgaan als het precies het
+                // vertrouwde certificaat is (zie ServerCertificate).
+                override fun onReceivedSslError(view: WebView?, handler: SslErrorHandler, error: SslError) {
+                    val certificate = ServerCertificate.encoded(error.certificate)
+                    if (certificate != null && isServerUrl(error.url) && serverCertificate.check(certificate)) {
+                        handler.proceed()
+                        return
+                    }
+                    handler.cancel()
+                    pageLoaded = false
+                    showingFallbackPage = true
+                    view?.loadDataWithBaseURL(null, FALLBACK_PAGE_HTML, "text/html", "UTF-8", null)
+                    showConnectionError(untrusted = serverCertificate.rejected != null)
+                }
+
                 override fun onReceivedError(
                     view: WebView?,
                     request: WebResourceRequest?,
@@ -335,39 +389,56 @@ class MainActivity : AppCompatActivity() {
     private fun checkHealthOnce() {
         val server = prefs.getString(KEY_SERVER, null)
         if (server.isNullOrBlank()) return
-        val healthUrl = buildHealthUrl(server)
+        val healthUrl = "${serverBaseUrl(server)}/api/health"
         healthCheckExecutor.execute {
-            val reachable = isServerReachable(healthUrl)
-            mainHandler.post { onHealthCheckResult(reachable) }
+            val result = checkServer(healthUrl)
+            mainHandler.post { onHealthCheckResult(result) }
         }
     }
 
-    private fun buildHealthUrl(address: String): String {
-        val clean = address.trim().removeSuffix("/")
-        val base = if (clean.startsWith("http://") || clean.startsWith("https://")) clean else "http://$clean"
-        return "$base/api/health"
+    private enum class HealthResult { OK, UNREACHABLE, UNTRUSTED }
+
+    /** "192.168.1.50:8000" (of met http(s):// ervoor) -> "https://192.168.1.50:8000".
+     * Altijd https: de server aanvaardt niets anders meer op het netwerk. */
+    private fun serverBaseUrl(address: String): String {
+        val clean = address.trim().removeSuffix("/").removePrefix("https://").removePrefix("http://")
+        return "https://$clean"
     }
 
-    private fun isServerReachable(healthUrl: String): Boolean {
-        var connection: HttpURLConnection? = null
+    /** True als `url` een pagina van de ingestelde server is. */
+    private fun isServerUrl(url: String?): Boolean {
+        val server = prefs.getString(KEY_SERVER, null)
+        if (url == null || server.isNullOrBlank()) return false
+        val target = Uri.parse(url)
+        val expected = Uri.parse(serverBaseUrl(server))
+        return target.scheme == "https" && target.host == expected.host && target.port == expected.port
+    }
+
+    private fun checkServer(healthUrl: String): HealthResult {
+        var connection: HttpsURLConnection? = null
         return try {
-            connection = URL(healthUrl).openConnection() as HttpURLConnection
+            connection = URL(healthUrl).openConnection() as HttpsURLConnection
+            serverCertificate.configure(connection, pinOnFirstUse = true)
             connection.connectTimeout = HEALTH_CHECK_TIMEOUT_MS
             connection.readTimeout = HEALTH_CHECK_TIMEOUT_MS
             connection.requestMethod = "GET"
-            connection.responseCode in 200..299
+            if (connection.responseCode in 200..299) HealthResult.OK else HealthResult.UNREACHABLE
         } catch (e: Exception) {
-            false
+            if (generateSequence<Throwable>(e) { it.cause }.any { it is UntrustedCertificateException }) {
+                HealthResult.UNTRUSTED
+            } else {
+                HealthResult.UNREACHABLE
+            }
         } finally {
             connection?.disconnect()
         }
     }
 
-    private fun onHealthCheckResult(reachable: Boolean) {
+    private fun onHealthCheckResult(result: HealthResult) {
         // Een controle die nog onderweg was toen de app afsloot: geen vensters
         // of zoektocht meer starten op een afgesloten scherm.
         if (isFinishing || isDestroyed) return
-        if (reachable) {
+        if (result == HealthResult.OK) {
             consecutiveHealthFailures = 0
             if (connectionErrorShowing) {
                 recoverFromConnectionError()
@@ -376,9 +447,11 @@ class MainActivity : AppCompatActivity() {
         }
         consecutiveHealthFailures++
         if (connectionErrorShowing) {
+            // Van "Geen verbinding" naar "niet vertrouwd" (of terug) als dat verandert.
+            showConnectionError(untrusted = result == HealthResult.UNTRUSTED)
             maybeStartAutoDiscovery()
         } else if (consecutiveHealthFailures >= HEALTH_CHECK_FAILURES_BEFORE_ERROR) {
-            showConnectionError()
+            showConnectionError(untrusted = result == HealthResult.UNTRUSTED)
         }
     }
 
@@ -391,8 +464,7 @@ class MainActivity : AppCompatActivity() {
      * wegnemen genoeg. */
     private fun recoverFromConnectionError(message: String = "Verbinding hersteld", forceReload: Boolean = false) {
         connectionErrorDialog?.dismiss()
-        connectionErrorDialog = null
-        connectionErrorStatus = null
+        clearConnectionErrorViews()
         connectionErrorShowing = false
         Toast.makeText(this, message, Toast.LENGTH_SHORT).show()
         if (forceReload || !pageLoaded || showingFallbackPage) {
@@ -602,7 +674,7 @@ class MainActivity : AppCompatActivity() {
         )
         panel.addView(serverInput)
 
-        val searchButton = darkButton("Automatisch zoeken", bottomMarginDp = 26)
+        val searchButton = darkButton("Automatisch zoeken", bottomMarginDp = 12)
         searchButton.setOnClickListener {
             searchButton.isEnabled = false
             searchButton.text = "Zoeken…"
@@ -621,6 +693,7 @@ class MainActivity : AppCompatActivity() {
             }
         }
         panel.addView(searchButton)
+        addCertificateInfo(panel)
 
         // ---- Dit toestel
         panel.addView(sectionHeader("Dit toestel"))
@@ -737,6 +810,47 @@ class MainActivity : AppCompatActivity() {
         dialog.setOnDismissListener { settingsDialogShowing = false }
     }
 
+    /** Toont welk servercertificaat de app vertrouwt, met dezelfde code als
+     * Beheer → Systeem op de pc. Toont de server een ander certificaat dan
+     * eerst, dan kan dat hier -- na vergelijken -- vertrouwd worden. */
+    private fun addCertificateInfo(panel: LinearLayout) {
+        val rejectedCode = serverCertificate.rejectedCode()
+        if (rejectedCode == null) {
+            val pinned = serverCertificate.pinnedCode()
+            panel.addView(
+                brandedText(
+                    if (pinned != null) {
+                        "Certificaatcode: $pinned\nMoet gelijk zijn aan Beheer → Systeem op de pc."
+                    } else {
+                        "Certificaatcode: wordt vastgelegd bij de eerste verbinding met de server."
+                    },
+                    bottomMarginDp = 26,
+                    sizeSp = 13f,
+                ),
+            )
+            return
+        }
+
+        val warning = brandedText(
+            "De server toont een ander certificaat dan eerst: $rejectedCode\n" +
+                "Vergelijk deze code met Beheer → Systeem op de pc. Enkel als ze " +
+                "gelijk is (bv. na een herinstallatie van de server): vertrouwen. " +
+                "Anders niet doen en IT verwittigen.",
+            bottomMarginDp = 12,
+            color = COLOR_SPARKX_GEEL,
+            sizeSp = 13f,
+        )
+        panel.addView(warning)
+        val trustButton = darkButton("Nieuw certificaat vertrouwen", bottomMarginDp = 26)
+        trustButton.setOnClickListener {
+            serverCertificate.trustRejected()
+            webView.clearSslPreferences()
+            warning.text = "Vertrouwd: $rejectedCode. Druk op Opslaan."
+            trustButton.visibility = View.GONE
+        }
+        panel.addView(trustButton)
+    }
+
     // ---- Kioskmodus: Android's "app vastzetten" (screen pinning). Zolang dit
     // aanstaat, kan niemand de app verlaten via de thuis- of recente-apps-
     // knop. Losmaken kan enkel via de instellingen van deze app, of via het
@@ -773,25 +887,43 @@ class MainActivity : AppCompatActivity() {
 
     private fun loadServer(address: String, screenPath: String) {
         showingFallbackPage = false
-        val cleanAddress = address.trim().removeSuffix("/")
-        val base = if (cleanAddress.startsWith("http://") || cleanAddress.startsWith("https://")) {
-            "$cleanAddress$screenPath"
-        } else {
-            "http://$cleanAddress$screenPath"
-        }
+        val base = "${serverBaseUrl(address)}$screenPath"
         // Het hostscherm onthoudt deze naam en geeft hem door aan de server
         // (zie frontend/host/app.js); ook leeg, zodat wissen ook doorkomt.
         val deviceName = URLEncoder.encode(prefs.getString(KEY_DEVICE_NAME, "") ?: "", "UTF-8")
         webView.loadUrl("$base?toestel=$deviceName")
     }
 
-    private fun showConnectionError() {
+    private fun clearConnectionErrorViews() {
+        connectionErrorDialog = null
+        connectionErrorStatus = null
+        connectionErrorTitle = null
+        connectionErrorMessage = null
+    }
+
+    /** `untrusted`: de server antwoordt wel, maar met een ander certificaat
+     * dan het vertrouwde (zie ServerCertificate) -- dan niet verder werken. */
+    private fun showConnectionError(untrusted: Boolean = false) {
+        val title = if (untrusted) "Server niet vertrouwd" else "Geen verbinding"
+        val message = if (untrusted) {
+            "De server toont een ander certificaat dan eerst. Werd de server opnieuw " +
+                "geïnstalleerd? Open dan Instellingen en vergelijk de code. Anders: " +
+                "niet laten springen en IT verwittigen."
+        } else {
+            "Kan de server niet bereiken. Controleer of de pc aan staat, " +
+                "de server draait, en het IP-adres klopt."
+        }
+        if (connectionErrorShowing) {
+            connectionErrorTitle?.text = title
+            connectionErrorMessage?.text = message
+            return
+        }
         // Zolang het instellingenvenster open staat (bv. net geopend vanuit
         // dit venster om het serveradres te wijzigen) mag de achtergrond-
         // controle dit venster niet erover-tonen: de server is uiteraard nog
         // onbereikbaar zolang het juiste adres nog niet is ingevuld en
         // opgeslagen -- personeel moet hier onbeperkt de tijd voor krijgen.
-        if (connectionErrorShowing || settingsDialogShowing) return
+        if (settingsDialogShowing) return
         connectionErrorShowing = true
 
         val panel = brandedPanel()
@@ -810,14 +942,10 @@ class MainActivity : AppCompatActivity() {
                 }
             },
         )
-        panel.addView(brandedTitle("Geen verbinding", bottomMarginDp = 10))
-        panel.addView(
-            brandedText(
-                "Kan de server niet bereiken. Controleer of de pc aan staat, " +
-                    "de server draait, en het IP-adres klopt.",
-                bottomMarginDp = 12,
-            ),
-        )
+        val titleView = brandedTitle(title, bottomMarginDp = 10)
+        panel.addView(titleView)
+        val messageView = brandedText(message, bottomMarginDp = 12)
+        panel.addView(messageView)
         val status = brandedText("", bottomMarginDp = 22, color = COLOR_SPARKX_GEEL, sizeSp = 13f)
         panel.addView(status)
 
@@ -827,8 +955,7 @@ class MainActivity : AppCompatActivity() {
             gradientButton("Opnieuw proberen", bottomMarginDp = 10).apply {
                 setOnClickListener {
                     connectionErrorShowing = false
-                    connectionErrorDialog = null
-                    connectionErrorStatus = null
+                    clearConnectionErrorViews()
                     consecutiveHealthFailures = 0
                     dialog.dismiss()
                     loadServer(
@@ -842,8 +969,7 @@ class MainActivity : AppCompatActivity() {
             darkButton("Instellingen", bottomMarginDp = 0).apply {
                 setOnClickListener {
                     connectionErrorShowing = false
-                    connectionErrorDialog = null
-                    connectionErrorStatus = null
+                    clearConnectionErrorViews()
                     consecutiveHealthFailures = 0
                     // Meteen al aan, niet pas in showSettingsDialog(): anders
                     // kan de achtergrondcontrole in het (korte) gaatje tussen
@@ -862,7 +988,38 @@ class MainActivity : AppCompatActivity() {
         dialog = showBrandedDialog(panel, cancelable = false)
         connectionErrorDialog = dialog
         connectionErrorStatus = status
+        connectionErrorTitle = titleView
+        connectionErrorMessage = messageView
         maybeStartAutoDiscovery()
+    }
+
+    /**
+     * Bewaart de sleutel die het hostscherm krijgt bij het koppelen (zie
+     * frontend/shared/api.js: getDeviceToken). In de pagina zelf (localStorage)
+     * zou die horen bij het adres van de server, en dus verdwijnen zodra de pc
+     * een ander IP-adres krijgt -- dan zou elk toestel opnieuw gekoppeld moeten
+     * worden.
+     *
+     * Enkel een pagina van de ingestelde server krijgt de sleutel: de
+     * certificaatcontrole (onReceivedSslError) zorgt dat dat ook echt de
+     * server is.
+     */
+    private inner class DeviceKeyBridge {
+        private fun fromServerPage(): Boolean = isServerUrl(currentPageUrl)
+
+        @JavascriptInterface
+        fun getDeviceToken(): String? =
+            if (fromServerPage()) prefs.getString(KEY_DEVICE_TOKEN, null) else null
+
+        @JavascriptInterface
+        fun setDeviceToken(token: String) {
+            if (fromServerPage()) prefs.edit().putString(KEY_DEVICE_TOKEN, token).apply()
+        }
+
+        @JavascriptInterface
+        fun clearDeviceToken() {
+            if (fromServerPage()) prefs.edit().remove(KEY_DEVICE_TOKEN).apply()
+        }
     }
 
     @Suppress("DEPRECATION")

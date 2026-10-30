@@ -8,7 +8,9 @@ beheerscherm opent meteen. De telefoons van de hosts tonen het hostscherm
 Je kan het beheerscherm ook op een telefoon openen, via de knop
 **"Profiel"** rechtsboven op het hostscherm.
 
-Log in met je persoonlijke pincode. Na **2 minuten inactiviteit** log je
+Log in met je persoonlijke pincode. Na **5 foute pincodes** na elkaar is
+dat toestel **5 minuten geblokkeerd** (zo valt een pincode niet te raden);
+wacht dan en probeer opnieuw. Na **2 minuten inactiviteit** log je
 automatisch uit. Rechtsboven zie je je naam; met het **uitlog-icoontje**
 ernaast log je af, en **← Host** opent het hostscherm.
 
@@ -44,12 +46,14 @@ en de gemiddelde tijd tussen twee sprongen bij de testsprong die dag.
 ## Tabblad "Medewerkers" (enkel zichtbaar voor rol admin)
 
 - **Nieuwe medewerker**: naam, pincode en rol
-  (**Admin** of **Supervisor**). Een pincode moet uniek zijn onder de
-  actieve medewerkers.
+  (**Admin** of **Supervisor**). Een pincode moet **minstens 6 tekens**
+  lang zijn en uniek onder de actieve medewerkers.
 - **Intrekken / Heractiveren**: een ingetrokken medewerker kan niet meer
   inloggen, maar blijft zichtbaar in de logs (voor de geschiedenis).
 - **Nieuwe pincode**: vervangt de pincode van een medewerker (bv. na een
-  vermoeden van misbruik).
+  vermoeden van misbruik). Oudere pincodes van 4 of 5 tekens blijven
+  werken, maar wie daarmee inlogt, ziet een oranje balk met de vraag om
+  ze te vervangen: geef die medewerkers hier een nieuwe van 6 tekens.
 
 ## Tabblad "Systeem" (enkel zichtbaar voor rol admin)
 
@@ -57,10 +61,24 @@ en de gemiddelde tijd tussen twee sprongen bij de testsprong die dag.
 `10.18.0.155:8000`). Normaal vindt de telefoon-app de pc vanzelf; lukt dat
 niet, vul dan dit adres in bij de instellingen van de app (op de telefoon
 10 seconden ergens op het scherm drukken). Wissel je van netwerk, klik dan
-op **Vernieuwen**.
+op **Vernieuwen**. Daaronder staat de **certificaatcode** (bv. `A6A9 E891
+DBC2 04C5`): de app toont dezelfde code bij haar instellingen. Zo kan je
+nakijken dat een telefoon echt met deze pc praat.
+
+**Gekoppelde toestellen**: enkel telefoons die je hier gekoppeld hebt,
+mogen bandjes scannen en een oordeel geven.
+- **Nieuwe koppelcode** toont een code van 6 cijfers, 10 minuten geldig,
+  voor één telefoon. Typ die in op de telefoon, in het scherm "Toestel
+  koppelen". Klik daarna op **Vernieuwen** om de telefoon in de lijst te
+  zien.
+- De lijst toont elke gekoppelde telefoon, wanneer hij gekoppeld werd en
+  wanneer hij laatst iets deed.
+- **Ontkoppelen**: de telefoon kan meteen niets meer (bv. bij verlies of
+  diefstal). Opnieuw gebruiken kan pas met een nieuwe koppelcode.
 
 **Simulatiemodus** opent het hostscherm met een paneel van testbandjes,
-om te oefenen of te demonstreren zonder een echt bandje.
+om te oefenen of te demonstreren zonder een echt bandje. Ook dat scherm
+moet de eerste keer gekoppeld worden met een koppelcode.
 
 **Applicatie afsluiten** sluit het systeem netjes af: het host- en
 beheerscherm werken vanaf dan niet meer, ook niet op de telefoons. Vraagt
@@ -90,15 +108,32 @@ afsluiten.
 Per telefoon, één keer:
 1. Installeer de app en open ze. Ze zoekt de pc zelf en opent het
    hostscherm.
-2. Geef de telefoon een naam: 10 seconden drukken → onder **Dit toestel**
+2. **Koppel de telefoon**: maak hier op het tabblad **Systeem** een
+   **Nieuwe koppelcode** aan en typ die in op de telefoon (scherm
+   "Toestel koppelen").
+3. Geef de telefoon een naam: 10 seconden drukken → onder **Dit toestel**
    de naam invullen (bv. "Host 1") → **Opslaan**. Zo zie je in de logs
    welke telefoon wat gedaan heeft. Geef elke telefoon een andere naam.
-3. Zet in de Android-instellingen een **pincode** op de telefoon, en zet
+4. Zet in de Android-instellingen een **pincode** op de telefoon, en zet
    **"Pincode vragen voor losmaken"** aan (Instellingen → Beveiliging →
    App vastzetten; de naam verschilt per merk).
-4. In de app: 10 seconden drukken → zet **App vastzetten** aan →
+5. In de app: 10 seconden drukken → zet **App vastzetten** aan →
    **Opslaan** → **Ik snap het**.
    De hosts kunnen de app nu niet meer verlaten.
+
+## Telefoon toont "Server niet vertrouwd"
+
+De app vertrouwt enkel het vaste certificaat van deze pc. Toont een
+telefoon "Server niet vertrouwd", dan is dat veranderd — normaal enkel
+nadat het systeem op de pc volledig opnieuw geïnstalleerd werd zonder de
+map `data` te bewaren. Oplossen, per telefoon:
+1. Open de instellingen van de app (10 seconden drukken, of de knop
+   **Instellingen** in het venster).
+2. Vergelijk de **nieuwe code** daar met de certificaatcode op het tabblad
+   **Systeem** hier.
+3. **Enkel als ze gelijk zijn**: tik op **Nieuw certificaat vertrouwen** en
+   daarna **Opslaan**. Zijn ze verschillend, doe dan niets en verwittig
+   IT: dan doet mogelijk een ander toestel zich voor als de pc.
 
 ## Technisch onderhoud
 

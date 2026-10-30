@@ -15,8 +15,8 @@ from app.services.common import now_utc
 from app.services.errors import DuplicatePincodeError
 
 TEST_WRISTBANDS = ["TEST-001", "TEST-002", "TEST-003", "TEST-004", "TEST-005"]
-DEMO_ADMIN_PINCODE = "1234"
-DEMO_SUPERVISOR_PINCODE = "5678"
+DEMO_ADMIN_PINCODE = "123456"
+DEMO_SUPERVISOR_PINCODE = "567890"
 
 
 def main() -> None:

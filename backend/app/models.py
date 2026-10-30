@@ -73,6 +73,35 @@ class DeviceModel(Base):
     updated_at: Mapped[datetime] = mapped_column(UTCDateTime)
 
 
+class PairedDeviceModel(Base):
+    """Een hosttoestel dat een beheerder één keer goedgekeurd heeft. Enkel
+    gekoppelde toestellen mogen scannen en oordelen; het toestel bewijst wie
+    het is met een geheime sleutel (zie pairing_service). De server bewaart
+    daarvan enkel een hash: wie de database kan lezen, kan zich daarmee nog
+    niet als toestel voordoen."""
+
+    __tablename__ = "paired_devices"
+
+    device_id: Mapped[str] = mapped_column(String(64), primary_key=True)
+    token_hash: Mapped[str] = mapped_column(String(64), unique=True)
+    paired_at: Mapped[datetime] = mapped_column(UTCDateTime)
+    paired_by_employee_id: Mapped[int | None] = mapped_column(
+        ForeignKey("employees.id"), nullable=True
+    )
+    last_seen_at: Mapped[datetime] = mapped_column(UTCDateTime)
+
+
+class PairingCodeModel(Base):
+    """Eenmalige koppelcode die een beheerder aanmaakt om één toestel te koppelen."""
+
+    __tablename__ = "pairing_codes"
+
+    code: Mapped[str] = mapped_column(String(16), primary_key=True)
+    created_at: Mapped[datetime] = mapped_column(UTCDateTime)
+    expires_at: Mapped[datetime] = mapped_column(UTCDateTime)
+    created_by_employee_id: Mapped[int] = mapped_column(ForeignKey("employees.id"))
+
+
 class EventModel(Base):
     __tablename__ = "events"
 

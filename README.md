@@ -77,9 +77,16 @@ sudo systemctl enable --now toelatingssysteem
 ./start.sh
 ```
 
-`http://<server-ip>:8000/` opent altijd rechtstreeks het hostscherm. Het
-beheerscherm (`.../admin/`) is bereikbaar via de knop **"Profiel"**
-rechtsboven op het hostscherm.
+De server luistert op twee poorten:
+
+- **`https://<server-ip>:8000/`** voor de telefoons en de rest van het
+  netwerk. Opent rechtstreeks het hostscherm; het beheerscherm
+  (`.../admin/`) is bereikbaar via de knop **"Profiel"** rechtsboven. Een
+  gewone browser toont hier eerst een certificaatwaarschuwing: dat is
+  normaal (zie "Beveiliging" hieronder), de telefoon-app niet.
+- **`http://127.0.0.1:8001/`** enkel op de server-pc zelf (niet bereikbaar
+  vanaf het netwerk), zonder certificaatwaarschuwing. De
+  bureaubladsnelkoppeling gebruikt deze.
 
 ### Bureaubladsnelkoppeling (Windows)
 
@@ -124,14 +131,13 @@ gesloten moet worden.
 Het hostscherm heeft een `manifest.json` met naam, logo en kleuren. Om er
 een icoon van te maken op een Android-toestel:
 
-1. Open `http://<server-ip>:8000/` in Chrome.
+1. Open `https://<server-ip>:8000/` in Chrome (en aanvaard de
+   certificaatwaarschuwing).
 2. Tik op het menu (⋮, rechtsboven) → **"Toevoegen aan startscherm"**.
 
-Dit geeft een icoon met het Sparkx-logo op het startscherm. Let op: omdat
-dit systeem bewust zonder internetverbinding/HTTPS werkt (gewoon HTTP op
-het lokale netwerk), blijft de adresbalk van Chrome zichtbaar bovenaan —
-een browservenster zonder adresbalk (zoals de Windows-snelkoppeling) is op
-Android enkel mogelijk via HTTPS of een aparte app.
+Dit geeft een icoon met het Sparkx-logo op het startscherm. Omdat Chrome
+het zelfgemaakte certificaat niet vertrouwt, blijft de adresbalk zichtbaar
+bovenaan, en het toestel moet net als de app gekoppeld worden.
 
 Voor een echte, installeerbare Android-app (eigen icoon, geen adresbalk,
 volledig scherm, en scant bandjes met de NFC-chip van de telefoon zelf)
@@ -153,16 +159,41 @@ source .venv/bin/activate
 python3 create_admin.py
 ```
 
-Dit vraagt interactief om een naam en een pincode (die nooit in platte tekst
-wordt opgeslagen, enkel gehasht). Log daarna in op `/admin/` met die pincode
-om verdere medewerkers aan te maken.
+Dit vraagt interactief om een naam en een pincode van minstens 6 tekens
+(die nooit in platte tekst wordt opgeslagen, enkel gehasht). Log daarna in
+op `/admin/` met die pincode om verdere medewerkers aan te maken.
+
+## Beveiliging
+
+- **Versleuteld verkeer (https).** Bij de eerste start maakt de server zelf
+  een certificaat aan in `data/tls/` (geen internet of
+  certificaatautoriteit nodig). Niemand op het netwerk kan zo meelezen of
+  berichten aanpassen. De telefoon-app vertrouwt het certificaat dat hij de
+  eerste keer ziet, en daarna enkel nog precies dat ene: een ander toestel
+  dat zich voordoet als de server, wordt geweigerd. **Laat `data/tls/`
+  daarom staan** (ook bij een herinstallatie of verhuis naar een andere
+  pc); anders toont elke telefoon "Server niet vertrouwd" en moet die het
+  nieuwe certificaat eerst vertrouwen via de instellingen van de app. Ter
+  controle staat een korte certificaatcode op het tabblad **"Systeem"**,
+  en dezelfde code in de instellingen van de app.
+- **Enkel gekoppelde toestellen mogen scannen.** Een nieuw toestel toont
+  bij het openen van het hostscherm een koppelscherm. Een admin maakt op
+  het tabblad **"Systeem"** een koppelcode aan (6 cijfers, 10 minuten
+  geldig, voor één toestel); het toestel krijgt daarmee een eigen geheime
+  sleutel. Zonder die sleutel weigert de server elke scan en elk oordeel.
+  Een verloren toestel ontkoppel je op hetzelfde tabblad.
+- **Pincodes van minstens 6 tekens**, en na 5 foute pincodes (of
+  koppelcodes) vanaf hetzelfde toestel is dat toestel 5 minuten
+  geblokkeerd. Oudere, kortere pincodes blijven werken, maar het
+  beheerscherm vraagt dan om ze te vervangen.
 
 ## Simulatiemodus (ontwikkeling en demo)
 
 Zonder een fysieke bandjeslezer kan elk scherm met `?sim=1` achter de URL
-geopend worden (bv. `http://localhost:8000/host/?sim=1`) — of, sneller,
+geopend worden (bv. `http://127.0.0.1:8001/host/?sim=1`) — of, sneller,
 via de knop **"Open hostscherm in simulatiemodus"** op het tabblad
-**"Systeem"** van het beheerscherm. Dat toont een paneel onderaan met een
+**"Systeem"** van het beheerscherm. Ook dan moet de browser eerst
+gekoppeld worden (zie "Beveiliging"). Dat toont een paneel onderaan met een
 paar testbandjes om op te klikken, en een veld om een willekeurig
 bandje-ID in te typen. Een lezer die zich als toetsenbord gedraagt
 (bandje-ID + Enter) werkt op elk scherm sowieso al, ook zonder `?sim=1` —
@@ -176,8 +207,8 @@ source .venv/bin/activate
 python3 seed.py
 ```
 
-**Let op:** `seed.py` maakt een admin (pincode `1234`) en supervisor
-(pincode `5678`) aan met vaste, publiek bekende pincodes. Enkel gebruiken
+**Let op:** `seed.py` maakt een admin (pincode `123456`) en supervisor
+(pincode `567890`) aan met vaste, publiek bekende pincodes. Enkel gebruiken
 voor demo/ontwikkeling, nooit op de echte parkserver.
 
 ## Configuratie
@@ -187,7 +218,9 @@ Alle instelbare waarden staan in één bestand, `backend/config.yaml`:
 | Sleutel | Betekenis | Standaard |
 |---|---|---|
 | `timezone` | Tijdzone voor de dagwissel | `Europe/Brussels` |
-| `port` | Poort van de server | `8000` |
+| `port` | Poort voor de telefoons en het netwerk (https) | `8000` |
+| `local_port` | Poort voor het beheerscherm op de server-pc zelf (http, enkel `127.0.0.1`) | `8001` |
+| `tls_dir` | Map met het eigen https-certificaat (laten staan!) | `../data/tls` |
 | `scan_timeout_seconds` | Hoelang een oefensprong op bevestiging wacht (een oordeel bij de 1e/2e poging heeft geen tijdslimiet) | `60` |
 | `session_inactivity_timeout_seconds` | Auto-uitloggen na inactiviteit (beheer) | `120` |
 | `log_retention_days` | Bewaartermijn van logs | `365` |
@@ -212,8 +245,8 @@ python3 -m pytest
 Dit draait alle unit- en integratietests: de volledige statuslogica
 (overgangen, dagwissel inclusief zomer-/wintertijd), de scan-/oordeelflow
 (geen tijdslimiet op een oordeel, een nieuwe scan vervangt een
-openstaande), pincodes en rollen, handmatige
-wijzigingen met logging, en een integratietest die een volledige dag met
+openstaande), pincodes en rollen, de blokkering na foute pogingen, het
+koppelen van toestellen, handmatige wijzigingen met logging, en een integratietest die een volledige dag met
 meerdere bezoekers simuleert.
 
 ## Back-up maken van de database
@@ -248,7 +281,9 @@ sqlite3 data/toelating.db ".backup data/backups/backup-$(date +%Y%m%d-%H%M%S).db
    de map `data\` van de oude installatie over die van de nieuwe
    (dezelfde locatie, `%LOCALAPPDATA%\Toelatingssysteem\data`) en herstart
    de server. Geen eigen `data\` meegenomen? Maak dan een eerste admin aan
-   (zie hierboven) voor je kan inloggen op het beheerscherm.
+   (zie hierboven) voor je kan inloggen op het beheerscherm. `data\`
+   bevat ook het certificaat (`data\tls\`): wie die meeneemt, hoeft de
+   telefoons niet opnieuw het certificaat te laten vertrouwen.
 
 **Handmatig (Linux/macOS, of Windows zonder de installer):**
 
@@ -273,7 +308,7 @@ backend/
     hardware/       # hekje- en kussen-sensor-abstracties (dummy-implementaties)
     api/             # FastAPI-routes
   tests/             # unit- en integratietests
-  run.py             # serverlauncher (start.sh/start-app.bat/systemd draaien dit)
+  run.py             # serverlauncher: https op 8000 + lokale http op 8001 (start.sh/start-app.bat/systemd draaien dit)
   seed.py            # demo-seed (testbandjes + demo-admin/-supervisor)
   create_admin.py    # eerste admin aanmaken
   config.yaml
@@ -288,7 +323,7 @@ installer/
   Toelatingssysteem-Setup.nsi         # NSIS-bronbestand voor de Windows-installer
   build.sh                            # bouwt Toelatingssysteem-Setup.exe (niet in git)
   README.md                           # hoe (her)bouwen
-data/      # SQLite-bestand + back-ups (niet in git)
+data/      # SQLite-bestand, back-ups en het https-certificaat (niet in git)
 install.sh                          # installatie (Linux/macOS/WSL)
 setup.ps1                           # installatie + bureaubladsnelkoppeling (Windows, alternatief script)
 start.sh                            # server starten (Linux/macOS/WSL)

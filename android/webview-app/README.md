@@ -62,16 +62,49 @@ ze niets, dan vraagt ze om:
    toont.
 
 Het instellingenvenster heeft twee delen: **Server** (adres van de pc, met
-een knop **Automatisch zoeken**) en **Dit toestel** (naam van de telefoon,
-host- of beheerscherm, app vastzetten). Alles geldt pas na **Opslaan**.
+een knop **Automatisch zoeken**, en de certificaatcode) en **Dit toestel**
+(naam van de telefoon, host- of beheerscherm, app vastzetten). Alles geldt
+pas na **Opslaan**.
+
+Daarna toont het hostscherm eenmalig **"Toestel koppelen"**: een admin
+maakt op de pc (beheerscherm → **Systeem** → **Nieuwe koppelcode**) een
+code van 6 cijfers aan, die je hier intypt. Pas dan mag de telefoon
+scannen. De sleutel die de telefoon daarbij krijgt, bewaart de app zelf
+(niet de webpagina), zodat hij blijft werken als de pc een ander IP-adres
+krijgt.
+
+## Beveiliging: https en het servercertificaat
+
+Alle verkeer met de server loopt over **https** (onversleuteld verkeer
+staat uit in de app). De server maakt zelf een certificaat aan (zie
+`backend/app/tls.py`); de app vertrouwt het certificaat dat ze de eerste
+keer bij de ingestelde server ziet, en daarna **enkel nog precies dat
+ene** (zie `ServerCertificate.kt`). Een ander toestel op het netwerk dat
+zich voordoet als de server, wordt zo geweigerd — ook als het het IP-adres
+van de pc overneemt. Een nieuw IP-adres voor de echte pc maakt niets uit:
+enkel het certificaat zelf telt.
+
+In de instellingen staat onder **Server** de **certificaatcode** (bv.
+`A6A9 E891 DBC2 04C5`). Die moet gelijk zijn aan de code op de pc
+(beheerscherm → **Systeem**).
+
+Toont de server ooit een ander certificaat (bv. na een volledige
+herinstallatie waarbij `data/tls/` niet bewaard werd), dan toont de app
+**"Server niet vertrouwd"** en werkt ze niet verder. Open dan
+**Instellingen**: daar staat de code van het nieuwe certificaat.
+Vergelijk die met de code op de pc; enkel als ze gelijk is, tik je op
+**Nieuw certificaat vertrouwen** en daarna **Opslaan**. Is ze anders,
+verwittig dan IT.
 
 ### Hoe het automatisch zoeken werkt
 
 De app kent haar eigen adres op het wifi (bv. `192.168.8.23`) en vraagt elk
-ander adres in dat netwerk op poort 8000 naar `/api/health`. Enkel een
-antwoord met `"app": "toelatingssysteem"` telt (zie
+ander adres in dat netwerk op poort 8000 naar `/api/health` (over https).
+Enkel een antwoord met `"app": "toelatingssysteem"` telt (zie
 `backend/app/api/routes_health.py`), zodat een ander toestel dat toevallig
-op poort 8000 draait nooit per ongeluk gekozen wordt. Er is dus **geen extra
+op poort 8000 draait nooit per ongeluk gekozen wordt. Vertrouwt de app al
+een servercertificaat, dan telt ook enkel een server met precies dat
+certificaat. Er is dus **geen extra
 poort of firewallregel** op de pc nodig. Zie `ServerDiscovery.kt`.
 
 Beperkingen:
@@ -83,8 +116,10 @@ Beperkingen:
   adres af: een volledige scan zou te lang duren en kan door IT als
   verdacht gezien worden. Op een reisroutertje of thuisnetwerk speelt dit
   niet.
-- Vereist een server met de herkenningswaarde in `/api/health`: installeer
-  dus ook de nieuwste versie van de pc-installer.
+- Vereist een server met de herkenningswaarde in `/api/health` en https:
+  installeer dus ook de nieuwste versie van de pc-installer. Deze versie
+  van de app werkt niet meer met een oudere server (gewone http), en
+  omgekeerd.
 
 Dit onthoudt de app nadien. Om het later te wijzigen: **houd je vinger 10
 seconden ononderbroken ergens op het scherm** (bewust lang, zodat dit niet

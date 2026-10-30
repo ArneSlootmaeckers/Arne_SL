@@ -49,6 +49,11 @@
       <button class="tab-btn admin-only hidden" data-tab="systeem">Systeem</button>
     </nav>
 
+    <div id="pincode-warning" class="warning-banner hidden">
+      Je pincode is korter dan 6 tekens en daardoor makkelijker te raden.
+      Laat een admin ze vervangen via <strong>Medewerkers → Nieuwe pincode</strong>.
+    </div>
+
     <main class="tab-content">
       <!-- Bandje -->
       <section id="tab-bandje" class="tab-panel">
@@ -109,7 +114,11 @@
             <option value="HANDMATIGE_WIJZIGING">Handmatige wijziging</option>
             <option value="INLOGGEN">Inloggen</option>
             <option value="INLOGGEN_MISLUKT">Inloggen mislukt</option>
+            <option value="INLOGGEN_GEBLOKKEERD">Inloggen geblokkeerd</option>
             <option value="UITLOGGEN">Uitloggen</option>
+            <option value="TOESTEL_GEKOPPELD">Toestel gekoppeld</option>
+            <option value="TOESTEL_ONTKOPPELD">Toestel ontkoppeld</option>
+            <option value="KOPPELEN_MISLUKT">Koppelen mislukt</option>
             <option value="SYSTEEM_AFSLUITEN">Systeem afgesloten</option>
           </select>
           <button type="submit">Zoek</button>
@@ -149,7 +158,8 @@
           <div class="card-title">Nieuwe medewerker</div>
           <form id="create-employee-form" class="inline-form wrap">
             <input id="new-employee-name" type="text" placeholder="Naam" required />
-            <input id="new-employee-pincode" type="text" inputmode="numeric" placeholder="Pincode" required />
+            <input id="new-employee-pincode" type="text" inputmode="numeric" placeholder="Pincode (min. 6)"
+                   minlength="6" required />
             <select id="new-employee-role" data-title="Rol">
               <option value="supervisor">Supervisor</option>
               <option value="admin">Admin</option>
@@ -181,7 +191,40 @@
           </p>
           <div id="network-addresses" class="network-addresses"></div>
           <p id="network-note" class="network-note hidden"></p>
+          <p id="network-fingerprint" class="network-fingerprint hidden">
+            Certificaatcode: <span id="network-fingerprint-value" class="fingerprint"></span><br />
+            De app toont dezelfde code bij <strong>Instellingen → Server</strong>. Is
+            die anders, dan praat de telefoon niet met deze pc: verwittig dan IT.
+          </p>
           <button id="network-refresh-btn" class="btn-secondary">Vernieuwen</button>
+        </div>
+
+        <div class="card">
+          <div class="card-title">Gekoppelde toestellen</div>
+          <p>
+            Enkel gekoppelde toestellen mogen bandjes scannen en een oordeel
+            geven. Een nieuw toestel toont bij het openen van het hostscherm
+            een koppelscherm: maak hier een code aan en typ die daar in. Een
+            code is 10 minuten geldig en werkt maar voor één toestel.
+          </p>
+          <button id="pairing-code-btn" class="btn-secondary">Nieuwe koppelcode</button>
+          <div id="pairing-code-result" class="pairing-code-result hidden">
+            <span id="pairing-code-value" class="network-address"></span>
+            <div id="pairing-code-expiry" class="network-address-hint"></div>
+          </div>
+          <p id="devices-message" class="message hidden"></p>
+          <div class="table-scroll">
+            <table id="devices-table" class="data-table">
+              <thead>
+                <tr><th>Naam</th><th>Gekoppeld op</th><th>Laatst actief</th><th></th></tr>
+              </thead>
+              <tbody></tbody>
+            </table>
+          </div>
+          <p class="network-note">
+            Verloren of gestolen toestel? Ontkoppel het hier: het kan dan
+            meteen niets meer.
+          </p>
         </div>
 
         <div class="card">

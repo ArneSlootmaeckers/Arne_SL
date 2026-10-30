@@ -59,7 +59,7 @@ Function AdminPageCreate
   ${NSD_CreateText} 0 13u 100% 13u ""
   Pop $AdminNameField
 
-  ${NSD_CreateLabel} 0 32u 100% 12u "Pincode (min. 4 tekens):"
+  ${NSD_CreateLabel} 0 32u 100% 12u "Pincode (min. 6 tekens):"
   Pop $0
   ${NSD_CreatePassword} 0 45u 100% 13u ""
   Pop $AdminPincodeField
@@ -97,8 +97,8 @@ Function AdminPageLeave
   ${EndIf}
 
   StrLen $1 $AdminPincode
-  ${If} $1 < 4
-    MessageBox MB_OK|MB_ICONEXCLAMATION "De pincode moet minstens 4 tekens lang zijn."
+  ${If} $1 < 6
+    MessageBox MB_OK|MB_ICONEXCLAMATION "De pincode moet minstens 6 tekens lang zijn."
     Abort
   ${EndIf}
 FunctionEnd

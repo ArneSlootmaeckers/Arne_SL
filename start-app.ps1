@@ -24,8 +24,11 @@ $serverProcess = Start-Process -FilePath $venvPython -ArgumentList "run.py" `
 
 Start-Sleep -Seconds 2
 
-# De pc is de beheerplek; het hostscherm draait op de telefoons.
-$appUrl = "http://127.0.0.1:8000/admin/"
+# De pc is de beheerplek; het hostscherm draait op de telefoons. Poort 8001
+# is de aparte, enkel lokale ingang (gewone http, zie backend/run.py): het
+# netwerk zelf gebruikt https op poort 8000, met een eigen certificaat waar
+# een browser anders voor zou waarschuwen.
+$appUrl = "http://127.0.0.1:8001/admin/"
 $browserPaths = @(
     "$env:ProgramFiles\Google\Chrome\Application\chrome.exe",
     "${env:ProgramFiles(x86)}\Google\Chrome\Application\chrome.exe",

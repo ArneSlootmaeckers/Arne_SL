@@ -3,6 +3,8 @@ die het beheerscherm naast de technische toestel-code in de logs toont.
 De code blijft de sleutel: twee toestellen met dezelfde naam blijven apart."""
 from __future__ import annotations
 
+from tests.devices import paired
+
 
 def _admin_headers(client) -> dict:
     token = client.post("/api/auth/login", json={"pincode": "1234"}).json()["token"]
@@ -10,11 +12,11 @@ def _admin_headers(client) -> dict:
 
 
 def _set_name(client, device_id: str, name: str):
-    return client.put("/api/host/device-name", json={"device_id": device_id, "name": name})
+    return client.put("/api/host/device-name", json={"name": name}, headers=paired(client, device_id))
 
 
 def _scan(client, device_id: str, wristband_id: str = "B001"):
-    return client.post("/api/host/scan", json={"wristband_id": wristband_id, "device_id": device_id})
+    return client.post("/api/host/scan", json={"wristband_id": wristband_id}, headers=paired(client, device_id))
 
 
 def _logs(client, headers) -> list[dict]:

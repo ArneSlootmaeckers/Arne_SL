@@ -34,3 +34,23 @@ class DuplicatePincodeError(DomainServiceError):
 
 class EmployeeNotFoundError(DomainServiceError):
     """No employee exists with the given id."""
+
+
+class WeakPincodeError(DomainServiceError):
+    """The requested pincode is shorter than the minimum length."""
+
+
+class TooManyAttemptsError(DomainServiceError):
+    """Too many failed login/pairing attempts from this address; temporarily blocked."""
+
+
+class DeviceNotPairedError(DomainServiceError):
+    """The request carries no (valid) device token: the device isn't paired, or was unpaired."""
+
+
+class InvalidPairingCodeError(DomainServiceError):
+    """The pairing code is unknown, already used, or expired."""
+
+
+class DeviceNotFoundError(DomainServiceError):
+    """No paired device exists with the given id."""

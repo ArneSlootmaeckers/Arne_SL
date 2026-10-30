@@ -1,4 +1,13 @@
-import { ApiError, api, getDeviceId, getDeviceName, setDeviceName, startHealthPolling } from "../shared/api.js";
+import {
+  ApiError,
+  api,
+  clearDeviceToken,
+  getDeviceName,
+  getDeviceToken,
+  setDeviceName,
+  setDeviceToken,
+  startHealthPolling,
+} from "../shared/api.js";
 import { KeyboardWedgeReader, NativeBridgeReader, SimulatedReader } from "../shared/reader.js";
 import { playFailureSound, playNeutralSound, playSuccessSound } from "../shared/sound.js";
 
@@ -17,11 +26,15 @@ const STATUS_INFO = {
 
 const FINAL_STATUSES = new Set(["GESLAAGD", "NIET_GESLAAGD"]);
 
-const deviceId = getDeviceId();
-
 const els = {
   banner: document.getElementById("connection-banner"),
   toast: document.getElementById("rejected-toast"),
+  pairView: document.getElementById("pair-view"),
+  pairForm: document.getElementById("pair-form"),
+  pairCode: document.getElementById("pair-code"),
+  pairName: document.getElementById("pair-name"),
+  pairSubmit: document.getElementById("pair-submit"),
+  pairError: document.getElementById("pair-error"),
   waitingView: document.getElementById("waiting-view"),
   resultView: document.getElementById("result-view"),
   wristbandId: document.getElementById("wristband-id"),
@@ -58,8 +71,57 @@ function clearTimers() {
 
 function showWaiting() {
   clearTimers();
+  els.pairView.classList.add("hidden");
   els.resultView.classList.add("hidden");
   els.waitingView.classList.remove("hidden");
+}
+
+function isPaired() {
+  return els.pairView.classList.contains("hidden");
+}
+
+/** Zonder geldige toestelsleutel weigert de server elke scan en elk oordeel:
+ * dan eerst (opnieuw) koppelen met een code van een beheerder. */
+function showPairing() {
+  clearTimers();
+  scanSeq += 1; // een antwoord op een eerdere scan mag dit niet meer wegnemen
+  clearDeviceToken();
+  els.waitingView.classList.add("hidden");
+  els.resultView.classList.add("hidden");
+  els.pairView.classList.remove("hidden");
+  els.pairCode.value = "";
+  els.pairName.value = getDeviceName() ?? "";
+  els.pairError.classList.add("hidden");
+}
+
+/** True als de fout betekent dat dit toestel niet (meer) gekoppeld is. */
+function handleUnpaired(err) {
+  if (err instanceof ApiError && err.status === 401) {
+    showPairing();
+    return true;
+  }
+  return false;
+}
+
+async function handlePair(event) {
+  event.preventDefault();
+  const code = els.pairCode.value.trim();
+  const name = els.pairName.value.trim();
+  els.pairError.classList.add("hidden");
+  els.pairSubmit.disabled = true;
+  try {
+    const result = await api.pair(code, name);
+    setDeviceToken(result.token);
+    if (name) setDeviceName(name);
+    playSuccessSound();
+    showWaiting();
+  } catch (err) {
+    els.pairError.textContent = err instanceof ApiError ? err.message : "Geen verbinding met de server.";
+    els.pairError.classList.remove("hidden");
+    els.pairCode.select();
+  } finally {
+    els.pairSubmit.disabled = false;
+  }
 }
 
 function showRejectedToast(message) {
@@ -78,9 +140,10 @@ function applyStatusBanner(status, tekstOverride) {
 async function autoAcknowledgePractice() {
   const seq = scanSeq;
   try {
-    await api.practiceAck(deviceId);
+    await api.practiceAck();
     playNeutralSound();
   } catch (err) {
+    if (handleUnpaired(err)) return;
     console.error(err);
   } finally {
     if (seq === scanSeq) showWaiting();
@@ -137,10 +200,12 @@ function renderScanResult(body) {
 }
 
 async function handleScan(wristbandId) {
+  if (!isPaired()) return;
   try {
-    const body = await api.scan(wristbandId, deviceId);
+    const body = await api.scan(wristbandId);
     renderScanResult(body);
   } catch (err) {
+    if (handleUnpaired(err)) return;
     if (!(err instanceof ApiError)) console.error(err);
     showRejectedToast(err instanceof ApiError ? err.message : "Er ging iets mis. Probeer opnieuw.");
   }
@@ -150,7 +215,7 @@ async function handleVerdict(verdict) {
   clearTimers();
   const seq = scanSeq;
   try {
-    const result = await api.verdict(deviceId, verdict);
+    const result = await api.verdict(verdict);
     if (seq !== scanSeq) return;
     playSuccessSound();
     applyStatusBanner(result.status);
@@ -168,7 +233,7 @@ async function handleVerdict(verdict) {
       returnTimeout = setTimeout(showWaiting, CONFIRMATION_DISPLAY_MS);
     }
   } catch (err) {
-    if (seq !== scanSeq) return;
+    if (seq !== scanSeq || handleUnpaired(err)) return;
     showRejectedToast(err instanceof ApiError ? err.message : "Er ging iets mis.");
     showWaiting();
   }
@@ -188,9 +253,10 @@ async function handleCancel() {
   }
   const seq = scanSeq;
   try {
-    await api.cancelScan(deviceId);
+    await api.cancelScan();
     playNeutralSound();
   } catch (err) {
+    if (handleUnpaired(err)) return;
     if (seq === scanSeq) showRejectedToast(err instanceof ApiError ? err.message : "Er ging iets mis.");
   } finally {
     if (seq === scanSeq) showWaiting();
@@ -200,6 +266,7 @@ async function handleCancel() {
 els.btnGroen.addEventListener("click", () => handleVerdict("GROEN"));
 els.btnRood.addEventListener("click", () => handleVerdict("ROOD"));
 els.btnCancel.addEventListener("click", handleCancel);
+els.pairForm.addEventListener("submit", handlePair);
 
 new KeyboardWedgeReader().start(handleScan);
 new NativeBridgeReader().start(handleScan);
@@ -215,11 +282,16 @@ if (params.get("sim") === "1") {
 // pagina ook zonder die parameter terug.
 if (params.has("toestel")) setDeviceName(params.get("toestel"));
 
+if (getDeviceToken()) showWaiting();
+else showPairing();
+
 startHealthPolling(POLLING_INTERVAL_MS, (online) => {
   els.banner.classList.toggle("hidden", online);
-  // Bij elke (her)verbinding opnieuw doorgeven: zo kent de server de naam
-  // ook als hij onbereikbaar was toen de naam ingesteld werd.
-  if (online && getDeviceName() !== null) {
-    api.setDeviceName(deviceId, getDeviceName()).catch(() => {});
-  }
+  if (!online || !isPaired()) return;
+  // Bij elke (her)verbinding: nagaan of de sleutel nog geldig is (een
+  // beheerder kan het toestel ontkoppeld hebben), en de naam opnieuw
+  // doorgeven, zodat de server die ook kent als hij onbereikbaar was toen
+  // de naam ingesteld werd.
+  api.currentDevice().catch(handleUnpaired);
+  if (getDeviceName() !== null) api.setDeviceName(getDeviceName()).catch(() => {});
 });

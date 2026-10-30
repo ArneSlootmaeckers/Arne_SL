@@ -10,7 +10,7 @@ from app.services.common import log_event, now_utc
 from app.services.errors import InvalidPincodeError, SessionExpiredError
 
 
-def login(db: Session, *, pincode: str, source: str) -> tuple[str, EmployeeModel]:
+def login(db: Session, *, pincode: str, source: str, client: str | None = None) -> tuple[str, EmployeeModel]:
     employees = db.execute(select(EmployeeModel).where(EmployeeModel.active.is_(True))).scalars()
     for employee in employees:
         if verify_pincode(pincode, employee.pincode_hash):
@@ -21,7 +21,7 @@ def login(db: Session, *, pincode: str, source: str) -> tuple[str, EmployeeModel
             db.commit()
             return token, employee
 
-    log_event(db, event_type="INLOGGEN_MISLUKT", source=source)
+    log_event(db, event_type="INLOGGEN_MISLUKT", source=source, detail={"ip": client} if client else None)
     db.commit()
     raise InvalidPincodeError("Onjuiste pincode.")
 

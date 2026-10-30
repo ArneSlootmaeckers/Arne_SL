@@ -10,6 +10,9 @@ data/*.db
 data/*.db-wal
 data/*.db-shm
 !data/.gitkeep
+data/backups/
+# eigen https-certificaat + geheime sleutel van de server (zie backend/app/tls.py)
+data/tls/
 
 .env
 

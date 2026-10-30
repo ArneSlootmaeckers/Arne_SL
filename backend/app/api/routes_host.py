@@ -5,29 +5,73 @@ Zodra een scan of oordeel de status op GESLAAGD of NIET_GESLAAGD zet (of
 al zo'n status oplevert bij het scannen), doet dit meteen ook de Ski
 Jump-toegangscontrole — inclusief het aansturen van het hekje en de
 TOEGANG_SKI_JUMP-log — zodat de host niet naar een apart scherm hoeft.
+
+Alles behalve /pair vereist een gekoppeld toestel (zie require_paired_device):
+zonder geldige toestelsleutel kan niemand op het netwerk een bandje als
+geslaagd laten markeren.
 """
 from __future__ import annotations
 
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends, Request
 from sqlalchemy.orm import Session
 
 from app.config import Settings
-from app.dependencies import get_db, get_gate_controller, get_settings
+from app.dependencies import (
+    client_address,
+    get_db,
+    get_gate_controller,
+    get_pairing_limiter,
+    get_settings,
+    require_paired_device,
+)
 from app.domain.status import Status
 from app.hardware.gate_controller import GateController
+from app.models import PairedDeviceModel
 from app.schemas import (
     DeviceNameRequest,
-    DeviceRequest,
+    PairRequest,
+    PairResponse,
     ScanRequest,
     ScanResponse,
     VerdictRequest,
     VerdictResponse,
 )
-from app.services import device_service, gate_service, scan_service
+from app.services import device_service, gate_service, pairing_service, scan_service
+from app.services.common import log_event
+from app.services.errors import InvalidPairingCodeError
+from app.services.rate_limit import AttemptLimiter
 
 router = APIRouter(prefix="/api/host", tags=["host"])
 
 _FINAL_STATUSES = (Status.GESLAAGD, Status.NIET_GESLAAGD)
+
+
+@router.post("/pair", response_model=PairResponse)
+def pair(
+    payload: PairRequest,
+    request: Request,
+    db: Session = Depends(get_db),
+    limiter: AttemptLimiter = Depends(get_pairing_limiter),
+) -> PairResponse:
+    client = client_address(request)
+    limiter.check(client)
+    try:
+        paired = pairing_service.pair_device(db, code=payload.code, name=payload.name, client=client)
+    except InvalidPairingCodeError:
+        if limiter.record_failure(client):
+            log_event(db, event_type="KOPPELEN_GEBLOKKEERD", source="host", detail={"ip": client})
+            db.commit()
+        raise
+    limiter.reset(client)
+    return PairResponse(device_id=paired.device_id, token=paired.token)
+
+
+@router.get("/device")
+def current_device(
+    db: Session = Depends(get_db), device: PairedDeviceModel = Depends(require_paired_device)
+) -> dict:
+    """Laat het hostscherm bij het openen nagaan of zijn sleutel nog geldig is."""
+    return {"device_id": device.device_id, "name": device_service.device_names(db).get(device.device_id)}
 
 
 @router.post("/scan", response_model=ScanResponse)
@@ -36,11 +80,12 @@ def scan(
     db: Session = Depends(get_db),
     settings: Settings = Depends(get_settings),
     gate_controller: GateController = Depends(get_gate_controller),
+    device: PairedDeviceModel = Depends(require_paired_device),
 ) -> ScanResponse:
     result = scan_service.register_scan(
         db,
         wristband_id=payload.wristband_id,
-        device_id=payload.device_id,
+        device_id=device.device_id,
         timeout_seconds=settings.scan_timeout_seconds,
         tz=settings.tz,
     )
@@ -51,7 +96,7 @@ def scan(
         ski_jump_toegestaan, _, ski_jump_reden = gate_service.check_gate_access(
             db,
             wristband_id=result.wristband_id,
-            device_id=payload.device_id,
+            device_id=device.device_id,
             tz=settings.tz,
             gate_controller=gate_controller,
         )
@@ -73,9 +118,10 @@ def submit_verdict(
     db: Session = Depends(get_db),
     settings: Settings = Depends(get_settings),
     gate_controller: GateController = Depends(get_gate_controller),
+    device: PairedDeviceModel = Depends(require_paired_device),
 ) -> VerdictResponse:
     outcome = scan_service.submit_verdict(
-        db, device_id=payload.device_id, verdict=payload.verdict, tz=settings.tz
+        db, device_id=device.device_id, verdict=payload.verdict, tz=settings.tz
     )
 
     ski_jump_toegestaan = None
@@ -84,7 +130,7 @@ def submit_verdict(
         ski_jump_toegestaan, _, ski_jump_reden = gate_service.check_gate_access(
             db,
             wristband_id=outcome.wristband_id,
-            device_id=payload.device_id,
+            device_id=device.device_id,
             tz=settings.tz,
             gate_controller=gate_controller,
         )
@@ -95,18 +141,26 @@ def submit_verdict(
 
 
 @router.post("/practice-ack")
-def practice_ack(payload: DeviceRequest, db: Session = Depends(get_db)) -> dict:
-    scan_service.submit_practice_ack(db, device_id=payload.device_id)
+def practice_ack(
+    db: Session = Depends(get_db), device: PairedDeviceModel = Depends(require_paired_device)
+) -> dict:
+    scan_service.submit_practice_ack(db, device_id=device.device_id)
     return {"ok": True}
 
 
 @router.post("/cancel")
-def cancel_scan(payload: DeviceRequest, db: Session = Depends(get_db)) -> dict:
-    scan_service.cancel_scan(db, device_id=payload.device_id)
+def cancel_scan(
+    db: Session = Depends(get_db), device: PairedDeviceModel = Depends(require_paired_device)
+) -> dict:
+    scan_service.cancel_scan(db, device_id=device.device_id)
     return {"ok": True}
 
 
 @router.put("/device-name")
-def set_device_name(payload: DeviceNameRequest, db: Session = Depends(get_db)) -> dict:
-    device_service.set_device_name(db, device_id=payload.device_id, name=payload.name)
+def set_device_name(
+    payload: DeviceNameRequest,
+    db: Session = Depends(get_db),
+    device: PairedDeviceModel = Depends(require_paired_device),
+) -> dict:
+    device_service.set_device_name(db, device_id=device.device_id, name=payload.name)
     return {"ok": True}

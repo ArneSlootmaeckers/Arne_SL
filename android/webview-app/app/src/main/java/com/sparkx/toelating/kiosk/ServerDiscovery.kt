@@ -5,9 +5,9 @@ import android.net.Network
 import android.net.NetworkCapabilities
 import org.json.JSONObject
 import java.io.IOException
-import java.net.HttpURLConnection
 import java.net.Inet4Address
 import java.net.URL
+import javax.net.ssl.HttpsURLConnection
 import java.util.concurrent.Callable
 import java.util.concurrent.Executors
 import java.util.concurrent.TimeUnit
@@ -33,8 +33,15 @@ private const val FALLBACK_PREFIX = 24
  * kijken of het antwoord van de toelatingsserver komt. Geen extra poort of
  * firewallregel op de pc nodig: dit gebruikt exact dezelfde poort als de app
  * zelf.
+ *
+ * Vertrouwt de app al een servercertificaat (zie ServerCertificate), dan telt
+ * enkel een server met precies dat certificaat: een toestel dat zich
+ * voordoet als de server, wordt zo ook hier niet gevonden.
  */
-class ServerDiscovery(private val connectivityManager: ConnectivityManager) {
+class ServerDiscovery(
+    private val connectivityManager: ConnectivityManager,
+    private val serverCertificate: ServerCertificate,
+) {
 
     /** Blokkeert tot een paar seconden: nooit op de hoofdthread aanroepen.
      * Geeft "ip:poort" terug, of null als er niets gevonden werd. */
@@ -71,7 +78,8 @@ class ServerDiscovery(private val connectivityManager: ConnectivityManager) {
     /** Gooit een uitzondering bij alles behalve de toelatingsserver: zo telt
      * invokeAny enkel een echte treffer als resultaat. */
     private fun probe(network: Network, host: String): String {
-        val connection = network.openConnection(URL("http://$host:$SERVER_PORT/api/health")) as HttpURLConnection
+        val connection = network.openConnection(URL("https://$host:$SERVER_PORT/api/health")) as HttpsURLConnection
+        serverCertificate.configure(connection, pinOnFirstUse = false)
         try {
             connection.connectTimeout = PROBE_CONNECT_TIMEOUT_MS
             connection.readTimeout = PROBE_READ_TIMEOUT_MS

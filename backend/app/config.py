@@ -24,6 +24,12 @@ class Settings:
     maintenance_interval_hours: int
     backup_dir: str
     backup_retention_days: int
+    # Met standaardwaarde: een config.yaml van vóór deze velden blijft werken.
+    # Poort voor de pc zelf (enkel 127.0.0.1, gewone http): het netwerk
+    # gebruikt https op `port`.
+    local_port: int = 8001
+    # Map met het zelfgemaakte https-certificaat (relatief t.o.v. backend/).
+    tls_dir: str = "../data/tls"
 
     @property
     def tz(self) -> ZoneInfo:

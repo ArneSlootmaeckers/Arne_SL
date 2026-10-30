@@ -4,6 +4,8 @@ from __future__ import annotations
 
 import json
 
+from tests.devices import paired
+
 
 def test_manual_override_changes_status_and_is_logged(client, supervisor_employee, db_session):
     login = client.post("/api/auth/login", json={"pincode": "5678"})
@@ -36,7 +38,7 @@ def test_manual_override_to_niet_geslaagd_then_blocks_gate(client, supervisor_em
         json={"status": "NIET_GESLAAGD", "reason": None},
         headers={"Authorization": f"Bearer {token}"},
     )
-    gate_response = client.post("/api/gate/scan", json={"wristband_id": "M002", "device_id": "gate-1"})
+    gate_response = client.post("/api/gate/scan", json={"wristband_id": "M002"}, headers=paired(client, "gate-1"))
     assert gate_response.json()["allowed"] is False
 
 

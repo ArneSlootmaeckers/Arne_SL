@@ -5,9 +5,11 @@ from __future__ import annotations
 
 import time
 
+from tests.devices import paired
+
 
 def _scan(client, wristband_id="B001", device_id="host-1"):
-    return client.post("/api/host/scan", json={"wristband_id": wristband_id, "device_id": device_id})
+    return client.post("/api/host/scan", json={"wristband_id": wristband_id}, headers=paired(client, device_id))
 
 
 def test_first_scan_is_not_yet_jumped(client):
@@ -21,27 +23,27 @@ def test_first_scan_is_not_yet_jumped(client):
 
 def test_green_verdict_sets_geslaagd(client):
     _scan(client)
-    response = client.post("/api/host/verdict", json={"device_id": "host-1", "verdict": "GROEN"})
+    response = client.post("/api/host/verdict", json={"verdict": "GROEN"}, headers=paired(client, "host-1"))
     assert response.status_code == 200
     assert response.json()["status"] == "GESLAAGD"
 
 
 def test_red_then_green_sets_geslaagd_via_herkansing(client):
     _scan(client)
-    client.post("/api/host/verdict", json={"device_id": "host-1", "verdict": "ROOD"})
+    client.post("/api/host/verdict", json={"verdict": "ROOD"}, headers=paired(client, "host-1"))
 
     second_scan = _scan(client)
     assert second_scan.json()["status"] == "HERKANSING"
 
-    response = client.post("/api/host/verdict", json={"device_id": "host-1", "verdict": "GROEN"})
+    response = client.post("/api/host/verdict", json={"verdict": "GROEN"}, headers=paired(client, "host-1"))
     assert response.json()["status"] == "GESLAAGD"
 
 
 def test_red_twice_sets_niet_geslaagd_and_blocks_test_jump(client):
     _scan(client)
-    client.post("/api/host/verdict", json={"device_id": "host-1", "verdict": "ROOD"})
+    client.post("/api/host/verdict", json={"verdict": "ROOD"}, headers=paired(client, "host-1"))
     _scan(client)
-    client.post("/api/host/verdict", json={"device_id": "host-1", "verdict": "ROOD"})
+    client.post("/api/host/verdict", json={"verdict": "ROOD"}, headers=paired(client, "host-1"))
 
     third_attempt = _scan(client)
     body = third_attempt.json()
@@ -52,7 +54,7 @@ def test_red_twice_sets_niet_geslaagd_and_blocks_test_jump(client):
 
 def test_geslaagd_scan_requires_practice_ack_not_verdict(client):
     _scan(client)
-    client.post("/api/host/verdict", json={"device_id": "host-1", "verdict": "GROEN"})
+    client.post("/api/host/verdict", json={"verdict": "GROEN"}, headers=paired(client, "host-1"))
 
     practice_scan = _scan(client)
     body = practice_scan.json()
@@ -60,7 +62,7 @@ def test_geslaagd_scan_requires_practice_ack_not_verdict(client):
     assert body["requires_verdict"] is False
     assert body["requires_practice_ack"] is True
 
-    ack = client.post("/api/host/practice-ack", json={"device_id": "host-1"})
+    ack = client.post("/api/host/practice-ack", headers=paired(client, "host-1"))
     assert ack.status_code == 200
 
 
@@ -71,7 +73,7 @@ def test_new_scan_replaces_a_scan_still_waiting_for_a_verdict(client, db_session
     assert response.json()["wristband_id"] == "B002"
 
     # Het oordeel gaat nu naar het nieuwe bandje...
-    client.post("/api/host/verdict", json={"device_id": "host-1", "verdict": "GROEN"})
+    client.post("/api/host/verdict", json={"verdict": "GROEN"}, headers=paired(client, "host-1"))
     assert _scan(client, wristband_id="B002").json()["status"] == "GESLAAGD"
     # ...en het vervangen bandje kreeg geen oordeel: status ongewijzigd.
     assert _scan(client, wristband_id="B001").json()["status"] == "NOG_NIET_GESPRONGEN"
@@ -85,7 +87,7 @@ def test_new_scan_replaces_a_scan_still_waiting_for_a_verdict(client, db_session
 
 def test_new_scan_during_practice_jump_counts_as_practice_jump(client, db_session):
     _scan(client)
-    client.post("/api/host/verdict", json={"device_id": "host-1", "verdict": "GROEN"})
+    client.post("/api/host/verdict", json={"verdict": "GROEN"}, headers=paired(client, "host-1"))
     assert _scan(client).json()["requires_practice_ack"] is True
 
     assert _scan(client, wristband_id="B002").status_code == 200
@@ -103,8 +105,12 @@ def test_verdict_has_no_time_limit(client, db_session):
 
     from app.main import reap_expired_pending_scans
 
-    assert reap_expired_pending_scans(client.app.state.session_factory()) == 0
-    response = client.post("/api/host/verdict", json={"device_id": "host-1", "verdict": "GROEN"})
+    reap_db = client.app.state.session_factory()
+    try:
+        assert reap_expired_pending_scans(reap_db) == 0
+    finally:
+        reap_db.close()  # anders houdt die sessie de schrijfvergrendeling vast
+    response = client.post("/api/host/verdict", json={"verdict": "GROEN"}, headers=paired(client, "host-1"))
     assert response.status_code == 200
     assert response.json()["status"] == "GESLAAGD"
 
@@ -115,11 +121,11 @@ def test_verdict_has_no_time_limit(client, db_session):
 
 def test_practice_jump_still_times_out(client, db_session):
     _scan(client)
-    client.post("/api/host/verdict", json={"device_id": "host-1", "verdict": "GROEN"})
+    client.post("/api/host/verdict", json={"verdict": "GROEN"}, headers=paired(client, "host-1"))
     assert _scan(client).json()["expires_at"] is not None
     time.sleep(1.2)
 
-    response = client.post("/api/host/practice-ack", json={"device_id": "host-1"})
+    response = client.post("/api/host/practice-ack", headers=paired(client, "host-1"))
     assert response.status_code == 409
 
     from app.models import EventModel
@@ -128,16 +134,16 @@ def test_practice_jump_still_times_out(client, db_session):
 
 
 def test_verdict_without_pending_scan_is_rejected(client):
-    response = client.post("/api/host/verdict", json={"device_id": "no-such-device", "verdict": "GROEN"})
+    response = client.post("/api/host/verdict", json={"verdict": "GROEN"}, headers=paired(client, "no-such-device"))
     assert response.status_code == 409
 
 
 def test_practice_ack_via_verdict_endpoint_is_rejected(client):
     _scan(client)
-    client.post("/api/host/verdict", json={"device_id": "host-1", "verdict": "GROEN"})
+    client.post("/api/host/verdict", json={"verdict": "GROEN"}, headers=paired(client, "host-1"))
     _scan(client)  # now GESLAAGD, requires practice-ack
 
-    response = client.post("/api/host/verdict", json={"device_id": "host-1", "verdict": "GROEN"})
+    response = client.post("/api/host/verdict", json={"verdict": "GROEN"}, headers=paired(client, "host-1"))
     assert response.status_code == 400
 
 
@@ -147,7 +153,7 @@ def test_cancel_scan_discards_pending_scan_without_status_change(client):
     scan = _scan(client)
     assert scan.json()["status"] == "NOG_NIET_GESPRONGEN"
 
-    cancel = client.post("/api/host/cancel", json={"device_id": "host-1"})
+    cancel = client.post("/api/host/cancel", headers=paired(client, "host-1"))
     assert cancel.status_code == 200
 
     # Status unchanged, and the device is immediately free for the next scan
@@ -158,11 +164,11 @@ def test_cancel_scan_discards_pending_scan_without_status_change(client):
 
 def test_cancel_scan_works_while_a_verdict_is_pending_on_herkansing(client):
     _scan(client)
-    client.post("/api/host/verdict", json={"device_id": "host-1", "verdict": "ROOD"})
+    client.post("/api/host/verdict", json={"verdict": "ROOD"}, headers=paired(client, "host-1"))
     scan = _scan(client)
     assert scan.json()["status"] == "HERKANSING"
 
-    cancel = client.post("/api/host/cancel", json={"device_id": "host-1"})
+    cancel = client.post("/api/host/cancel", headers=paired(client, "host-1"))
     assert cancel.status_code == 200
 
     again = _scan(client)
@@ -171,11 +177,11 @@ def test_cancel_scan_works_while_a_verdict_is_pending_on_herkansing(client):
 
 def test_cancel_scan_also_works_for_a_pending_practice_jump(client):
     _scan(client)
-    client.post("/api/host/verdict", json={"device_id": "host-1", "verdict": "GROEN"})
+    client.post("/api/host/verdict", json={"verdict": "GROEN"}, headers=paired(client, "host-1"))
     scan = _scan(client)
     assert scan.json()["requires_practice_ack"] is True
 
-    cancel = client.post("/api/host/cancel", json={"device_id": "host-1"})
+    cancel = client.post("/api/host/cancel", headers=paired(client, "host-1"))
     assert cancel.status_code == 200
 
     again = _scan(client)
@@ -183,13 +189,13 @@ def test_cancel_scan_also_works_for_a_pending_practice_jump(client):
 
 
 def test_cancel_scan_without_pending_scan_is_rejected(client):
-    response = client.post("/api/host/cancel", json={"device_id": "no-such-device"})
+    response = client.post("/api/host/cancel", headers=paired(client, "no-such-device"))
     assert response.status_code == 409
 
 
 def test_cancel_scan_is_logged_as_geannuleerd(client, db_session):
     _scan(client)
-    client.post("/api/host/cancel", json={"device_id": "host-1"})
+    client.post("/api/host/cancel", headers=paired(client, "host-1"))
 
     from app.models import EventModel
 
@@ -210,7 +216,7 @@ def test_scan_of_a_pending_wristband_has_no_ski_jump_info_yet(client):
 
 def test_green_verdict_response_grants_ski_jump_access(client):
     _scan(client)
-    response = client.post("/api/host/verdict", json={"device_id": "host-1", "verdict": "GROEN"})
+    response = client.post("/api/host/verdict", json={"verdict": "GROEN"}, headers=paired(client, "host-1"))
     body = response.json()
     assert body["status"] == "GESLAAGD"
     assert body["ski_jump_toegestaan"] is True
@@ -219,7 +225,7 @@ def test_green_verdict_response_grants_ski_jump_access(client):
 
 def test_red_verdict_on_first_attempt_has_no_ski_jump_info_yet(client):
     _scan(client)
-    response = client.post("/api/host/verdict", json={"device_id": "host-1", "verdict": "ROOD"})
+    response = client.post("/api/host/verdict", json={"verdict": "ROOD"}, headers=paired(client, "host-1"))
     body = response.json()
     assert body["status"] == "HERKANSING"
     assert body["ski_jump_toegestaan"] is None
@@ -227,9 +233,9 @@ def test_red_verdict_on_first_attempt_has_no_ski_jump_info_yet(client):
 
 def test_red_verdict_on_herkansing_denies_ski_jump_access(client):
     _scan(client)
-    client.post("/api/host/verdict", json={"device_id": "host-1", "verdict": "ROOD"})
+    client.post("/api/host/verdict", json={"verdict": "ROOD"}, headers=paired(client, "host-1"))
     _scan(client)
-    response = client.post("/api/host/verdict", json={"device_id": "host-1", "verdict": "ROOD"})
+    response = client.post("/api/host/verdict", json={"verdict": "ROOD"}, headers=paired(client, "host-1"))
     body = response.json()
     assert body["status"] == "NIET_GESLAAGD"
     assert body["ski_jump_toegestaan"] is False
@@ -238,7 +244,7 @@ def test_red_verdict_on_herkansing_denies_ski_jump_access(client):
 
 def test_rescanning_a_geslaagd_wristband_also_shows_ski_jump_access(client):
     _scan(client)
-    client.post("/api/host/verdict", json={"device_id": "host-1", "verdict": "GROEN"})
+    client.post("/api/host/verdict", json={"verdict": "GROEN"}, headers=paired(client, "host-1"))
 
     body = _scan(client).json()
     assert body["status"] == "GESLAAGD"
@@ -247,7 +253,7 @@ def test_rescanning_a_geslaagd_wristband_also_shows_ski_jump_access(client):
 
 def test_ski_jump_access_check_is_logged(client, db_session):
     _scan(client)
-    client.post("/api/host/verdict", json={"device_id": "host-1", "verdict": "GROEN"})
+    client.post("/api/host/verdict", json={"verdict": "GROEN"}, headers=paired(client, "host-1"))
 
     from app.models import EventModel
 

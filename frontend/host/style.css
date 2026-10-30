@@ -21,6 +21,79 @@ html, body {
   padding: 2rem;
 }
 
+.pair-form {
+  width: 100%;
+  max-width: 26rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.6rem;
+  padding: 1.75rem 1.5rem;
+  border-radius: 1.5rem;
+  background: var(--kleur-achtergrond-paneel);
+  text-align: left;
+  box-sizing: border-box;
+}
+
+.pair-title {
+  margin: 0;
+  font-size: clamp(1.8rem, 6vw, 2.5rem);
+  color: var(--sparkx-geel);
+  text-align: center;
+}
+
+.pair-hint {
+  margin: 0 0 0.5rem;
+  color: var(--kleur-tekst-gedempt);
+  font-size: 1.05rem;
+  line-height: 1.4;
+  text-align: center;
+}
+
+.pair-hint strong {
+  color: white;
+}
+
+.pair-label {
+  font-weight: 700;
+  margin-top: 0.4rem;
+}
+
+.pair-form input {
+  font-size: 1.3rem;
+  padding: 0.8rem 1rem;
+  border-radius: 0.75rem;
+  border: none;
+}
+
+.pair-form input.pair-code {
+  font-family: "Courier New", monospace;
+  font-size: 2rem;
+  font-weight: 700;
+  letter-spacing: 0.4em;
+  text-align: center;
+}
+
+.pair-submit {
+  margin-top: 0.9rem;
+  padding: 1rem;
+  border-radius: 0.75rem;
+  background: var(--sparkx-gradient);
+  color: var(--kleur-achtergrond-diep);
+  font-size: 1.4rem;
+  font-weight: 900;
+}
+
+.pair-submit:disabled {
+  opacity: 0.6;
+}
+
+.pair-error {
+  margin: 0.25rem 0 0;
+  color: #ff8a80;
+  font-weight: bold;
+  text-align: center;
+}
+
 .waiting-title {
   font-size: clamp(2.5rem, 8vw, 6rem);
   margin: 0;

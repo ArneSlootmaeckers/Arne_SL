@@ -2,10 +2,12 @@
 from __future__ import annotations
 
 from datetime import date
+from pathlib import Path
 
 from fastapi import APIRouter, Depends, HTTPException, Request, Response
 from sqlalchemy.orm import Session
 
+from app import tls
 from app.config import Settings
 from app.dependencies import get_db, get_settings, require_role
 from app.domain.calendar import local_today
@@ -16,9 +18,18 @@ from app.schemas import (
     EmployeeUpdateRequest,
     EventResponse,
     ManualStatusRequest,
+    PairedDeviceResponse,
+    PairingCodeResponse,
     WristbandStatusResponse,
 )
-from app.services import device_service, employee_service, log_service, network_service, report_service
+from app.services import (
+    device_service,
+    employee_service,
+    log_service,
+    network_service,
+    pairing_service,
+    report_service,
+)
 from app.services.common import get_or_create_wristband, log_event, now_utc, read_effective_status
 
 router = APIRouter(prefix="/api/admin", tags=["admin"])
@@ -164,7 +175,37 @@ def get_network_info(
     settings: Settings = Depends(get_settings),
     _: EmployeeModel = Depends(require_role("admin")),
 ) -> dict:
-    return {"port": settings.port, "addresses": network_service.local_ipv4_addresses()}
+    return {
+        "port": settings.port,
+        "addresses": network_service.local_ipv4_addresses(),
+        "certificate_fingerprint": tls.certificate_fingerprint(Path(settings.tls_dir)),
+    }
+
+
+@router.post("/pairing-codes", response_model=PairingCodeResponse)
+def create_pairing_code(
+    db: Session = Depends(get_db),
+    employee: EmployeeModel = Depends(require_role("admin")),
+) -> PairingCodeResponse:
+    code = pairing_service.create_pairing_code(db, employee_id=employee.id)
+    return PairingCodeResponse(code=code.code, expires_at=code.expires_at)
+
+
+@router.get("/devices", response_model=list[PairedDeviceResponse])
+def list_devices(
+    db: Session = Depends(get_db), _: EmployeeModel = Depends(require_role("admin"))
+) -> list[dict]:
+    return pairing_service.list_paired_devices(db)
+
+
+@router.delete("/devices/{device_id}")
+def unpair_device(
+    device_id: str,
+    db: Session = Depends(get_db),
+    employee: EmployeeModel = Depends(require_role("admin")),
+) -> dict:
+    pairing_service.unpair_device(db, device_id=device_id, employee_id=employee.id)
+    return {"ok": True}
 
 
 @router.post("/shutdown")

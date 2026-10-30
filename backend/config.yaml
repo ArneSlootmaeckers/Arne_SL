@@ -1,5 +1,13 @@
 timezone: "Europe/Brussels"
+# Poort voor de telefoons en de rest van het netwerk (https).
 port: 8000
+# Poort voor het beheerscherm op de server-pc zelf: enkel bereikbaar via
+# 127.0.0.1, dus niet vanaf het netwerk (gewone http, geen certificaat nodig).
+local_port: 8001
+# Map voor het https-certificaat. Wordt bij de eerste start automatisch
+# aangemaakt; laat deze map staan, anders moet elke telefoon de server
+# opnieuw vertrouwen (zie de handleiding).
+tls_dir: "../data/tls"
 # Hoeveel seconden een oefensprong op bevestiging mag wachten voor die vervalt.
 # (Een scan die op een oordeel wacht, de 1e/2e poging, vervalt nooit.)
 scan_timeout_seconds: 60

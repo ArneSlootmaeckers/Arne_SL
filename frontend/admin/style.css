@@ -403,6 +403,43 @@ button.picker-trigger {
   font-size: 0.9rem;
 }
 
+.network-fingerprint {
+  color: var(--kleur-tekst-gedempt);
+  font-size: 0.9rem;
+}
+
+.fingerprint {
+  color: var(--sparkx-geel);
+  font-family: Consolas, "Courier New", monospace;
+  font-size: 1.05rem;
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+.pairing-code-result {
+  margin: 1rem 0;
+}
+
+.pairing-code-result .network-address {
+  letter-spacing: 0.3em;
+}
+
+#devices-table {
+  margin-top: 0.75rem;
+}
+
+#devices-table td:last-child {
+  text-align: right;
+}
+
+.warning-banner {
+  background: var(--sparkx-oranje);
+  color: var(--kleur-achtergrond-diep);
+  font-weight: 700;
+  padding: 0.75rem 1rem;
+  line-height: 1.4;
+}
+
 .table-scroll {
   width: 100%;
   max-width: 70rem;

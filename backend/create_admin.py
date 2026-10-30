@@ -17,13 +17,14 @@ import sys
 from app.config import load_settings
 from app.database import create_session_factory
 from app.services import employee_service
+from app.services.employee_service import MIN_PINCODE_LENGTH
 from app.services.errors import DuplicatePincodeError
 
 
 def main() -> None:
     parser = argparse.ArgumentParser(description="Maak de allereerste admin aan.")
     parser.add_argument("--name", help="Naam van de nieuwe admin (anders interactief gevraagd)")
-    parser.add_argument("--pincode", help="Pincode, min. 4 tekens (anders interactief gevraagd)")
+    parser.add_argument("--pincode", help=f"Pincode, min. {MIN_PINCODE_LENGTH} tekens (anders interactief gevraagd)")
     args = parser.parse_args()
 
     settings = load_settings()
@@ -37,13 +38,13 @@ def main() -> None:
     if args.pincode is not None:
         pincode = args.pincode.strip()
     else:
-        pincode = getpass.getpass("Pincode (min. 4 tekens): ").strip()
+        pincode = getpass.getpass(f"Pincode (min. {MIN_PINCODE_LENGTH} tekens): ").strip()
         pincode_confirm = getpass.getpass("Herhaal pincode: ").strip()
         if pincode != pincode_confirm:
             print("Pincodes komen niet overeen.")
             sys.exit(1)
-    if len(pincode) < 4:
-        print("Pincode moet minstens 4 tekens lang zijn.")
+    if len(pincode) < MIN_PINCODE_LENGTH:
+        print(f"Pincode moet minstens {MIN_PINCODE_LENGTH} tekens lang zijn.")
         sys.exit(1)
 
     try:

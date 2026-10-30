@@ -25,7 +25,7 @@ def test_network_info_returns_port_and_addresses(client, admin_employee, monkeyp
     response = client.get("/api/admin/network", headers=_login(client, "1234"))
 
     assert response.status_code == 200
-    assert response.json() == {"port": 8000, "addresses": ["10.18.0.155"]}
+    assert response.json() == {"port": 8000, "addresses": ["10.18.0.155"], "certificate_fingerprint": None}
 
 
 def test_addresses_skip_loopback_and_link_local_and_keep_primary_first(monkeypatch):

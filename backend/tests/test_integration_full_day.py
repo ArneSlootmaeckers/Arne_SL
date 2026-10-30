@@ -6,20 +6,21 @@ from __future__ import annotations
 
 from app.domain.calendar import local_today
 from app.services.common import now_utc
+from tests.devices import paired
 
 
 def test_full_day_simulation(client, supervisor_employee, test_settings):
-    host = {"device_id": "host-1"}
-    gate = {"device_id": "gate-1"}
+    host = paired(client, "host-1")
+    gate = paired(client, "gate-1")
 
     def scan_host(wristband_id):
-        return client.post("/api/host/scan", json={"wristband_id": wristband_id, **host}).json()
+        return client.post("/api/host/scan", json={"wristband_id": wristband_id}, headers=host).json()
 
     def verdict(v):
-        return client.post("/api/host/verdict", json={"verdict": v, **host}).json()
+        return client.post("/api/host/verdict", json={"verdict": v}, headers=host).json()
 
     def scan_gate(wristband_id):
-        return client.post("/api/gate/scan", json={"wristband_id": wristband_id, **gate}).json()
+        return client.post("/api/gate/scan", json={"wristband_id": wristband_id}, headers=gate).json()
 
     # Bezoeker A: slaagt meteen.
     assert scan_host("A")["status"] == "NOG_NIET_GESPRONGEN"
@@ -48,7 +49,7 @@ def test_full_day_simulation(client, supervisor_employee, test_settings):
     oefensprong = scan_host("A")
     assert oefensprong["status"] == "GESLAAGD"
     assert oefensprong["requires_practice_ack"] is True
-    ack = client.post("/api/host/practice-ack", json=host)
+    ack = client.post("/api/host/practice-ack", headers=host)
     assert ack.status_code == 200
 
     # Supervisor corrigeert bandje C handmatig na overleg (bv. video herbekeken).

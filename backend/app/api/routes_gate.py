@@ -5,8 +5,9 @@ from fastapi import APIRouter, Depends
 from sqlalchemy.orm import Session
 
 from app.config import Settings
-from app.dependencies import get_db, get_gate_controller, get_settings
+from app.dependencies import get_db, get_gate_controller, get_settings, require_paired_device
 from app.hardware.gate_controller import GateController
+from app.models import PairedDeviceModel
 from app.schemas import GateScanRequest, GateScanResponse
 from app.services import gate_service
 
@@ -19,11 +20,12 @@ def gate_scan(
     db: Session = Depends(get_db),
     settings: Settings = Depends(get_settings),
     gate_controller: GateController = Depends(get_gate_controller),
+    device: PairedDeviceModel = Depends(require_paired_device),
 ) -> GateScanResponse:
     allowed, status, reason = gate_service.check_gate_access(
         db,
         wristband_id=payload.wristband_id,
-        device_id=payload.device_id,
+        device_id=device.device_id,
         tz=settings.tz,
         gate_controller=gate_controller,
     )

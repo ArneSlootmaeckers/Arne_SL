@@ -32,6 +32,7 @@ def test_settings(tmp_path: Path) -> Settings:
         maintenance_interval_hours=24,
         backup_dir=str(tmp_path / "backups"),
         backup_retention_days=30,
+        tls_dir=str(tmp_path / "tls"),
     )
 
 

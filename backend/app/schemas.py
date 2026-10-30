@@ -10,7 +10,6 @@ from app.domain.status import Status, Verdict
 
 class ScanRequest(BaseModel):
     wristband_id: str
-    device_id: str
 
 
 class ScanResponse(BaseModel):
@@ -33,25 +32,37 @@ class VerdictResponse(BaseModel):
 
 
 class VerdictRequest(BaseModel):
-    device_id: str
     verdict: Verdict
 
 
-class DeviceRequest(BaseModel):
-    """Shared shape for actions that only need to identify the device (e.g.
-    practice-jump acknowledgement, cancelling a pending scan)."""
-
-    device_id: str
-
-
 class DeviceNameRequest(BaseModel):
-    device_id: str
     name: str = Field(max_length=40)
+
+
+class PairRequest(BaseModel):
+    code: str = Field(max_length=16)
+    name: str = Field(default="", max_length=40)
+
+
+class PairResponse(BaseModel):
+    device_id: str
+    token: str
+
+
+class PairingCodeResponse(BaseModel):
+    code: str
+    expires_at: datetime
+
+
+class PairedDeviceResponse(BaseModel):
+    device_id: str
+    name: str | None
+    paired_at: datetime
+    last_seen_at: datetime
 
 
 class GateScanRequest(BaseModel):
     wristband_id: str
-    device_id: str
 
 
 class GateScanResponse(BaseModel):
@@ -70,6 +81,7 @@ class LoginResponse(BaseModel):
     employee_id: int
     name: str
     role: str
+    short_pincode: bool = False
 
 
 class EmployeeCreateRequest(BaseModel):

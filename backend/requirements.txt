@@ -8,3 +8,5 @@ pytest>=8.0
 # Windows heeft geen ingebouwde IANA-tijdzonedatabase (Linux/macOS wel), dus
 # zoneinfo.ZoneInfo("Europe/Brussels") heeft dit pakket nodig om te werken.
 tzdata>=2024.1
+# Maakt bij de eerste start het eigen https-certificaat aan (zie app/tls.py).
+cryptography>=42

@@ -20,17 +20,23 @@ from app.config import Settings, load_settings
 from app.database import create_session_factory
 from app.hardware.gate_controller import create_gate_controller
 from app.services.errors import (
+    DeviceNotFoundError,
+    DeviceNotPairedError,
     DomainServiceError,
     DuplicatePincodeError,
     EmployeeNotFoundError,
+    InvalidPairingCodeError,
     InvalidPincodeError,
     NoPendingScanError,
     PermissionDeniedError,
     SessionExpiredError,
+    TooManyAttemptsError,
+    WeakPincodeError,
     WrongResolutionPathError,
 )
 from app.services.log_service import purge_old_events
 from app.services.maintenance_service import create_backup, purge_old_backups
+from app.services.rate_limit import AttemptLimiter
 from app.services.scan_service import reap_expired_pending_scans
 
 logger = logging.getLogger("maintenance")
@@ -43,6 +49,11 @@ _ERROR_STATUS_CODES: dict[type[DomainServiceError], int] = {
     PermissionDeniedError: 403,
     DuplicatePincodeError: 409,
     EmployeeNotFoundError: 404,
+    WeakPincodeError: 400,
+    TooManyAttemptsError: 429,
+    DeviceNotPairedError: 401,
+    InvalidPairingCodeError: 400,
+    DeviceNotFoundError: 404,
 }
 
 _REAPER_INTERVAL_SECONDS = 5.0
@@ -125,6 +136,9 @@ def create_app(settings: Settings | None = None) -> FastAPI:
 
     app = FastAPI(title="Toelatingssysteem veiligheidssprong", lifespan=lifespan)
     app.state.frontend_version = _frontend_version()
+    # Na 5 foute pincodes of koppelcodes vanaf hetzelfde adres: 5 minuten geblokkeerd.
+    app.state.login_limiter = AttemptLimiter()
+    app.state.pairing_limiter = AttemptLimiter()
 
     def _make_handler(status_code: int):
         async def _handler(request: Request, exc: DomainServiceError) -> JSONResponse:

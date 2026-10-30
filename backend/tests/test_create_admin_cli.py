@@ -34,7 +34,7 @@ def cli_settings(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Settings:
 
 
 def test_non_interactive_creates_admin(cli_settings: Settings, monkeypatch: pytest.MonkeyPatch):
-    monkeypatch.setattr(sys, "argv", ["create_admin.py", "--name", "Installer Admin", "--pincode", "13579"])
+    monkeypatch.setattr(sys, "argv", ["create_admin.py", "--name", "Installer Admin", "--pincode", "135790"])
     create_admin.main()
 
     db = create_session_factory(cli_settings.database_url)()
@@ -47,21 +47,21 @@ def test_non_interactive_creates_admin(cli_settings: Settings, monkeypatch: pyte
 
 
 def test_non_interactive_rejects_short_pincode(cli_settings: Settings, monkeypatch: pytest.MonkeyPatch):
-    monkeypatch.setattr(sys, "argv", ["create_admin.py", "--name", "Kort", "--pincode", "12"])
+    monkeypatch.setattr(sys, "argv", ["create_admin.py", "--name", "Kort", "--pincode", "12345"])
     with pytest.raises(SystemExit):
         create_admin.main()
 
 
 def test_non_interactive_rejects_empty_name(cli_settings: Settings, monkeypatch: pytest.MonkeyPatch):
-    monkeypatch.setattr(sys, "argv", ["create_admin.py", "--name", "  ", "--pincode", "1234"])
+    monkeypatch.setattr(sys, "argv", ["create_admin.py", "--name", "  ", "--pincode", "123456"])
     with pytest.raises(SystemExit):
         create_admin.main()
 
 
 def test_non_interactive_rejects_duplicate_pincode(cli_settings: Settings, monkeypatch: pytest.MonkeyPatch):
-    monkeypatch.setattr(sys, "argv", ["create_admin.py", "--name", "Eerste", "--pincode", "24680"])
+    monkeypatch.setattr(sys, "argv", ["create_admin.py", "--name", "Eerste", "--pincode", "246800"])
     create_admin.main()
 
-    monkeypatch.setattr(sys, "argv", ["create_admin.py", "--name", "Tweede", "--pincode", "24680"])
+    monkeypatch.setattr(sys, "argv", ["create_admin.py", "--name", "Tweede", "--pincode", "246800"])
     with pytest.raises(SystemExit):
         create_admin.main()

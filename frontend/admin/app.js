@@ -28,7 +28,13 @@ const EVENT_LABELS = {
   HANDMATIGE_WIJZIGING: "Handmatige wijziging",
   INLOGGEN: "Inloggen",
   INLOGGEN_MISLUKT: "Inloggen mislukt",
+  INLOGGEN_GEBLOKKEERD: "Inloggen geblokkeerd (te veel foute pincodes)",
   UITLOGGEN: "Uitloggen",
+  KOPPELCODE_AANGEMAAKT: "Koppelcode aangemaakt",
+  TOESTEL_GEKOPPELD: "Toestel gekoppeld",
+  TOESTEL_ONTKOPPELD: "Toestel ontkoppeld",
+  KOPPELEN_MISLUKT: "Koppelen mislukt",
+  KOPPELEN_GEBLOKKEERD: "Koppelen geblokkeerd (te veel foute codes)",
   SYSTEEM_AFSLUITEN: "Systeem afgesloten",
 };
 
@@ -135,6 +141,16 @@ const els = {
   networkAddresses: document.getElementById("network-addresses"),
   networkNote: document.getElementById("network-note"),
   networkRefreshBtn: document.getElementById("network-refresh-btn"),
+  networkFingerprint: document.getElementById("network-fingerprint"),
+  networkFingerprintValue: document.getElementById("network-fingerprint-value"),
+  pincodeWarning: document.getElementById("pincode-warning"),
+
+  pairingCodeBtn: document.getElementById("pairing-code-btn"),
+  pairingCodeResult: document.getElementById("pairing-code-result"),
+  pairingCodeValue: document.getElementById("pairing-code-value"),
+  pairingCodeExpiry: document.getElementById("pairing-code-expiry"),
+  devicesMessage: document.getElementById("devices-message"),
+  devicesTableBody: document.querySelector("#devices-table tbody"),
 
   shutdownBtn: document.getElementById("shutdown-btn"),
   shutdownMessage: document.getElementById("shutdown-message"),
@@ -159,6 +175,8 @@ function showLogin(message) {
   localStorage.removeItem(EMPLOYEE_LABEL_KEY);
   els.adminView.classList.add("hidden");
   els.loginView.classList.remove("hidden");
+  els.pincodeWarning.classList.add("hidden");
+  els.pairingCodeResult.classList.add("hidden");
   els.pincodeInput.value = "";
   if (message) {
     els.loginError.textContent = message;
@@ -197,6 +215,7 @@ els.loginForm.addEventListener("submit", async (event) => {
     const result = await api.login(els.pincodeInput.value);
     localStorage.setItem(ADMIN_TOKEN_KEY, result.token);
     showAdmin({ id: result.employee_id, name: result.name, role: result.role });
+    els.pincodeWarning.classList.toggle("hidden", !result.short_pincode);
   } catch (err) {
     showLogin(err instanceof ApiError ? err.message : "Aanmelden mislukt.");
   }
@@ -445,7 +464,7 @@ els.employeesTableBody.addEventListener("click", async (event) => {
   }
 
   if (btn.dataset.action === "pincode") {
-    const newPincode = prompt("Nieuwe pincode voor deze medewerker:");
+    const newPincode = prompt("Nieuwe pincode voor deze medewerker (minstens 6 tekens):");
     if (!newPincode) return;
     try {
       await api.updateEmployee(id, { new_pincode: newPincode });
@@ -493,6 +512,8 @@ async function loadNetworkInfo() {
   showNetworkNote("");
   try {
     const info = await api.networkInfo();
+    els.networkFingerprintValue.textContent = info.certificate_fingerprint ?? "";
+    els.networkFingerprint.classList.toggle("hidden", !info.certificate_fingerprint);
     if (info.addresses.length === 0) {
       showNetworkNote(
         "Geen netwerkverbinding gevonden op deze pc. Controleer of de " +
@@ -526,8 +547,92 @@ async function loadNetworkInfo() {
   }
 }
 
-document.querySelector('.tab-btn[data-tab="systeem"]').addEventListener("click", loadNetworkInfo);
-els.networkRefreshBtn.addEventListener("click", loadNetworkInfo);
+function showDevicesMessage(text, kind = "error") {
+  els.devicesMessage.textContent = text;
+  els.devicesMessage.className = `message ${kind}`;
+  els.devicesMessage.classList.toggle("hidden", !text);
+}
+
+async function loadDevices() {
+  try {
+    const devices = await api.pairedDevices();
+    els.devicesTableBody.textContent = "";
+    if (devices.length === 0) {
+      const row = document.createElement("tr");
+      const cell = document.createElement("td");
+      cell.colSpan = 4;
+      cell.textContent = "Nog geen toestellen gekoppeld.";
+      row.append(cell);
+      els.devicesTableBody.append(row);
+    }
+    for (const device of devices) {
+      const row = document.createElement("tr");
+      // textContent, nooit innerHTML: de naam komt van de telefoon zelf.
+      for (const text of [
+        device.name || device.device_id,
+        formatTimestamp(device.paired_at),
+        formatTimestamp(device.last_seen_at),
+      ]) {
+        const cell = document.createElement("td");
+        cell.textContent = text;
+        row.append(cell);
+      }
+      const actions = document.createElement("td");
+      const unpairBtn = document.createElement("button");
+      unpairBtn.type = "button";
+      unpairBtn.className = "btn-secondary";
+      unpairBtn.dataset.id = device.device_id;
+      unpairBtn.dataset.name = device.name || device.device_id;
+      unpairBtn.textContent = "Ontkoppelen";
+      actions.append(unpairBtn);
+      row.append(actions);
+      els.devicesTableBody.append(row);
+    }
+  } catch (err) {
+    if (err instanceof ApiError && err.status === 401) return handleUnauthorized();
+    showDevicesMessage(err instanceof ApiError ? err.message : "Kon de toestellen niet ophalen.");
+  }
+}
+
+els.pairingCodeBtn.addEventListener("click", async () => {
+  showDevicesMessage("");
+  try {
+    const result = await api.createPairingCode();
+    els.pairingCodeValue.textContent = result.code;
+    const until = new Date(result.expires_at).toLocaleTimeString("nl-BE", { hour: "2-digit", minute: "2-digit" });
+    els.pairingCodeExpiry.textContent = `Geldig tot ${until}, voor één toestel.`;
+    els.pairingCodeResult.classList.remove("hidden");
+  } catch (err) {
+    if (err instanceof ApiError && err.status === 401) return handleUnauthorized();
+    showDevicesMessage(err instanceof ApiError ? err.message : "Kon geen koppelcode aanmaken.");
+  }
+});
+
+els.devicesTableBody.addEventListener("click", async (event) => {
+  const btn = event.target.closest("button[data-id]");
+  if (!btn) return;
+  const confirmed = confirm(
+    `Toestel "${btn.dataset.name}" ontkoppelen? Het kan dan meteen niet meer ` +
+      "scannen tot het opnieuw gekoppeld wordt met een nieuwe code."
+  );
+  if (!confirmed) return;
+  try {
+    await api.unpairDevice(btn.dataset.id);
+    showDevicesMessage(`"${btn.dataset.name}" is ontkoppeld.`, "success");
+    await loadDevices();
+  } catch (err) {
+    if (err instanceof ApiError && err.status === 401) return handleUnauthorized();
+    showDevicesMessage(err instanceof ApiError ? err.message : "Ontkoppelen mislukt.");
+  }
+});
+
+function loadSystemTab() {
+  loadNetworkInfo();
+  loadDevices();
+}
+
+document.querySelector('.tab-btn[data-tab="systeem"]').addEventListener("click", loadSystemTab);
+els.networkRefreshBtn.addEventListener("click", loadSystemTab);
 
 els.shutdownBtn.addEventListener("click", async () => {
   const confirmed = confirm(

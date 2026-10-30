@@ -1,15 +1,26 @@
-/** Small fetch wrapper + device id + connection polling, shared by all screens. */
+/** Small fetch wrapper + device key + connection polling, shared by all screens. */
 
-const DEVICE_ID_KEY = "toelating_device_id";
 export const ADMIN_TOKEN_KEY = "toelating_admin_token";
+const DEVICE_TOKEN_KEY = "toelating_device_token";
 
-export function getDeviceId() {
-  let id = localStorage.getItem(DEVICE_ID_KEY);
-  if (!id) {
-    id = "toestel-" + Math.random().toString(36).slice(2, 10);
-    localStorage.setItem(DEVICE_ID_KEY, id);
-  }
-  return id;
+/** De geheime sleutel die dit toestel kreeg bij het koppelen (zie het
+ * hostscherm), of null. In de Android-app bewaart de app zelf de sleutel
+ * (window.ToelatingApp): wat een pagina in localStorage zet, hoort bij het
+ * adres van de server en zou dus verdwijnen zodra het IP van de pc
+ * verandert. In een gewone browser is localStorage wel de juiste plek. */
+export function getDeviceToken() {
+  if (window.ToelatingApp) return window.ToelatingApp.getDeviceToken() || null;
+  return localStorage.getItem(DEVICE_TOKEN_KEY);
+}
+
+export function setDeviceToken(token) {
+  if (window.ToelatingApp) window.ToelatingApp.setDeviceToken(token);
+  else localStorage.setItem(DEVICE_TOKEN_KEY, token);
+}
+
+export function clearDeviceToken() {
+  if (window.ToelatingApp) window.ToelatingApp.clearDeviceToken();
+  else localStorage.removeItem(DEVICE_TOKEN_KEY);
 }
 
 const DEVICE_NAME_KEY = "toelating_device_name";
@@ -34,6 +45,8 @@ async function request(method, path, body) {
   const headers = {};
   const token = localStorage.getItem(ADMIN_TOKEN_KEY);
   if (token) headers["Authorization"] = `Bearer ${token}`;
+  const deviceToken = getDeviceToken();
+  if (deviceToken) headers["X-Device-Token"] = deviceToken;
   if (body !== undefined) headers["Content-Type"] = "application/json";
 
   const response = await fetch(path, {
@@ -77,14 +90,16 @@ function toQueryString(params) {
 
 export const api = {
   health: () => request("GET", "/api/health"),
-  scan: (wristbandId, deviceId) =>
-    request("POST", "/api/host/scan", { wristband_id: wristbandId, device_id: deviceId }),
-  verdict: (deviceId, verdict) => request("POST", "/api/host/verdict", { device_id: deviceId, verdict }),
-  practiceAck: (deviceId) => request("POST", "/api/host/practice-ack", { device_id: deviceId }),
-  cancelScan: (deviceId) => request("POST", "/api/host/cancel", { device_id: deviceId }),
-  setDeviceName: (deviceId, name) => request("PUT", "/api/host/device-name", { device_id: deviceId, name }),
-  gateScan: (wristbandId, deviceId) =>
-    request("POST", "/api/gate/scan", { wristband_id: wristbandId, device_id: deviceId }),
+  // Hostscherm: het toestel stuurt zijn sleutel mee (X-Device-Token), de
+  // server leidt daar zelf uit af welk toestel het is.
+  pair: (code, name) => request("POST", "/api/host/pair", { code, name }),
+  currentDevice: () => request("GET", "/api/host/device"),
+  scan: (wristbandId) => request("POST", "/api/host/scan", { wristband_id: wristbandId }),
+  verdict: (verdict) => request("POST", "/api/host/verdict", { verdict }),
+  practiceAck: () => request("POST", "/api/host/practice-ack"),
+  cancelScan: () => request("POST", "/api/host/cancel"),
+  setDeviceName: (name) => request("PUT", "/api/host/device-name", { name }),
+  gateScan: (wristbandId) => request("POST", "/api/gate/scan", { wristband_id: wristbandId }),
 
   login: (pincode) => request("POST", "/api/auth/login", { pincode }),
   logout: () => request("POST", "/api/auth/logout"),
@@ -104,6 +119,9 @@ export const api = {
   updateEmployee: (id, fields) => request("PATCH", `/api/admin/employees/${id}`, fields),
 
   networkInfo: () => request("GET", "/api/admin/network"),
+  createPairingCode: () => request("POST", "/api/admin/pairing-codes"),
+  pairedDevices: () => request("GET", "/api/admin/devices"),
+  unpairDevice: (deviceId) => request("DELETE", `/api/admin/devices/${encodeURIComponent(deviceId)}`),
   shutdown: () => request("POST", "/api/admin/shutdown"),
 };
 
