@@ -143,6 +143,16 @@ Section "Installeren"
 
   CreateDirectory "$INSTDIR\data"
 
+  ; Poort 8000 enkel open voor het eigen netwerk en dicht voor internet (zie
+  ; firewall.ps1). Het script vraagt zelf de beheerdersrechten die daarvoor
+  ; nodig zijn; de rest van deze installer heeft die niet nodig.
+  DetailPrint "Windows-firewall instellen (Windows vraagt om bevestiging)..."
+  nsExec::ExecToLog 'powershell -NoProfile -ExecutionPolicy Bypass -WindowStyle Hidden -File "$INSTDIR\firewall.ps1"'
+  Pop $0
+  ${If} $0 != "0"
+    MessageBox MB_OK|MB_ICONEXCLAMATION "De Windows-firewall kon niet ingesteld worden (geen beheerdersrechten gekregen?).$\r$\n$\r$\nDe server weigert internetadressen ook zelf, maar laat voor de zekerheid IT het bestand firewall.ps1 in $INSTDIR uitvoeren (rechtsklik -> Uitvoeren met PowerShell)."
+  ${EndIf}
+
   ${If} $AdminName != ""
     DetailPrint "Eerste admin aanmaken..."
     nsExec::ExecToLog '"$INSTDIR\backend\.venv\Scripts\python.exe" create_admin.py --name "$AdminName" --pincode "$AdminPincode"'
@@ -160,6 +170,7 @@ Section "Installeren"
 SectionEnd
 
 Section "Uninstall"
+  nsExec::ExecToLog 'powershell -NoProfile -ExecutionPolicy Bypass -WindowStyle Hidden -File "$INSTDIR\firewall.ps1" -Remove'
   Delete "$DESKTOP\Toelatingssysteem.lnk"
   RMDir /r "$INSTDIR"
 SectionEnd

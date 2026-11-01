@@ -182,6 +182,13 @@ op `/admin/` met die pincode om verdere medewerkers aan te maken.
   geldig, voor één toestel); het toestel krijgt daarmee een eigen geheime
   sleutel. Zonder die sleutel weigert de server elke scan en elk oordeel.
   Een verloren toestel ontkoppel je op hetzelfde tabblad.
+- **Dicht voor het internet**, met twee sloten. De server weigert zelf elk
+  verzoek vanaf een internetadres: enkel toestellen op het eigen netwerk
+  (`10.x`, `172.16-31.x`, `192.168.x`, ...) komen binnen. En de installer
+  zet een Windows-firewallregel (`firewall.ps1`) die poort 8000 dicht houdt
+  voor internetadressen, ook als iemand per ongeluk een poort op de router
+  openzet. Kon de installer de firewall niet instellen (geen
+  beheerdersrechten), voer `firewall.ps1` dan als administrator uit.
 - **Pincodes van minstens 6 tekens**, en na 5 foute pincodes (of
   koppelcodes) vanaf hetzelfde toestel is dat toestel 5 minuten
   geblokkeerd. Oudere, kortere pincodes blijven werken, maar het
@@ -221,6 +228,7 @@ Alle instelbare waarden staan in één bestand, `backend/config.yaml`:
 | `port` | Poort voor de telefoons en het netwerk (https) | `8000` |
 | `local_port` | Poort voor het beheerscherm op de server-pc zelf (http, enkel `127.0.0.1`) | `8001` |
 | `tls_dir` | Map met het eigen https-certificaat (laten staan!) | `../data/tls` |
+| `extra_allowed_networks` | Bijkomende netwerken die de server mogen bereiken, enkel nodig als het parknetwerk intern internetadressen gebruikt (bv. `["203.0.113.0/24"]`) | `[]` |
 | `scan_timeout_seconds` | Hoelang een oefensprong op bevestiging wacht (een oordeel bij de 1e/2e poging heeft geen tijdslimiet) | `60` |
 | `session_inactivity_timeout_seconds` | Auto-uitloggen na inactiviteit (beheer) | `120` |
 | `log_retention_days` | Bewaartermijn van logs | `365` |
@@ -326,6 +334,7 @@ installer/
 data/      # SQLite-bestand, back-ups en het https-certificaat (niet in git)
 install.sh                          # installatie (Linux/macOS/WSL)
 setup.ps1                           # installatie + bureaubladsnelkoppeling (Windows, alternatief script)
+firewall.ps1                        # Windows-firewall: poort 8000 enkel voor het eigen netwerk (installer voert dit uit)
 start.sh                            # server starten (Linux/macOS/WSL)
 start-app.bat                       # startpunt van de snelkoppeling, roept start-app.ps1 aan
 start-app.ps1                       # server + browser starten, browser mee afsluiten (Windows)

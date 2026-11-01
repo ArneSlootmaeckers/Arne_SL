@@ -39,7 +39,8 @@ def test_settings(tmp_path: Path) -> Settings:
 @pytest.fixture
 def client(test_settings: Settings):
     app = create_app(test_settings)
-    with TestClient(app) as test_client:
+    # Een adres op het eigen netwerk: de server weigert internetadressen.
+    with TestClient(app, client=("192.168.1.20", 50000)) as test_client:
         yield test_client
 
 

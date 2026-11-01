@@ -7,7 +7,10 @@
    (geen adminrechten nodig),
 2. controleert of Python 3.12+ aanwezig is,
 3. een virtuele omgeving aanmaakt en de dependencies installeert,
-4. en een bureaubladsnelkoppeling plaatst.
+4. de Windows-firewall instelt via `firewall.ps1`: poort 8000 enkel open
+   voor het eigen netwerk en dicht voor internet (Windows vraagt hiervoor
+   één keer om bevestiging; bij het verwijderen gaan de regels mee weg),
+5. en een bureaubladsnelkoppeling plaatst.
 
 Omdat het een gecompileerd programma is — geen `.ps1`-script — heeft hij
 geen last van PowerShell's execution policy. Dat blokkeerde eerder wel

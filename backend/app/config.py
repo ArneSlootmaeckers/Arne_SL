@@ -1,7 +1,7 @@
 """Application configuration, loaded from a single config.yaml file."""
 from __future__ import annotations
 
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from pathlib import Path
 from zoneinfo import ZoneInfo
 
@@ -30,6 +30,10 @@ class Settings:
     local_port: int = 8001
     # Map met het zelfgemaakte https-certificaat (relatief t.o.v. backend/).
     tls_dir: str = "../data/tls"
+    # Bijkomende netwerken (bv. "203.0.113.0/24") die de server mogen
+    # bereiken. Normaal leeg: enkel adressen van het eigen netwerk (geen
+    # internetadressen) worden toegelaten, zie network_service.
+    extra_allowed_networks: list[str] = field(default_factory=list)
 
     @property
     def tz(self) -> ZoneInfo:

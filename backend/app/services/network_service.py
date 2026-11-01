@@ -4,6 +4,26 @@ from __future__ import annotations
 
 import ipaddress
 import socket
+from collections.abc import Sequence
+
+
+def is_local_client(
+    host: str | None, extra_allowed_networks: Sequence[str | ipaddress.IPv4Network | ipaddress.IPv6Network] = ()
+) -> bool:
+    """True als een verzoek van `host` van het eigen netwerk komt (privé-,
+    loopback- of link-local-adres), en dus niet van ergens op het internet.
+    Zo blijft de server dicht voor de buitenwereld, ook als iemand per
+    ongeluk een poort op de router openzet."""
+    try:
+        address = ipaddress.ip_address(host or "")
+    except ValueError:
+        return False
+    # "::ffff:8.8.8.8" is gewoon 8.8.8.8 in een IPv6-jasje.
+    if getattr(address, "ipv4_mapped", None) is not None:
+        address = address.ipv4_mapped
+    if not address.is_global:
+        return True
+    return any(address in ipaddress.ip_network(network) for network in extra_allowed_networks)
 
 
 def _primary_ipv4() -> str | None:

@@ -8,6 +8,11 @@ local_port: 8001
 # aangemaakt; laat deze map staan, anders moet elke telefoon de server
 # opnieuw vertrouwen (zie de handleiding).
 tls_dir: "../data/tls"
+# De server weigert elk verzoek vanaf een internetadres: enkel toestellen op
+# het eigen netwerk (10.x, 172.16-31.x, 192.168.x, ...) mogen hem bereiken.
+# Gebruikt het parknetwerk toch "internetadressen" intern, zet die
+# netwerken hier, bv. ["203.0.113.0/24"]. Normaal leeg laten.
+extra_allowed_networks: []
 # Hoeveel seconden een oefensprong op bevestiging mag wachten voor die vervalt.
 # (Een scan die op een oordeel wacht, de 1e/2e poging, vervalt nooit.)
 scan_timeout_seconds: 60

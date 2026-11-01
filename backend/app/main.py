@@ -9,6 +9,7 @@ from __future__ import annotations
 import asyncio
 import contextlib
 import hashlib
+import ipaddress
 import logging
 from pathlib import Path
 
@@ -36,6 +37,7 @@ from app.services.errors import (
 )
 from app.services.log_service import purge_old_events
 from app.services.maintenance_service import create_backup, purge_old_backups
+from app.services.network_service import is_local_client
 from app.services.rate_limit import AttemptLimiter
 from app.services.scan_service import reap_expired_pending_scans
 
@@ -158,6 +160,19 @@ def create_app(settings: Settings | None = None) -> FastAPI:
         response = await call_next(request)
         response.headers.setdefault("Cache-Control", "no-cache")
         return response
+
+    # Als laatste toegevoegd = als eerste uitgevoerd: een verzoek vanaf een
+    # internetadres komt nergens anders meer aan (ook niet aan de
+    # schermbestanden). Tweede slot naast de firewall op de pc. Een fout in
+    # extra_allowed_networks laat de server meteen bij het starten stoppen.
+    extra_allowed_networks = [ipaddress.ip_network(network) for network in settings.extra_allowed_networks]
+
+    @app.middleware("http")
+    async def _only_local_network(request: Request, call_next):
+        host = request.client.host if request.client else None
+        if not is_local_client(host, extra_allowed_networks):
+            return JSONResponse(status_code=403, content={"detail": "Enkel bereikbaar vanaf het eigen netwerk."})
+        return await call_next(request)
 
     from app.api.routes_admin import router as admin_router
     from app.api.routes_auth import router as auth_router

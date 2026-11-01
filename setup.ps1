@@ -69,7 +69,16 @@ try {
     New-Item -ItemType Directory -Force -Path (Join-Path $scriptDir "data") | Out-Null
     Write-Host "Installatie geslaagd." -ForegroundColor Green
 
-    # 3. Bureaubladsnelkoppeling
+    # 3. Windows-firewall: poort 8000 enkel open voor het eigen netwerk, dicht
+    # voor internet (zie firewall.ps1, dat zelf om beheerdersrechten vraagt).
+    Write-Host ""
+    Write-Host "Windows-firewall instellen (Windows vraagt om bevestiging)..."
+    & powershell -NoProfile -ExecutionPolicy Bypass -File (Join-Path $scriptDir "firewall.ps1")
+    if ($LASTEXITCODE -ne 0) {
+        Write-Host "Firewall niet ingesteld. De server weigert internetadressen ook zelf, maar laat voor de zekerheid IT firewall.ps1 als administrator uitvoeren." -ForegroundColor Yellow
+    }
+
+    # 4. Bureaubladsnelkoppeling
     Write-Host ""
     Write-Host "Bureaubladsnelkoppeling aanmaken..."
     $target = Join-Path $scriptDir "start-app.bat"

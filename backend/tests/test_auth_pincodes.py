@@ -133,7 +133,7 @@ def test_successful_login_resets_the_wrong_pincode_count(client, admin_employee)
 def test_blocking_is_logged(client, admin_employee):
     for _ in range(5):
         client.post("/api/auth/login", json={"pincode": "000000"})
-    client.app.state.login_limiter.reset("testclient")
+    client.app.state.login_limiter.reset("192.168.1.20")
     client.app.state.login_limiter._blocked_until.clear()
 
     token = client.post("/api/auth/login", json={"pincode": "1234"}).json()["token"]
