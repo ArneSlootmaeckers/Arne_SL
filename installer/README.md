@@ -5,8 +5,11 @@
 
 1. de projectbestanden uitpakt naar `%LOCALAPPDATA%\Toelatingssysteem`
    (geen adminrechten nodig),
-2. controleert of Python 3.12+ aanwezig is,
-3. een virtuele omgeving aanmaakt en de dependencies installeert,
+2. zijn eigen Python uitpakt naar `...\Toelatingssysteem\python` — op de
+   pc hoeft vooraf geen Python te staan, en een andere Python op die pc
+   speelt geen rol,
+3. een virtuele omgeving aanmaakt en de dependencies installeert (daarvoor
+   is internet nodig),
 4. de Windows-firewall instelt via `firewall.ps1`: poort 8000 enkel open
    voor het eigen netwerk en dicht voor internet (Windows vraagt hiervoor
    één keer om bevestiging; bij het verwijderen gaan de regels mee weg),
@@ -40,7 +43,14 @@ Dan, vanuit deze map:
 
 Dit zet een schone kopie van het project (via `git archive`, dus zonder
 `.venv`, `data/*.db` of andere niet-ingecheckte bestanden) in `build/` en
-compileert `Toelatingssysteem-Setup.exe` ernaast. `build.sh` werkt op
+compileert `Toelatingssysteem-Setup.exe` ernaast.
+
+De meegeleverde Python is het officiële Windows-pakket van de Python
+Software Foundation op nuget.org (een volledige Python met pip en venv,
+zonder eigen installatieprogramma). `build.sh` downloadt het één keer naar
+`cache/` (niet in git) en controleert de SHA-256: een ander of aangepast
+bestand wordt geweigerd. Een nieuwere Python meenemen: pas
+`PYTHON_VERSION` en `PYTHON_SHA256` bovenaan `build.sh` aan. `build.sh` werkt op
 Linux, macOS én Windows (met `makensis` op het PATH) — de uitkomst is
 altijd een Windows-`.exe`, ongeacht op welk platform je bouwt.
 
@@ -50,9 +60,14 @@ broncode.
 
 ## Getest
 
-Het volledige installatie- en verwijderproces is end-to-end getest onder
-Wine (een Windows-compatibiliteitslaag op Linux) met een echte Windows-
-Python-runtime: bestanden uitpakken, virtuele omgeving aanmaken, alle
-dependencies installeren, bureaubladsnelkoppeling aanmaken, en de
+Sinds de installer zijn eigen Python meebrengt, is dat deel nog niet op
+Windows getest; wel is nagegaan dat alle dependencies een kant-en-klaar
+Windows-pakket hebben voor Python 3.13 (er hoeft niets gecompileerd te
+worden).
+
+Daarvoor werd het volledige installatie- en verwijderproces end-to-end
+getest onder Wine (een Windows-compatibiliteitslaag op Linux) met een echte
+Windows-Python-runtime: bestanden uitpakken, virtuele omgeving aanmaken,
+alle dependencies installeren, bureaubladsnelkoppeling aanmaken, en de
 uninstaller die alles weer opruimt — allemaal bevestigd werkend. Niet
 getest op een fysieke Windows-machine.

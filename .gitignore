@@ -18,6 +18,7 @@ data/tls/
 
 # Windows-installer bouwresultaten (zie installer/build.sh)
 installer/build/
+installer/cache/
 installer/*.exe
 
 # Gradle/Android bouwresultaten

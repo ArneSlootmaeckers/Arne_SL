@@ -26,15 +26,19 @@ statuslogica in hoofdstuk 2 van de opdracht (of
 
 ## Vereisten
 
-- Python 3.12 of hoger
+- **Windows met de installer:** niets. De installer brengt zijn eigen
+  Python mee; een internetverbinding is wel nodig tijdens de installatie
+  (om de onderdelen van de server op te halen).
+- **Linux/macOS, of `setup.ps1`:** Python 3.12 of hoger.
 
 ## Installatie
 
 **Windows**: dubbelklik **`Toelatingssysteem-Setup.exe`** (zie
 [installer/](installer/)) en doorloop de wizard — Volgende, Volgende,
 Installeren. Dit is een echte Windows-installer, geen script: hij
-controleert Python, zet de virtuele omgeving en dependencies op, en
-plaatst de bureaubladsnelkoppeling, allemaal automatisch. Omdat het een
+brengt zijn eigen Python mee (Python hoeft dus niet vooraf op de pc te
+staan), zet de virtuele omgeving en dependencies op, stelt de firewall in,
+en plaatst de bureaubladsnelkoppeling, allemaal automatisch. Omdat het een
 gecompileerd programma is (geen `.ps1`-bestand), heeft hij geen last van
 PowerShell's execution policy — een script kan Windows na een download
 soms stilzwijgend blokkeren, een installer niet.
@@ -45,8 +49,9 @@ vraag de laatst gebouwde versie op.
 
 Geen zin in de installer, of liever een script dat je zelf kan aanpassen?
 Rechtsklik `setup.ps1` → **"Uitvoeren met PowerShell"** doet exact
-hetzelfde (maar loopt, als losstaand script, wél het hierboven genoemde
-execution-policy-risico).
+hetzelfde, maar heeft wel een eigen Python 3.12+ op de pc nodig (met
+"Add python.exe to PATH" aangevinkt) en loopt, als losstaand script, het
+hierboven genoemde execution-policy-risico.
 
 **Linux/macOS/Raspberry Pi**:
 
@@ -282,8 +287,8 @@ sqlite3 data/toelating.db ".backup data/backups/backup-$(date +%Y%m%d-%H%M%S).db
    op tabblad "Systeem" van het beheerscherm, of Ctrl+C).
 2. Zet **`Toelatingssysteem-Setup.exe`** op de nieuwe pc (USB-stick,
    netwerkschijf, OneDrive — wat je toepasselijk vindt) en voer hem uit.
-   Dit zet een volledig nieuwe, werkende installatie op (Python-check,
-   virtuele omgeving, dependencies, bureaubladsnelkoppeling) in
+   Dit zet een volledig nieuwe, werkende installatie op (eigen Python,
+   virtuele omgeving, dependencies, firewall, bureaubladsnelkoppeling) in
    `%LOCALAPPDATA%\Toelatingssysteem`.
 3. **Bestaande gegevens (bandjes, logs, medewerkers) meenemen?** Kopieer
    de map `data\` van de oude installatie over die van de nieuwe

@@ -5,13 +5,13 @@
 ; gemarkeerd stonden). Een gecompileerde installer is geen "script" in die
 ; zin en heeft daar geen last van.
 ;
-; Bouwen: ./build.sh (zie build.sh) vanuit deze map, of handmatig:
-;   1. Kopieer een schone checkout van het project naar build/payload/
-;      (zonder .git, backend/.venv, data/*).
-;   2. makensis Toelatingssysteem-Setup.nsi
+; Bouwen: ./build.sh (zie build.sh) vanuit deze map. Dat zet een schone
+; checkout van het project in build/payload/ en de meegeleverde Python in
+; build/python/, en roept daarna makensis aan.
 ;
-; Vereist Python 3.12+ op de doel-pc zelf (wordt gecontroleerd tijdens
-; installatie) -- Python zelf wordt niet meegeleverd.
+; Python zit in de installer zelf (naar $INSTDIR\python): op de doel-pc
+; hoeft vooraf niets geïnstalleerd te zijn, en een andere Python op die pc
+; (of het ontbreken van "Add python.exe to PATH") speelt geen rol.
 
 !include "MUI2.nsh"
 !include "LogicLib.nsh"
@@ -108,27 +108,18 @@ Section "Installeren"
   SetOutPath "$INSTDIR"
   File /r "build\payload\*.*"
 
-  DetailPrint "Python controleren..."
-  nsExec::ExecToLog 'cmd /c python --version'
-  Pop $0
-  ${If} $0 != "0"
-    MessageBox MB_OK|MB_ICONSTOP "Geen 'python' gevonden op het PATH.$\r$\n$\r$\nInstalleer Python 3.12 of hoger van python.org (vink 'Add python.exe to PATH' aan tijdens de installatie) en voer deze installer daarna opnieuw uit."
-    Abort
-  ${EndIf}
+  DetailPrint "Python uitpakken..."
+  SetOutPath "$INSTDIR\python"
+  File /r "build\python\*.*"
 
-  nsExec::ExecToLog 'cmd /c python -c "import sys; sys.exit(0 if sys.version_info >= (3, 12) else 1)"'
-  Pop $0
-  ${If} $0 != "0"
-    MessageBox MB_OK|MB_ICONSTOP "Je Python-versie is te oud -- er is minstens Python 3.12 nodig.$\r$\n$\r$\nInstalleer een nieuwere versie van python.org en voer deze installer daarna opnieuw uit."
-    Abort
-  ${EndIf}
-
+  ; --clear: een bestaande .venv (bv. van een vroegere installatie met een
+  ; andere Python) volledig opnieuw opbouwen op de meegeleverde Python.
   DetailPrint "Virtuele omgeving aanmaken (kan even duren)..."
   SetOutPath "$INSTDIR\backend"
-  nsExec::ExecToLog 'cmd /c python -m venv .venv'
+  nsExec::ExecToLog '"$INSTDIR\python\python.exe" -m venv --clear .venv'
   Pop $0
   ${If} $0 != "0"
-    MessageBox MB_OK|MB_ICONSTOP "Aanmaken van de virtuele omgeving is mislukt."
+    MessageBox MB_OK|MB_ICONSTOP "Aanmaken van de virtuele omgeving is mislukt.$\r$\n$\r$\nStaat het Toelatingssysteem nog open? Sluit het af (Beheer -> Systeem -> Applicatie afsluiten) en voer deze installer opnieuw uit."
     Abort
   ${EndIf}
 
