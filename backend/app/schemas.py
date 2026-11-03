@@ -84,26 +84,14 @@ class LoginResponse(BaseModel):
     short_pincode: bool = False
 
 
-class EmployeeCreateRequest(BaseModel):
-    name: str
-    pincode: str
+class GroupPincodeRequest(BaseModel):
+    pincode: str = Field(max_length=64)
+
+
+class GroupResponse(BaseModel):
     role: str
-
-
-class EmployeeUpdateRequest(BaseModel):
-    name: str | None = None
-    role: str | None = None
-    active: bool | None = None
-    new_pincode: str | None = None
-
-
-class EmployeeResponse(BaseModel):
-    id: int
-    name: str
-    role: str
+    label: str
     active: bool
-
-    model_config = {"from_attributes": True}
 
 
 class ManualStatusRequest(BaseModel):
@@ -125,4 +113,5 @@ class EventResponse(BaseModel):
     # Leesbare naam van het toestel achter `source`, als die ingesteld is.
     device_name: str | None = None
     employee_id: int | None
+    group: str | None = None
     detail: dict

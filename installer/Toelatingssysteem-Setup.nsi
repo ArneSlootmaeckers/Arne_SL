@@ -25,10 +25,8 @@ ShowInstDetails show
 ShowUninstDetails show
 
 Var AdminPage
-Var AdminNameField
 Var AdminPincodeField
 Var AdminPincodeConfirmField
-Var AdminName
 Var AdminPincode
 Var AdminPincodeConfirm
 
@@ -47,48 +45,38 @@ Page custom AdminPageCreate AdminPageLeave
 !insertmacro MUI_LANGUAGE "Dutch"
 
 Function AdminPageCreate
-  !insertmacro MUI_HEADER_TEXT "Eerste admin aanmaken" "Hiermee kan je meteen inloggen op het beheerscherm. Laat alles leeg om dit later zelf te doen."
+  !insertmacro MUI_HEADER_TEXT "Pincode van de beheerder" "Hiermee log je meteen in op het beheerscherm. Laat leeg om dit later zelf te doen."
   nsDialogs::Create 1018
   Pop $AdminPage
   ${If} $AdminPage == error
     Abort
   ${EndIf}
 
-  ${NSD_CreateLabel} 0 0 100% 12u "Naam:"
+  ; Geen naam: het systeem bewaart geen personeelsgegevens, enkel een
+  ; pincode per groep (beheerder, vaste medewerkers, studenten).
+  ${NSD_CreateLabel} 0 0 100% 12u "Pincode van de beheerder (min. 6 tekens):"
   Pop $0
-  ${NSD_CreateText} 0 13u 100% 13u ""
-  Pop $AdminNameField
-
-  ${NSD_CreateLabel} 0 32u 100% 12u "Pincode (min. 6 tekens):"
-  Pop $0
-  ${NSD_CreatePassword} 0 45u 100% 13u ""
+  ${NSD_CreatePassword} 0 13u 100% 13u ""
   Pop $AdminPincodeField
 
-  ${NSD_CreateLabel} 0 64u 100% 12u "Herhaal pincode:"
+  ${NSD_CreateLabel} 0 32u 100% 12u "Herhaal pincode:"
   Pop $0
-  ${NSD_CreatePassword} 0 77u 100% 13u ""
+  ${NSD_CreatePassword} 0 45u 100% 13u ""
   Pop $AdminPincodeConfirmField
 
-  ${NSD_CreateLabel} 0 100u 100% 24u "Laat alle drie de velden leeg om dit later handmatig te doen (zie README.md, 'Eerste admin aanmaken')."
+  ${NSD_CreateLabel} 0 68u 100% 36u "De pincodes voor vaste medewerkers en studenten stel je daarna in op het beheerscherm, tabblad Pincodes. Laat beide velden leeg om dit later handmatig te doen (zie README.md, 'Pincode van de beheerder instellen')."
   Pop $0
 
   nsDialogs::Show
 FunctionEnd
 
 Function AdminPageLeave
-  ${NSD_GetText} $AdminNameField $AdminName
   ${NSD_GetText} $AdminPincodeField $AdminPincode
   ${NSD_GetText} $AdminPincodeConfirmField $AdminPincodeConfirm
 
-  ${If} $AdminName == ""
-  ${AndIf} $AdminPincode == ""
+  ${If} $AdminPincode == ""
   ${AndIf} $AdminPincodeConfirm == ""
     Return
-  ${EndIf}
-
-  ${If} $AdminName == ""
-    MessageBox MB_OK|MB_ICONEXCLAMATION "Vul een naam in, of laat alle drie de velden leeg om dit later te doen."
-    Abort
   ${EndIf}
 
   ${If} $AdminPincode != $AdminPincodeConfirm
@@ -144,12 +132,12 @@ Section "Installeren"
     MessageBox MB_OK|MB_ICONEXCLAMATION "De Windows-firewall kon niet ingesteld worden (geen beheerdersrechten gekregen?).$\r$\n$\r$\nDe server weigert internetadressen ook zelf, maar laat voor de zekerheid IT het bestand firewall.ps1 in $INSTDIR uitvoeren (rechtsklik -> Uitvoeren met PowerShell)."
   ${EndIf}
 
-  ${If} $AdminName != ""
-    DetailPrint "Eerste admin aanmaken..."
-    nsExec::ExecToLog '"$INSTDIR\backend\.venv\Scripts\python.exe" create_admin.py --name "$AdminName" --pincode "$AdminPincode"'
+  ${If} $AdminPincode != ""
+    DetailPrint "Pincode van de beheerder instellen..."
+    nsExec::ExecToLog '"$INSTDIR\backend\.venv\Scripts\python.exe" create_admin.py --pincode "$AdminPincode"'
     Pop $0
     ${If} $0 != "0"
-      MessageBox MB_OK|MB_ICONEXCLAMATION "Aanmaken van de admin is mislukt (bv. een pincode die al in gebruik is). Je kan dit achteraf handmatig doen -- zie README.md, 'Eerste admin aanmaken'."
+      MessageBox MB_OK|MB_ICONEXCLAMATION "Instellen van de pincode van de beheerder is mislukt (bv. een pincode die al door een andere groep gebruikt wordt). Je kan dit achteraf handmatig doen -- zie README.md, 'Pincode van de beheerder instellen'."
     ${EndIf}
   ${EndIf}
 

@@ -97,9 +97,10 @@ opnieuw gescand worden.
 - Scan je tijdens een oefensprong (de balk van 5 seconden) al het
   volgende bandje, dan telt die oefensprong gewoon mee.
 - **Je kan hier niets terugdraaien.** Als je per ongeluk de verkeerde knop
-  indrukt, kan dat enkel gecorrigeerd worden door bevoegd personeel via de
-  knop **"Profiel"** rechtsboven — die opent het beheerscherm, waar je met
-  een pincode inlogt om de status van een bandje aan te passen.
+  indrukt, kan dat enkel gecorrigeerd worden door een vaste medewerker via
+  de knop **"Profiel"** rechtsboven — die opent het beheerscherm, waar je
+  met de pincode van je groep inlogt. Studenten kunnen daar een bandje
+  enkel opzoeken, niet aanpassen.
 
 ## Geen verbinding
 

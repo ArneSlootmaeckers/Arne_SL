@@ -1,5 +1,5 @@
-"""create_admin.py's non-interactive mode (--name/--pincode), used by the
-Windows installer to create the first admin without any prompts."""
+"""create_admin.py's non-interactive mode (--pincode), used by the Windows
+installer to set the beheerder's pincode without any prompts."""
 from __future__ import annotations
 
 import sys
@@ -11,6 +11,7 @@ import create_admin
 from app.config import Settings
 from app.database import create_session_factory
 from app.models import EmployeeModel
+from app.security import verify_pincode
 
 
 @pytest.fixture
@@ -33,35 +34,37 @@ def cli_settings(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Settings:
     return settings
 
 
-def test_non_interactive_creates_admin(cli_settings: Settings, monkeypatch: pytest.MonkeyPatch):
-    monkeypatch.setattr(sys, "argv", ["create_admin.py", "--name", "Installer Admin", "--pincode", "135790"])
-    create_admin.main()
-
-    db = create_session_factory(cli_settings.database_url)()
+def _beheerders(settings: Settings) -> list[EmployeeModel]:
+    db = create_session_factory(settings.database_url)()
     try:
-        employee = db.query(EmployeeModel).filter_by(name="Installer Admin").one()
-        assert employee.role == "admin"
-        assert employee.active is True
+        return db.query(EmployeeModel).filter_by(role="admin").all()
     finally:
         db.close()
 
 
-def test_non_interactive_rejects_short_pincode(cli_settings: Settings, monkeypatch: pytest.MonkeyPatch):
-    monkeypatch.setattr(sys, "argv", ["create_admin.py", "--name", "Kort", "--pincode", "12345"])
-    with pytest.raises(SystemExit):
-        create_admin.main()
-
-
-def test_non_interactive_rejects_empty_name(cli_settings: Settings, monkeypatch: pytest.MonkeyPatch):
-    monkeypatch.setattr(sys, "argv", ["create_admin.py", "--name", "  ", "--pincode", "123456"])
-    with pytest.raises(SystemExit):
-        create_admin.main()
-
-
-def test_non_interactive_rejects_duplicate_pincode(cli_settings: Settings, monkeypatch: pytest.MonkeyPatch):
-    monkeypatch.setattr(sys, "argv", ["create_admin.py", "--name", "Eerste", "--pincode", "246800"])
+def test_non_interactive_sets_admin_pincode(cli_settings: Settings, monkeypatch: pytest.MonkeyPatch):
+    monkeypatch.setattr(sys, "argv", ["create_admin.py", "--pincode", "135790"])
     create_admin.main()
 
-    monkeypatch.setattr(sys, "argv", ["create_admin.py", "--name", "Tweede", "--pincode", "246800"])
+    [account] = _beheerders(cli_settings)
+    assert account.name == "Beheerder"  # geen persoonsnaam
+    assert account.active is True
+    assert verify_pincode("135790", account.pincode_hash)
+
+
+def test_running_again_replaces_the_admin_pincode(cli_settings: Settings, monkeypatch: pytest.MonkeyPatch):
+    # Zo raakt de beheerder weer binnen als niemand de pincode nog weet.
+    monkeypatch.setattr(sys, "argv", ["create_admin.py", "--pincode", "135790"])
+    create_admin.main()
+    monkeypatch.setattr(sys, "argv", ["create_admin.py", "--pincode", "246800"])
+    create_admin.main()
+
+    [account] = [a for a in _beheerders(cli_settings) if a.active]
+    assert verify_pincode("246800", account.pincode_hash)
+
+
+def test_non_interactive_rejects_short_pincode(cli_settings: Settings, monkeypatch: pytest.MonkeyPatch):
+    monkeypatch.setattr(sys, "argv", ["create_admin.py", "--pincode", "12345"])
     with pytest.raises(SystemExit):
         create_admin.main()
+    assert _beheerders(cli_settings) == []

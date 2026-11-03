@@ -8,11 +8,20 @@ beheerscherm opent meteen. De telefoons van de hosts tonen het hostscherm
 Je kan het beheerscherm ook op een telefoon openen, via de knop
 **"Profiel"** rechtsboven op het hostscherm.
 
-Log in met je persoonlijke pincode. Na **5 foute pincodes** na elkaar is
-dat toestel **5 minuten geblokkeerd** (zo valt een pincode niet te raden);
-wacht dan en probeer opnieuw. Na **2 minuten inactiviteit** log je
-automatisch uit. Rechtsboven zie je je naam; met het **uitlog-icoontje**
-ernaast log je af, en **← Host** opent het hostscherm.
+Log in met de pincode van je groep. Er zijn drie groepen, elk met één
+pincode, en het systeem bewaart geen namen:
+
+| Groep | Ziet en mag |
+|---|---|
+| **Beheerder** | Alle tabbladen: ook Pincodes en Systeem |
+| **Vaste medewerkers** | Bandje (opzoeken én corrigeren), Logs, Dagoverzicht |
+| **Studenten** | Enkel Bandje: opzoeken, niet aanpassen |
+
+Na **5 foute pincodes** na elkaar is dat toestel **5 minuten geblokkeerd**
+(zo valt een pincode niet te raden); wacht dan en probeer opnieuw. Na
+**2 minuten inactiviteit** log je automatisch uit. Rechtsboven zie je je
+groep; met het **uitlog-icoontje** ernaast log je af, en **← Host** opent
+het hostscherm.
 
 ## Tabblad "Bandje"
 
@@ -25,14 +34,15 @@ het nummer wordt dan vanzelf ingevuld.
 - Onder **"Status handmatig zetten"** kies je een van de vier statussen:
   **Nog niet gesprongen**, **Herkansing**, **Geslaagd** of **Niet
   geslaagd**, en klik je op **Toepassen**. Vul altijd een **reden** in —
-  dit wordt gelogd samen met je naam en de oude/nieuwe status. Gebruik dit
+  dit wordt gelogd samen met je groep en de oude/nieuwe status. Studenten
+  zien dit deel niet: zij kunnen een bandje enkel opzoeken. Gebruik dit
   enkel om een fout van de host te corrigeren, niet als vervanging voor een
   echte beoordeling bij de testsprong.
 
 ## Tabblad "Logs"
 
-Filter op datum, bandje-ID, medewerker en/of type gebeurtenis, en klik
-**Zoek**. De kolom **Bron** toont welke telefoon iets deed: de naam die op
+Filter op datum, bandje-ID, groep en/of type gebeurtenis, en klik
+**Zoek**. De kolom **Groep** toont welke groep iets deed. De kolom **Bron** toont welke telefoon iets deed: de naam die op
 die telefoon ingesteld is (bv. "Host 1"), of anders een code zoals
 "toestel-a8f3k2". Met **Exporteer CSV** download je precies de gefilterde lijst als
 CSV-bestand, bijvoorbeeld voor een incidentonderzoek of rapportage.
@@ -43,19 +53,22 @@ Kies een datum en klik **Toon** voor het aantal testsprongen, hoeveel
 daarvan geslaagd/herkansing/niet geslaagd waren, het aantal oefensprongen,
 en de gemiddelde tijd tussen twee sprongen bij de testsprong die dag.
 
-## Tabblad "Medewerkers" (enkel zichtbaar voor rol admin)
+## Tabblad "Pincodes" (enkel voor de beheerder)
 
-- **Nieuwe medewerker**: naam, pincode en rol
-  (**Admin** of **Supervisor**). Een pincode moet **minstens 6 tekens**
-  lang zijn en uniek onder de actieve medewerkers.
-- **Intrekken / Heractiveren**: een ingetrokken medewerker kan niet meer
-  inloggen, maar blijft zichtbaar in de logs (voor de geschiedenis).
-- **Nieuwe pincode**: vervangt de pincode van een medewerker (bv. na een
-  vermoeden van misbruik). Oudere pincodes van 4 of 5 tekens blijven
-  werken, maar wie daarmee inlogt, ziet een oranje balk met de vraag om
-  ze te vervangen: geef die medewerkers hier een nieuwe van 6 tekens.
+Bovenaan zie je de drie groepen, wat ze mogen en of hun pincode ingesteld
+is.
+- **Pincode instellen of wijzigen**: kies de groep, typ de nieuwe pincode
+  twee keer en klik **Opslaan**. Minstens 6 tekens, en elke groep een
+  andere. De vorige pincode van die groep werkt meteen niet meer: geef de
+  nieuwe door aan iedereen van die groep. **Wijzig de pincode van een groep
+  als er iemand van die groep vertrekt.**
+- **Uitzetten**: niemand van die groep kan nog inloggen (bv. buiten het
+  seizoen voor studenten), tot je een nieuwe pincode instelt. De beheerder
+  zelf kan niet uitgezet worden.
+- Een oudere pincode van minder dan 6 tekens blijft werken, maar wie
+  daarmee inlogt, ziet een oranje balk: stel dan een nieuwe in.
 
-## Tabblad "Systeem" (enkel zichtbaar voor rol admin)
+## Tabblad "Systeem" (enkel voor de beheerder)
 
 **Verbinden met de telefoon-app** toont het adres van de pc (bv.
 `10.18.0.155:8000`). Normaal vindt de telefoon-app de pc vanzelf; lukt dat
@@ -86,10 +99,8 @@ eerst een bevestiging. Opnieuw opstarten kan **enkel via de pc zelf**
 (snelkoppeling op het bureaublad) — niet vanaf een telefoon. Gebruik dit
 dus bij het einde van de dag of voor onderhoud, niet zomaar tussendoor.
 
-Rol **supervisor** kan bandjes opzoeken en status wijzigen (tabblad
-"Bandje"), logs bekijken en het dagoverzicht raadplegen, maar geen
-medewerkers beheren, het systeem-tabblad gebruiken of de applicatie
-afsluiten.
+Vaste medewerkers en studenten zien de tabbladen Pincodes en Systeem niet,
+en kunnen de applicatie dus ook niet afsluiten.
 
 ## Verbindingsproblemen
 
@@ -137,6 +148,6 @@ map `data` te bewaren. Oplossen, per telefoon:
 
 ## Technisch onderhoud
 
-Voor installatie, opstarten, de eerste admin aanmaken en back-ups: zie
+Voor installatie, opstarten, de pincode van de beheerder en back-ups: zie
 `README.md` in de hoofdmap van het project. Voor de telefoon-app: zie
 `android/webview-app/README.md`.

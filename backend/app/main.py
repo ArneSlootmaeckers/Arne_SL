@@ -25,7 +25,6 @@ from app.services.errors import (
     DeviceNotPairedError,
     DomainServiceError,
     DuplicatePincodeError,
-    EmployeeNotFoundError,
     InvalidPairingCodeError,
     InvalidPincodeError,
     NoPendingScanError,
@@ -35,6 +34,7 @@ from app.services.errors import (
     WeakPincodeError,
     WrongResolutionPathError,
 )
+from app.services.employee_service import anonymise_accounts
 from app.services.log_service import purge_old_events
 from app.services.maintenance_service import create_backup, purge_old_backups
 from app.services.network_service import is_local_client
@@ -50,7 +50,6 @@ _ERROR_STATUS_CODES: dict[type[DomainServiceError], int] = {
     SessionExpiredError: 401,
     PermissionDeniedError: 403,
     DuplicatePincodeError: 409,
-    EmployeeNotFoundError: 404,
     WeakPincodeError: 400,
     TooManyAttemptsError: 429,
     DeviceNotPairedError: 401,
@@ -123,6 +122,13 @@ def create_app(settings: Settings | None = None) -> FastAPI:
         app.state.settings = settings
         app.state.session_factory = create_session_factory(settings.database_url)
         app.state.gate_controller = create_gate_controller(settings.gate_controller)
+        # Geen personeelsgegevens: namen van vroegere, persoonlijke accounts
+        # worden vervangen door het label van hun groep.
+        db = app.state.session_factory()
+        try:
+            anonymise_accounts(db)
+        finally:
+            db.close()
 
         reaper_task = asyncio.create_task(_reap_expired_scans_periodically(app))
         maintenance_task = asyncio.create_task(_run_maintenance_periodically(app, settings))

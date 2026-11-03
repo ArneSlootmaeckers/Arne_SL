@@ -74,3 +74,14 @@ def supervisor_employee(db_session) -> EmployeeModel:
     db_session.add(employee)
     db_session.commit()
     return employee
+
+
+@pytest.fixture
+def student_employee(db_session) -> EmployeeModel:
+    employee = EmployeeModel(
+        name="Studenten", pincode_hash=hash_pincode("2468"), role="student",
+        active=True, created_at=now_utc(),
+    )
+    db_session.add(employee)
+    db_session.commit()
+    return employee

@@ -1,8 +1,15 @@
-"""Admin screen API: employee management, manual overrides, logs, report."""
+"""Beheerscherm-API. Wie wat mag:
+
+- beheerder ("admin"): alles, ook pincodes, telefoons koppelen en afsluiten;
+- vaste medewerkers ("supervisor"): bandjes opzoeken en corrigeren, logs,
+  dagoverzicht;
+- studenten ("student"): enkel een bandje opzoeken.
+"""
 from __future__ import annotations
 
 from datetime import date
 from pathlib import Path
+from typing import Literal
 
 from fastapi import APIRouter, Depends, HTTPException, Request, Response
 from sqlalchemy.orm import Session
@@ -13,10 +20,9 @@ from app.dependencies import get_db, get_settings, require_role
 from app.domain.calendar import local_today
 from app.models import DailyStatusModel, EmployeeModel
 from app.schemas import (
-    EmployeeCreateRequest,
-    EmployeeResponse,
-    EmployeeUpdateRequest,
     EventResponse,
+    GroupPincodeRequest,
+    GroupResponse,
     ManualStatusRequest,
     PairedDeviceResponse,
     PairingCodeResponse,
@@ -34,34 +40,43 @@ from app.services.common import get_or_create_wristband, log_event, now_utc, rea
 
 router = APIRouter(prefix="/api/admin", tags=["admin"])
 
+Group = Literal["admin", "supervisor", "student"]
 
-@router.get("/employees", response_model=list[EmployeeResponse])
-def list_employees(
+
+@router.get("/pincodes", response_model=list[GroupResponse])
+def list_groups(
     db: Session = Depends(get_db), _: EmployeeModel = Depends(require_role("admin"))
-) -> list[EmployeeModel]:
-    return employee_service.list_employees(db)
+) -> list[dict]:
+    return employee_service.group_overview(db)
 
 
-@router.post("/employees", response_model=EmployeeResponse)
-def create_employee(
-    payload: EmployeeCreateRequest,
+@router.put("/pincodes/{role}", response_model=GroupResponse)
+def set_group_pincode(
+    role: Group,
+    payload: GroupPincodeRequest,
     db: Session = Depends(get_db),
-    _: EmployeeModel = Depends(require_role("admin")),
-) -> EmployeeModel:
-    return employee_service.create_employee(db, name=payload.name, pincode=payload.pincode, role=payload.role)
+    employee: EmployeeModel = Depends(require_role("admin")),
+) -> GroupResponse:
+    employee_service.set_group_pincode(db, role=role, pincode=payload.pincode)
+    label = employee_service.GROUP_LABELS[role]
+    log_event(db, event_type="PINCODE_INGESTELD", source="admin", employee_id=employee.id, detail={"groep": label})
+    db.commit()
+    return GroupResponse(role=role, label=label, active=True)
 
 
-@router.patch("/employees/{employee_id}", response_model=EmployeeResponse)
-def update_employee(
-    employee_id: int,
-    payload: EmployeeUpdateRequest,
+@router.delete("/pincodes/{role}")
+def disable_group(
+    role: Group,
     db: Session = Depends(get_db),
-    _: EmployeeModel = Depends(require_role("admin")),
-) -> EmployeeModel:
-    return employee_service.update_employee(
-        db, employee_id,
-        name=payload.name, role=payload.role, active=payload.active, new_pincode=payload.new_pincode,
+    employee: EmployeeModel = Depends(require_role("admin")),
+) -> dict:
+    employee_service.disable_group(db, role=role)
+    log_event(
+        db, event_type="GROEP_UITGEZET", source="admin", employee_id=employee.id,
+        detail={"groep": employee_service.GROUP_LABELS[role]},
     )
+    db.commit()
+    return {"ok": True}
 
 
 @router.get("/wristbands/{wristband_id}", response_model=WristbandStatusResponse)
@@ -69,11 +84,28 @@ def get_wristband_status(
     wristband_id: str,
     db: Session = Depends(get_db),
     settings: Settings = Depends(get_settings),
-    _: EmployeeModel = Depends(require_role("admin", "supervisor")),
+    _: EmployeeModel = Depends(require_role("admin", "supervisor", "student")),
 ) -> WristbandStatusResponse:
     today = local_today(now_utc(), settings.tz)
     status, _ = read_effective_status(db, wristband_id, today)
     return WristbandStatusResponse(wristband_id=wristband_id, status=status)
+
+
+@router.get("/wristbands/{wristband_id}/history", response_model=list[EventResponse])
+def get_wristband_history(
+    wristband_id: str,
+    db: Session = Depends(get_db),
+    settings: Settings = Depends(get_settings),
+    _: EmployeeModel = Depends(require_role("admin", "supervisor", "student")),
+) -> list[dict]:
+    """De geschiedenis van vandaag voor één bandje, voor wie het bandje
+    opzoekt -- ook studenten, die verder geen logs mogen bekijken."""
+    events = log_service.query_events(
+        db, tz=settings.tz, event_date=local_today(now_utc(), settings.tz), wristband_id=wristband_id, limit=100,
+    )
+    names = device_service.device_names(db)
+    labels = employee_service.group_labels_by_account(db)
+    return [log_service.event_to_dict(event, names, labels) for event in events]
 
 
 @router.post("/wristbands/{wristband_id}/status", response_model=WristbandStatusResponse)
@@ -117,16 +149,18 @@ def get_logs(
     event_date: date | None = None,
     wristband_id: str | None = None,
     employee_id: int | None = None,
+    role: Group | None = None,
     event_type: str | None = None,
     limit: int = 200,
     offset: int = 0,
 ) -> list[dict]:
     events = log_service.query_events(
         db, tz=settings.tz, event_date=event_date, wristband_id=wristband_id,
-        employee_id=employee_id, event_type=event_type, limit=limit, offset=offset,
+        employee_id=employee_id, role=role, event_type=event_type, limit=limit, offset=offset,
     )
     names = device_service.device_names(db)
-    return [log_service.event_to_dict(event, names) for event in events]
+    labels = employee_service.group_labels_by_account(db)
+    return [log_service.event_to_dict(event, names, labels) for event in events]
 
 
 @router.get("/logs/export.csv")
@@ -137,13 +171,16 @@ def export_logs_csv(
     event_date: date | None = None,
     wristband_id: str | None = None,
     employee_id: int | None = None,
+    role: Group | None = None,
     event_type: str | None = None,
 ) -> Response:
     events = log_service.query_events(
         db, tz=settings.tz, event_date=event_date, wristband_id=wristband_id,
-        employee_id=employee_id, event_type=event_type, limit=100_000, offset=0,
+        employee_id=employee_id, role=role, event_type=event_type, limit=100_000, offset=0,
     )
-    csv_content = log_service.events_to_csv(events, device_service.device_names(db))
+    csv_content = log_service.events_to_csv(
+        events, device_service.device_names(db), employee_service.group_labels_by_account(db)
+    )
     return Response(
         content=csv_content, media_type="text/csv",
         headers={"Content-Disposition": "attachment; filename=logs.csv"},

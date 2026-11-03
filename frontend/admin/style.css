@@ -128,13 +128,8 @@ html, body {
   white-space: nowrap;
 }
 
-.user-role {
-  color: var(--kleur-tekst-gedempt);
-}
-
 @media (max-width: 420px) {
-  .admin-header-subtitle,
-  .user-role {
+  .admin-header-subtitle {
     display: none;
   }
 }

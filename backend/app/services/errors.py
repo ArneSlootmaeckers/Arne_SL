@@ -29,11 +29,7 @@ class PermissionDeniedError(DomainServiceError):
 
 
 class DuplicatePincodeError(DomainServiceError):
-    """The requested pincode is already in use by another active employee."""
-
-
-class EmployeeNotFoundError(DomainServiceError):
-    """No employee exists with the given id."""
+    """The requested pincode is already in use by another group."""
 
 
 class WeakPincodeError(DomainServiceError):

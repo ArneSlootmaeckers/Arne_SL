@@ -42,16 +42,17 @@
     </header>
 
     <nav class="tabs">
-      <button class="tab-btn active" data-tab="bandje">Bandje</button>
-      <button class="tab-btn" data-tab="logs">Logs</button>
-      <button class="tab-btn" data-tab="rapport">Dagoverzicht</button>
-      <button class="tab-btn admin-only hidden" data-tab="medewerkers">Medewerkers</button>
-      <button class="tab-btn admin-only hidden" data-tab="systeem">Systeem</button>
+      <!-- data-roles: welke groepen dit tabblad zien (zie de server voor wat ze mogen). -->
+      <button class="tab-btn active" data-tab="bandje" data-roles="admin supervisor student">Bandje</button>
+      <button class="tab-btn hidden" data-tab="logs" data-roles="admin supervisor">Logs</button>
+      <button class="tab-btn hidden" data-tab="rapport" data-roles="admin supervisor">Dagoverzicht</button>
+      <button class="tab-btn hidden" data-tab="pincodes" data-roles="admin">Pincodes</button>
+      <button class="tab-btn hidden" data-tab="systeem" data-roles="admin">Systeem</button>
     </nav>
 
     <div id="pincode-warning" class="warning-banner hidden">
-      Je pincode is korter dan 6 tekens en daardoor makkelijker te raden.
-      Laat een admin ze vervangen via <strong>Medewerkers → Nieuwe pincode</strong>.
+      De pincode van je groep is korter dan 6 tekens en daardoor makkelijker te
+      raden. Laat de beheerder ze vervangen via <strong>Pincodes</strong>.
     </div>
 
     <main class="tab-content">
@@ -68,7 +69,7 @@
             <div id="wristband-status-badge" class="status-badge"></div>
           </div>
 
-          <div class="card">
+          <div class="card" id="override-card">
             <div class="card-title">Status handmatig zetten</div>
             <form id="override-form" class="stacked-form">
               <select id="override-status" data-title="Nieuwe status">
@@ -102,7 +103,12 @@
         <form id="logs-filter-form" class="inline-form wrap">
           <input id="logs-filter-date" type="date" />
           <input id="logs-filter-wristband" type="text" placeholder="Bandje-ID" />
-          <input id="logs-filter-employee" type="number" placeholder="Medewerker-ID" />
+          <select id="logs-filter-group" data-title="Groep">
+            <option value="">Alle groepen</option>
+            <option value="admin">Beheerder</option>
+            <option value="supervisor">Vaste medewerkers</option>
+            <option value="student">Studenten</option>
+          </select>
           <select id="logs-filter-type" data-title="Type">
             <option value="">Alle types</option>
             <option value="SCAN">Scan</option>
@@ -116,6 +122,8 @@
             <option value="INLOGGEN_MISLUKT">Inloggen mislukt</option>
             <option value="INLOGGEN_GEBLOKKEERD">Inloggen geblokkeerd</option>
             <option value="UITLOGGEN">Uitloggen</option>
+            <option value="PINCODE_INGESTELD">Pincode ingesteld</option>
+            <option value="GROEP_UITGEZET">Groep uitgezet</option>
             <option value="TOESTEL_GEKOPPELD">Toestel gekoppeld</option>
             <option value="TOESTEL_ONTKOPPELD">Toestel ontkoppeld</option>
             <option value="KOPPELEN_MISLUKT">Koppelen mislukt</option>
@@ -128,7 +136,7 @@
         <div class="table-scroll">
           <table class="data-table" id="logs-table">
             <thead>
-              <tr><th>Tijdstip</th><th>Type</th><th>Bandje</th><th>Bron</th><th>Medewerker</th><th>Detail</th></tr>
+              <tr><th>Tijdstip</th><th>Type</th><th>Bandje</th><th>Bron</th><th>Groep</th><th>Detail</th></tr>
             </thead>
             <tbody></tbody>
           </table>
@@ -152,30 +160,45 @@
         </div>
       </section>
 
-      <!-- Medewerkers -->
-      <section id="tab-medewerkers" class="tab-panel hidden">
+      <!-- Pincodes -->
+      <section id="tab-pincodes" class="tab-panel hidden">
         <div class="card">
-          <div class="card-title">Nieuwe medewerker</div>
-          <form id="create-employee-form" class="inline-form wrap">
-            <input id="new-employee-name" type="text" placeholder="Naam" required />
-            <input id="new-employee-pincode" type="text" inputmode="numeric" placeholder="Pincode (min. 6)"
-                   minlength="6" required />
-            <select id="new-employee-role" data-title="Rol">
-              <option value="supervisor">Supervisor</option>
-              <option value="admin">Admin</option>
-            </select>
-            <button type="submit">Aanmaken</button>
-          </form>
-          <p id="create-employee-message" class="message hidden"></p>
+          <div class="card-title">Eén pincode per groep</div>
+          <p>
+            Het systeem bewaart geen namen: wie inlogt, doet dat met de pincode
+            van zijn groep. Wat elke groep mag:
+          </p>
+          <div class="table-scroll">
+            <table class="data-table" id="groups-table">
+              <thead>
+                <tr><th>Groep</th><th>Mag</th><th>Pincode</th><th></th></tr>
+              </thead>
+              <tbody></tbody>
+            </table>
+          </div>
+          <p id="groups-message" class="message hidden"></p>
         </div>
 
-        <div class="table-scroll">
-          <table class="data-table" id="employees-table">
-            <thead>
-              <tr><th>Naam</th><th>Rol</th><th>Actief</th><th>Acties</th></tr>
-            </thead>
-            <tbody></tbody>
-          </table>
+        <div class="card">
+          <div class="card-title">Pincode instellen of wijzigen</div>
+          <p class="network-note">
+            Minstens 6 tekens, en elke groep een andere. De vorige pincode van
+            die groep werkt meteen niet meer: geef de nieuwe door aan iedereen
+            van die groep. Wijzig ze ook als er iemand vertrekt.
+          </p>
+          <form id="group-pincode-form" class="inline-form wrap" autocomplete="off">
+            <select id="group-pincode-role" data-title="Groep">
+              <option value="supervisor">Vaste medewerkers</option>
+              <option value="student">Studenten</option>
+              <option value="admin">Beheerder</option>
+            </select>
+            <input id="group-pincode" type="password" inputmode="numeric" placeholder="Nieuwe pincode"
+                   minlength="6" required />
+            <input id="group-pincode-confirm" type="password" inputmode="numeric" placeholder="Herhaal pincode"
+                   minlength="6" required />
+            <button type="submit">Opslaan</button>
+          </form>
+          <p id="group-pincode-message" class="message hidden"></p>
         </div>
       </section>
 

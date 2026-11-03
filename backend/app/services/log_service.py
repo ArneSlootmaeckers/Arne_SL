@@ -11,7 +11,7 @@ from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from app.domain.calendar import local_day_utc_range
-from app.models import EventModel
+from app.models import EmployeeModel, EventModel
 from app.services.common import now_utc
 
 
@@ -22,6 +22,7 @@ def query_events(
     event_date: date | None = None,
     wristband_id: str | None = None,
     employee_id: int | None = None,
+    role: str | None = None,
     event_type: str | None = None,
     limit: int = 200,
     offset: int = 0,
@@ -31,6 +32,8 @@ def query_events(
         stmt = stmt.where(EventModel.wristband_id == wristband_id)
     if employee_id is not None:
         stmt = stmt.where(EventModel.employee_id == employee_id)
+    if role is not None:
+        stmt = stmt.where(EventModel.employee_id.in_(select(EmployeeModel.id).where(EmployeeModel.role == role)))
     if event_type is not None:
         stmt = stmt.where(EventModel.event_type == event_type)
     if event_date is not None:
@@ -40,7 +43,9 @@ def query_events(
     return list(db.execute(stmt).scalars())
 
 
-def event_to_dict(event: EventModel, device_names: dict[str, str]) -> dict:
+def event_to_dict(
+    event: EventModel, device_names: dict[str, str], group_labels: dict[int, str] | None = None
+) -> dict:
     return {
         "id": event.id,
         "timestamp": event.timestamp,
@@ -49,21 +54,26 @@ def event_to_dict(event: EventModel, device_names: dict[str, str]) -> dict:
         "source": event.source,
         "device_name": device_names.get(event.source),
         "employee_id": event.employee_id,
+        # Welke groep (beheerder, vaste medewerkers, studenten) iets deed.
+        "group": (group_labels or {}).get(event.employee_id),
         "detail": json.loads(event.detail) if event.detail else {},
     }
 
 
-def events_to_csv(events: list[EventModel], device_names: dict[str, str]) -> str:
+def events_to_csv(
+    events: list[EventModel], device_names: dict[str, str], group_labels: dict[int, str] | None = None
+) -> str:
+    group_labels = group_labels or {}
     buffer = io.StringIO()
     writer = csv.writer(buffer)
     writer.writerow(
-        ["id", "tijdstip_utc", "type", "bandje_id", "bron", "toestelnaam", "medewerker_id", "detail"]
+        ["id", "tijdstip_utc", "type", "bandje_id", "bron", "toestelnaam", "medewerker_id", "groep", "detail"]
     )
     for event in events:
         writer.writerow([
             event.id, event.timestamp.isoformat(), event.event_type,
             event.wristband_id or "", event.source, device_names.get(event.source, ""),
-            event.employee_id or "", event.detail,
+            event.employee_id or "", group_labels.get(event.employee_id, ""), event.detail,
         ])
     return buffer.getvalue()
 

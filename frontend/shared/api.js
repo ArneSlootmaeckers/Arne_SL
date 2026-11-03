@@ -106,6 +106,8 @@ export const api = {
   me: () => request("GET", "/api/auth/me"),
 
   wristbandStatus: (wristbandId) => request("GET", `/api/admin/wristbands/${encodeURIComponent(wristbandId)}`),
+  wristbandHistory: (wristbandId) =>
+    request("GET", `/api/admin/wristbands/${encodeURIComponent(wristbandId)}/history`),
   setWristbandStatus: (wristbandId, status, reason) =>
     request("POST", `/api/admin/wristbands/${encodeURIComponent(wristbandId)}/status`, { status, reason }),
 
@@ -114,9 +116,9 @@ export const api = {
 
   report: (reportDate) => request("GET", `/api/admin/report${toQueryString({ report_date: reportDate })}`),
 
-  employees: () => request("GET", "/api/admin/employees"),
-  createEmployee: (name, pincode, role) => request("POST", "/api/admin/employees", { name, pincode, role }),
-  updateEmployee: (id, fields) => request("PATCH", `/api/admin/employees/${id}`, fields),
+  groups: () => request("GET", "/api/admin/pincodes"),
+  setGroupPincode: (role, pincode) => request("PUT", `/api/admin/pincodes/${role}`, { pincode }),
+  disableGroup: (role) => request("DELETE", `/api/admin/pincodes/${role}`),
 
   networkInfo: () => request("GET", "/api/admin/network"),
   createPairingCode: () => request("POST", "/api/admin/pairing-codes"),

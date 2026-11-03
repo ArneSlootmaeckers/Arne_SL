@@ -30,6 +30,8 @@ const EVENT_LABELS = {
   INLOGGEN_MISLUKT: "Inloggen mislukt",
   INLOGGEN_GEBLOKKEERD: "Inloggen geblokkeerd (te veel foute pincodes)",
   UITLOGGEN: "Uitloggen",
+  PINCODE_INGESTELD: "Pincode ingesteld",
+  GROEP_UITGEZET: "Groep uitgezet",
   KOPPELCODE_AANGEMAAKT: "Koppelcode aangemaakt",
   TOESTEL_GEKOPPELD: "Toestel gekoppeld",
   TOESTEL_ONTKOPPELD: "Toestel ontkoppeld",
@@ -98,7 +100,7 @@ const els = {
     bandje: document.getElementById("tab-bandje"),
     logs: document.getElementById("tab-logs"),
     rapport: document.getElementById("tab-rapport"),
-    medewerkers: document.getElementById("tab-medewerkers"),
+    pincodes: document.getElementById("tab-pincodes"),
     systeem: document.getElementById("tab-systeem"),
   },
 
@@ -107,6 +109,7 @@ const els = {
   wristbandResult: document.getElementById("wristband-result"),
   wristbandResultId: document.getElementById("wristband-result-id"),
   wristbandStatusBadge: document.getElementById("wristband-status-badge"),
+  overrideCard: document.getElementById("override-card"),
   overrideForm: document.getElementById("override-form"),
   overrideStatus: document.getElementById("override-status"),
   overrideReason: document.getElementById("override-reason"),
@@ -116,7 +119,7 @@ const els = {
   logsFilterForm: document.getElementById("logs-filter-form"),
   logsFilterDate: document.getElementById("logs-filter-date"),
   logsFilterWristband: document.getElementById("logs-filter-wristband"),
-  logsFilterEmployee: document.getElementById("logs-filter-employee"),
+  logsFilterGroup: document.getElementById("logs-filter-group"),
   logsFilterType: document.getElementById("logs-filter-type"),
   logsTableBody: document.querySelector("#logs-table tbody"),
   exportCsvBtn: document.getElementById("export-csv-btn"),
@@ -131,12 +134,13 @@ const els = {
   statOefensprongen: document.getElementById("stat-oefensprongen"),
   statGemiddelde: document.getElementById("stat-gemiddelde"),
 
-  createEmployeeForm: document.getElementById("create-employee-form"),
-  newEmployeeName: document.getElementById("new-employee-name"),
-  newEmployeePincode: document.getElementById("new-employee-pincode"),
-  newEmployeeRole: document.getElementById("new-employee-role"),
-  createEmployeeMessage: document.getElementById("create-employee-message"),
-  employeesTableBody: document.querySelector("#employees-table tbody"),
+  groupsTableBody: document.querySelector("#groups-table tbody"),
+  groupsMessage: document.getElementById("groups-message"),
+  groupPincodeForm: document.getElementById("group-pincode-form"),
+  groupPincodeRole: document.getElementById("group-pincode-role"),
+  groupPincode: document.getElementById("group-pincode"),
+  groupPincodeConfirm: document.getElementById("group-pincode-confirm"),
+  groupPincodeMessage: document.getElementById("group-pincode-message"),
 
   networkAddresses: document.getElementById("network-addresses"),
   networkNote: document.getElementById("network-note"),
@@ -191,20 +195,19 @@ function showAdmin(employee) {
   localStorage.setItem(EMPLOYEE_LABEL_KEY, JSON.stringify(employee));
   els.loginView.classList.add("hidden");
   els.adminView.classList.remove("hidden");
-  els.userLabel.textContent = "";
-  els.userLabel.append(document.createTextNode(`${employee.name} `));
-  const roleSpan = document.createElement("span");
-  roleSpan.className = "user-role";
-  roleSpan.textContent = `(${employee.role})`;
-  els.userLabel.append(roleSpan);
+  // De naam is het label van de groep ("Vaste medewerkers"): er zijn geen
+  // persoonlijke accounts.
+  els.userLabel.textContent = employee.name;
 
-  for (const tab of ["medewerkers", "systeem"]) {
-    const btn = els.tabButtons.find((b) => b.dataset.tab === tab);
-    btn.classList.toggle("hidden", employee.role !== "admin");
+  // Enkel de tabbladen van deze groep; de server weigert de rest sowieso.
+  for (const btn of els.tabButtons) {
+    btn.classList.toggle("hidden", !btn.dataset.roles.split(" ").includes(employee.role));
   }
-  if (employee.role !== "admin" && (activeTab === "medewerkers" || activeTab === "systeem")) {
+  if (els.tabButtons.find((b) => b.dataset.tab === activeTab).classList.contains("hidden")) {
     switchTab("bandje");
   }
+  // Studenten mogen een bandje enkel opzoeken, niet aanpassen.
+  els.overrideCard.classList.toggle("hidden", employee.role === "student");
 
   lastActivityAt = Date.now();
 }
@@ -292,7 +295,7 @@ function renderWristbandStatus(body) {
 }
 
 async function loadWristbandHistory(wristbandId) {
-  const events = await api.logs({ wristband_id: wristbandId, event_date: todayIso(), limit: 100 });
+  const events = await api.wristbandHistory(wristbandId);
   els.wristbandHistoryBody.innerHTML = "";
   for (const event of events) {
     els.wristbandHistoryBody.append(
@@ -340,7 +343,7 @@ function currentLogFilters() {
   return {
     event_date: els.logsFilterDate.value || undefined,
     wristband_id: els.logsFilterWristband.value.trim() || undefined,
-    employee_id: els.logsFilterEmployee.value || undefined,
+    role: els.logsFilterGroup.value || undefined,
     event_type: els.logsFilterType.value || undefined,
     limit: 500,
   };
@@ -357,7 +360,7 @@ async function searchLogs() {
           eventLabel(event.event_type),
           event.wristband_id || "",
           sourceLabel(event),
-          event.employee_id ?? "",
+          event.group ?? "",
           formatDetail(event.detail),
         ])
       );
@@ -414,91 +417,85 @@ els.reportForm.addEventListener("submit", (event) => {
   showReport(els.reportDate.value || todayIso());
 });
 
-// ---- Medewerkers tab ------------------------------------------------------
+// ---- Pincodes tab ---------------------------------------------------------
 
-async function loadEmployees() {
+const GROUP_PERMISSIONS = {
+  admin: "Alles: ook pincodes, telefoons koppelen en afsluiten",
+  supervisor: "Bandjes opzoeken en corrigeren, logs, dagoverzicht",
+  student: "Enkel een bandje opzoeken",
+};
+
+function showMessage(el, text, kind) {
+  el.textContent = text;
+  el.className = `message ${kind}`;
+  el.classList.toggle("hidden", !text);
+}
+
+async function loadGroups() {
   try {
-    const employees = await api.employees();
-    els.employeesTableBody.innerHTML = "";
-    for (const employee of employees) {
-      const row = tableRow([employee.name, humanize(employee.role), employee.active ? "Ja" : "Nee"]);
+    const groups = await api.groups();
+    els.groupsTableBody.textContent = "";
+    for (const group of groups) {
+      const row = tableRow([group.label, GROUP_PERMISSIONS[group.role] ?? "", group.active ? "Ingesteld" : "Uit"]);
       const actions = document.createElement("td");
-      const toggleBtn = document.createElement("button");
-      toggleBtn.type = "button";
-      toggleBtn.className = "btn-secondary";
-      toggleBtn.dataset.action = "toggle";
-      toggleBtn.dataset.id = employee.id;
-      toggleBtn.dataset.active = employee.active;
-      toggleBtn.textContent = employee.active ? "Intrekken" : "Heractiveren";
-      const pincodeBtn = document.createElement("button");
-      pincodeBtn.type = "button";
-      pincodeBtn.className = "btn-secondary";
-      pincodeBtn.dataset.action = "pincode";
-      pincodeBtn.dataset.id = employee.id;
-      pincodeBtn.textContent = "Nieuwe pincode";
-      actions.append(toggleBtn, " ", pincodeBtn);
+      // De beheerder uitzetten kan niet: dan raakt niemand er nog in.
+      if (group.active && group.role !== "admin") {
+        const disableBtn = document.createElement("button");
+        disableBtn.type = "button";
+        disableBtn.className = "btn-secondary";
+        disableBtn.dataset.role = group.role;
+        disableBtn.dataset.label = group.label;
+        disableBtn.textContent = "Uitzetten";
+        actions.append(disableBtn);
+      }
       row.append(actions);
-      els.employeesTableBody.append(row);
+      els.groupsTableBody.append(row);
     }
   } catch (err) {
     if (err instanceof ApiError && err.status === 401) return handleUnauthorized();
-    if (err instanceof ApiError && err.status === 403) return; // not admin, tab hidden anyway
-    console.error(err);
+    showMessage(els.groupsMessage, err instanceof ApiError ? err.message : "Kon de groepen niet ophalen.", "error");
   }
 }
 
-els.employeesTableBody.addEventListener("click", async (event) => {
-  const btn = event.target.closest("button[data-action]");
+els.groupsTableBody.addEventListener("click", async (event) => {
+  const btn = event.target.closest("button[data-role]");
   if (!btn) return;
-  const id = Number(btn.dataset.id);
-
-  if (btn.dataset.action === "toggle") {
-    const active = btn.dataset.active === "true";
-    try {
-      await api.updateEmployee(id, { active: !active });
-      await loadEmployees();
-    } catch (err) {
-      if (err instanceof ApiError && err.status === 401) return handleUnauthorized();
-      alert(err instanceof ApiError ? err.message : "Fout bij aanpassen.");
-    }
-  }
-
-  if (btn.dataset.action === "pincode") {
-    const newPincode = prompt("Nieuwe pincode voor deze medewerker (minstens 6 tekens):");
-    if (!newPincode) return;
-    try {
-      await api.updateEmployee(id, { new_pincode: newPincode });
-      alert("Pincode aangepast.");
-    } catch (err) {
-      if (err instanceof ApiError && err.status === 401) return handleUnauthorized();
-      alert(err instanceof ApiError ? err.message : "Fout bij aanpassen.");
-    }
-  }
-});
-
-els.createEmployeeForm.addEventListener("submit", async (event) => {
-  event.preventDefault();
+  const confirmed = confirm(
+    `Toegang voor "${btn.dataset.label}" uitzetten? Niemand van die groep kan dan nog inloggen, ` +
+      "tot je een nieuwe pincode instelt."
+  );
+  if (!confirmed) return;
   try {
-    await api.createEmployee(
-      els.newEmployeeName.value.trim(),
-      els.newEmployeePincode.value.trim(),
-      els.newEmployeeRole.value
-    );
-    els.createEmployeeMessage.textContent = "Medewerker aangemaakt.";
-    els.createEmployeeMessage.className = "message success";
-    els.createEmployeeMessage.classList.remove("hidden");
-    els.createEmployeeForm.reset();
-    await loadEmployees();
+    await api.disableGroup(btn.dataset.role);
+    showMessage(els.groupsMessage, `"${btn.dataset.label}" kan niet meer inloggen.`, "success");
+    await loadGroups();
   } catch (err) {
     if (err instanceof ApiError && err.status === 401) return handleUnauthorized();
-    els.createEmployeeMessage.textContent = err instanceof ApiError ? err.message : "Fout bij aanmaken.";
-    els.createEmployeeMessage.className = "message error";
-    els.createEmployeeMessage.classList.remove("hidden");
+    showMessage(els.groupsMessage, err instanceof ApiError ? err.message : "Uitzetten mislukt.", "error");
   }
 });
 
-// Load the employee list the first time the tab is opened.
-document.querySelector('.tab-btn[data-tab="medewerkers"]').addEventListener("click", loadEmployees, { once: false });
+els.groupPincodeForm.addEventListener("submit", async (event) => {
+  event.preventDefault();
+  const pincode = els.groupPincode.value.trim();
+  if (pincode !== els.groupPincodeConfirm.value.trim()) {
+    showMessage(els.groupPincodeMessage, "De pincodes komen niet overeen.", "error");
+    return;
+  }
+  const label = els.groupPincodeRole.options[els.groupPincodeRole.selectedIndex].textContent;
+  try {
+    await api.setGroupPincode(els.groupPincodeRole.value, pincode);
+    showMessage(els.groupPincodeMessage, `Nieuwe pincode voor "${label}" ingesteld.`, "success");
+    els.groupPincode.value = "";
+    els.groupPincodeConfirm.value = "";
+    await loadGroups();
+  } catch (err) {
+    if (err instanceof ApiError && err.status === 401) return handleUnauthorized();
+    showMessage(els.groupPincodeMessage, err instanceof ApiError ? err.message : "Opslaan mislukt.", "error");
+  }
+});
+
+document.querySelector('.tab-btn[data-tab="pincodes"]').addEventListener("click", loadGroups);
 
 // ---- Systeem tab ----------------------------------------------------------
 

@@ -108,7 +108,7 @@ try {
     Write-Host "=== Klaar! ===" -ForegroundColor Cyan
     Write-Host "Dubbelklik de snelkoppeling 'Toelatingssysteem' op je bureaublad om te starten."
     Write-Host ""
-    Write-Host "Nog geen medewerkers/admin op deze pc? Maak een eerste admin aan met:"
+    Write-Host "Nog geen pincode voor de beheerder op deze pc? Stel die in met:"
     Write-Host "  cd backend; .venv\Scripts\python.exe create_admin.py"
     Write-Host ""
     Read-Host "Druk op Enter om te sluiten"

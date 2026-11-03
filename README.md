@@ -118,7 +118,7 @@ telefoon-app" — geen `ipconfig` meer nodig.
 
 `Ctrl+C` in het terminalvenster van de server (op Linux), of de knop
 **"Applicatie afsluiten"** op het tabblad **"Systeem"** van het
-beheerscherm (enkel voor rol admin). Dat sluit de server netjes af —
+beheerscherm (enkel voor de beheerder). Dat sluit de server netjes af —
 geen `kill -9` of een venster gewoon wegklikken nodig.
 
 Via de bureaubladsnelkoppeling (`start-app.bat`/`start-app.ps1`) sluit het
@@ -152,11 +152,22 @@ blijft wel op een pc draaien. Er is daarnaast een gepauzeerde, veel grotere
 native herbouw in Kotlin (volledig standalone, helemaal geen aparte pc nodig)
 — zie [`android/README.md`](android/README.md) voor de status daarvan.
 
-## Eerste admin aanmaken
+## Pincode van de beheerder instellen
 
-Medewerkers (met hun pincode) worden normaal aangemaakt via het
-beheerscherm — maar dat vereist al een ingelogde admin. Maak daarom de
-allereerste admin aan met een apart script:
+Het systeem kent drie groepen, elk met **één eigen pincode** en zonder
+namen (er worden geen personeelsgegevens bewaard):
+
+| Groep | Mag op het beheerscherm |
+|---|---|
+| **Beheerder** | Alles: ook pincodes instellen, telefoons koppelen en de applicatie afsluiten |
+| **Vaste medewerkers** | Bandjes opzoeken en corrigeren, logs, dagoverzicht |
+| **Studenten** | Enkel een bandje opzoeken |
+
+De pincodes van vaste medewerkers en studenten stelt de beheerder in op
+het tabblad **"Pincodes"**. De pincode van de beheerder zelf stel je de
+eerste keer in tijdens de installatie, of met een apart script. Dat script
+dient ook om weer binnen te raken als niemand de pincode van de beheerder
+nog weet:
 
 ```bash
 cd backend
@@ -164,9 +175,10 @@ source .venv/bin/activate
 python3 create_admin.py
 ```
 
-Dit vraagt interactief om een naam en een pincode van minstens 6 tekens
-(die nooit in platte tekst wordt opgeslagen, enkel gehasht). Log daarna in
-op `/admin/` met die pincode om verdere medewerkers aan te maken.
+Dit vraagt om een pincode van minstens 6 tekens (die nooit in platte tekst
+wordt opgeslagen, enkel gehasht). Accounts met een naam uit een vroegere
+versie krijgen bij de volgende start automatisch het label van hun groep in
+plaats van die naam.
 
 ## Beveiliging
 
@@ -194,6 +206,9 @@ op `/admin/` met die pincode om verdere medewerkers aan te maken.
   voor internetadressen, ook als iemand per ongeluk een poort op de router
   openzet. Kon de installer de firewall niet instellen (geen
   beheerdersrechten), voer `firewall.ps1` dan als administrator uit.
+- **Geen personeelsgegevens**: geen namen, enkel één pincode per groep
+  (zie "Pincode van de beheerder instellen"). De logs tonen welke groep
+  iets deed.
 - **Pincodes van minstens 6 tekens**, en na 5 foute pincodes (of
   koppelcodes) vanaf hetzelfde toestel is dat toestel 5 minuten
   geblokkeerd. Oudere, kortere pincodes blijven werken, maar het
@@ -211,7 +226,7 @@ bandje-ID in te typen. Een lezer die zich als toetsenbord gedraagt
 (bandje-ID + Enter) werkt op elk scherm sowieso al, ook zonder `?sim=1` —
 er hoeft geen tekstveld actief te zijn.
 
-Om meteen wat testbandjes en een demo-admin/-supervisor te hebben:
+Om meteen wat testbandjes en demo-pincodes te hebben:
 
 ```bash
 cd backend
@@ -219,8 +234,9 @@ source .venv/bin/activate
 python3 seed.py
 ```
 
-**Let op:** `seed.py` maakt een admin (pincode `123456`) en supervisor
-(pincode `567890`) aan met vaste, publiek bekende pincodes. Enkel gebruiken
+**Let op:** `seed.py` stelt vaste, publiek bekende pincodes in voor de
+beheerder (`123456`), vaste medewerkers (`567890`) en studenten
+(`135790`). Enkel gebruiken
 voor demo/ontwikkeling, nooit op de echte parkserver.
 
 ## Configuratie
@@ -293,7 +309,7 @@ sqlite3 data/toelating.db ".backup data/backups/backup-$(date +%Y%m%d-%H%M%S).db
 3. **Bestaande gegevens (bandjes, logs, medewerkers) meenemen?** Kopieer
    de map `data\` van de oude installatie over die van de nieuwe
    (dezelfde locatie, `%LOCALAPPDATA%\Toelatingssysteem\data`) en herstart
-   de server. Geen eigen `data\` meegenomen? Maak dan een eerste admin aan
+   de server. Geen eigen `data\` meegenomen? Stel dan de pincode van de beheerder in
    (zie hierboven) voor je kan inloggen op het beheerscherm. `data\`
    bevat ook het certificaat (`data\tls\`): wie die meeneemt, hoeft de
    telefoons niet opnieuw het certificaat te laten vertrouwen.
@@ -309,7 +325,7 @@ sqlite3 data/toelating.db ".backup data/backups/backup-$(date +%Y%m%d-%H%M%S).db
    sla je die ook over.
 3. Op de nieuwe pc: zorg dat Python 3.12+ geïnstalleerd is, en voer de
    installatie opnieuw uit (`./install.sh`, of op Windows `setup.ps1`).
-4. Geen eigen `data/` meegenomen? Maak een eerste admin aan.
+4. Geen eigen `data/` meegenomen? Stel de pincode van de beheerder in.
 
 ## Mappenstructuur
 
@@ -317,13 +333,13 @@ sqlite3 data/toelating.db ".backup data/backups/backup-$(date +%Y%m%d-%H%M%S).db
 backend/
   app/
     domain/       # pure statuslogica (status.py, calendar.py) — geen I/O
-    services/      # scan-/oordeelflow, toegang, auth, medewerkers, logs, rapport
+    services/      # scan-/oordeelflow, toegang, auth, pincodes per groep, logs, rapport
     hardware/       # hekje- en kussen-sensor-abstracties (dummy-implementaties)
     api/             # FastAPI-routes
   tests/             # unit- en integratietests
   run.py             # serverlauncher: https op 8000 + lokale http op 8001 (start.sh/start-app.bat/systemd draaien dit)
-  seed.py            # demo-seed (testbandjes + demo-admin/-supervisor)
-  create_admin.py    # eerste admin aanmaken
+  seed.py            # demo-seed (testbandjes + demo-pincodes per groep)
+  create_admin.py    # pincode van de beheerder instellen
   config.yaml
 frontend/
   host/    # hostscherm: testsprong + Ski Jump-toegang in één, standaard startpagina (/, /host/)
