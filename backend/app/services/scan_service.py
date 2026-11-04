@@ -71,6 +71,24 @@ def _close_for_new_scan(db: Session, pending: PendingScanModel) -> None:
     db.flush()
 
 
+def _close_on_other_devices(db: Session, *, wristband_id: str, device_id: str) -> None:
+    """Een speler van de kiosk verschijnt op elk hostscherm tegelijk. Is hij
+    op één toestel afgehandeld, dan mag een ander toestel hem niet nog eens
+    beoordelen (dat zou als tweede poging tellen)."""
+    others = db.execute(
+        select(PendingScanModel).where(
+            PendingScanModel.wristband_id == wristband_id, PendingScanModel.device_id != device_id
+        )
+    ).scalars()
+    for other in others:
+        if other.status_snapshot in _VERDICT_STATUS_VALUES:
+            log_event(
+                db, event_type="GEANNULEERD", wristband_id=wristband_id, source=other.device_id,
+                detail={"reden": "al afgehandeld op ander toestel"},
+            )
+        db.delete(other)
+
+
 def register_scan(
     db: Session, *, wristband_id: str, device_id: str, timeout_seconds: int, tz: ZoneInfo
 ) -> ScanResult:
@@ -142,6 +160,7 @@ def submit_verdict(db: Session, *, device_id: str, verdict: Verdict, tz: ZoneInf
     row.reason = None
 
     db.delete(pending)
+    _close_on_other_devices(db, wristband_id=wristband_id, device_id=device_id)
     log_event(
         db, event_type="OORDEEL", wristband_id=wristband_id, source=device_id,
         detail={
@@ -164,6 +183,7 @@ def submit_practice_ack(db: Session, *, device_id: str) -> None:
 
     wristband_id = pending.wristband_id
     db.delete(pending)
+    _close_on_other_devices(db, wristband_id=wristband_id, device_id=device_id)
     log_event(db, event_type="OEFENSPRONG", wristband_id=wristband_id, source=device_id)
     db.commit()
 

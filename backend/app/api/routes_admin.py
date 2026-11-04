@@ -31,6 +31,7 @@ from app.schemas import (
 from app.services import (
     device_service,
     employee_service,
+    lemon_service,
     log_service,
     network_service,
     pairing_service,
@@ -217,6 +218,46 @@ def get_network_info(
         "addresses": network_service.local_ipv4_addresses(),
         "certificate_fingerprint": tls.certificate_fingerprint(Path(settings.tls_dir)),
     }
+
+
+@router.get("/lemon")
+def lemon_status(
+    request: Request,
+    settings: Settings = Depends(get_settings),
+    _: EmployeeModel = Depends(require_role("admin")),
+) -> dict:
+    """Werkt de koppeling met de kiosk? Zonder namen: enkel wanneer, hoe en
+    hoeveel spelers er laatst binnenkwamen."""
+    inbox = request.app.state.lemon_inbox
+    session = inbox.current()
+    return {
+        "post_path": "/api/lemon/session",
+        "kiosk_host": settings.lemon_kiosk_host or None,
+        "kiosk_port": settings.lemon_kiosk_port,
+        "poll_enabled": settings.lemon_poll_enabled,
+        "poll_error": inbox.poll_error if settings.lemon_poll_enabled else None,
+        "last_session": None if session is None else {
+            "received_at": session.received_at,
+            "via": session.via,
+            "players": len(session.players),
+        },
+    }
+
+
+@router.post("/lemon/test-session")
+def send_test_session(
+    request: Request,
+    db: Session = Depends(get_db),
+    employee: EmployeeModel = Depends(require_role("admin")),
+) -> dict:
+    """Een verzonnen testspeler, om het hostscherm te testen zonder kiosk."""
+    session = request.app.state.lemon_inbox.receive(lemon_service.test_session_payload(), via="test")
+    log_event(
+        db, event_type="LEMON_SESSIE", source="admin", employee_id=employee.id,
+        detail={"spelers": len(session.players), "via": "test"},
+    )
+    db.commit()
+    return {"ok": True}
 
 
 @router.post("/pairing-codes", response_model=PairingCodeResponse)

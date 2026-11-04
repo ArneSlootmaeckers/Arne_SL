@@ -411,6 +411,20 @@ button.picker-trigger {
   white-space: nowrap;
 }
 
+.network-address.lemon-url {
+  font-size: clamp(0.9rem, 2.6vw, 1.15rem);
+}
+
+.lemon-status {
+  max-width: 40rem;
+  margin-bottom: 0.5rem;
+}
+
+.lemon-status th {
+  width: 12rem;
+  vertical-align: top;
+}
+
 .pairing-code-result {
   margin: 1rem 0;
 }

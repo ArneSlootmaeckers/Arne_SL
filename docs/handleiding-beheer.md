@@ -78,6 +78,13 @@ op **Vernieuwen**. Daaronder staat de **certificaatcode** (bv. `A6A9 E891
 DBC2 04C5`): de app toont dezelfde code bij haar instellingen. Zo kan je
 nakijken dat een telefoon echt met deze pc praat.
 
+**Koppeling met de Lemon-kiosk** toont of de kiosk spelers doorstuurt:
+het ingestelde adres van de kiosk, of het ophalen (fallback) aan staat, en
+wanneer de laatste spelers binnenkwamen. Het adres om aan Lemon door te
+geven staat er ook. Met **Testspeler sturen** verschijnt een verzonnen
+speler op elk gekoppeld hostscherm, om te testen zonder kiosk. Instellen
+gebeurt in `backend/config.yaml` (zie `README.md`).
+
 **Gekoppelde toestellen**: enkel telefoons die je hier gekoppeld hebt,
 mogen bandjes scannen en een oordeel geven.
 - **Nieuwe koppelcode** toont een code van 6 cijfers, 10 minuten geldig,

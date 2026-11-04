@@ -13,6 +13,18 @@ tls_dir: "../data/tls"
 # Gebruikt het parknetwerk toch "internetadressen" intern, zet die
 # netwerken hier, bv. ["203.0.113.0/24"]. Normaal leeg laten.
 extra_allowed_networks: []
+
+# --- Koppeling met de Lemon-kiosk van de experience ---
+# IP-adres van de kiosk. Enkel dit adres mag spelers doorsturen naar
+# https://<deze pc>:8000/api/lemon/session (zie Beheer -> Systeem). Leeg =
+# koppeling uit.
+lemon_kiosk_host: ""
+lemon_kiosk_port: 4100
+# Fallback: zet op true als het doorsturen door de kiosk niet werkt; dan
+# vraagt de server de spelers zelf op via http://<kiosk>:<poort>/players.
+lemon_poll_enabled: false
+lemon_poll_interval_seconds: 2
+
 # Hoeveel seconden een oefensprong op bevestiging mag wachten voor die vervalt.
 # (Een scan die op een oordeel wacht, de 1e/2e poging, vervalt nooit.)
 scan_timeout_seconds: 60

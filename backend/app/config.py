@@ -34,6 +34,13 @@ class Settings:
     # bereiken. Normaal leeg: enkel adressen van het eigen netwerk (geen
     # internetadressen) worden toegelaten, zie network_service.
     extra_allowed_networks: list[str] = field(default_factory=list)
+    # Lemon-kiosk (zie app/services/lemon_service.py). Enkel dit adres mag
+    # spelers doorsturen; leeg = koppeling uit.
+    lemon_kiosk_host: str = ""
+    lemon_kiosk_port: int = 4100
+    # Fallback: deze server vraagt de spelers zelf op bij de kiosk.
+    lemon_poll_enabled: bool = False
+    lemon_poll_interval_seconds: float = 2
 
     @property
     def tz(self) -> ZoneInfo:

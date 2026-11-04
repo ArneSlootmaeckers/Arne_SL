@@ -38,12 +38,21 @@
     </section>
 
     <section id="waiting-view" class="view hidden">
-      <h1 class="waiting-title">Scan het bandje</h1>
-      <p class="waiting-hint">Wacht op een scan…</p>
+      <h1 class="waiting-title" id="waiting-title">Scan het bandje</h1>
+      <p class="waiting-hint" id="waiting-hint">Wacht op een scan…</p>
+      <!-- Meerdere spelers in één sessie van de kiosk: de host kiest wie springt. -->
+      <div class="player-chooser hidden" id="player-chooser">
+        <div class="player-chooser-title">Wie springt er?</div>
+        <div class="player-chooser-list" id="player-chooser-list"></div>
+      </div>
     </section>
 
     <section id="result-view" class="view hidden">
       <div class="wristband-id" id="wristband-id"></div>
+      <div class="player-card hidden" id="player-card">
+        <div class="player-avatar" id="player-avatar"></div>
+        <div class="player-name" id="player-name"></div>
+      </div>
       <div class="status-banner" id="status-banner">
         <div class="status-text" id="status-text"></div>
       </div>

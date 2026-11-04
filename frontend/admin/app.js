@@ -37,6 +37,7 @@ const EVENT_LABELS = {
   TOESTEL_ONTKOPPELD: "Toestel ontkoppeld",
   KOPPELEN_MISLUKT: "Koppelen mislukt",
   KOPPELEN_GEBLOKKEERD: "Koppelen geblokkeerd (te veel foute codes)",
+  LEMON_SESSIE: "Spelers van de kiosk",
   SYSTEEM_AFSLUITEN: "Systeem afgesloten",
 };
 
@@ -154,6 +155,10 @@ const els = {
   pairingCodeValue: document.getElementById("pairing-code-value"),
   pairingCodeExpiry: document.getElementById("pairing-code-expiry"),
   devicesMessage: document.getElementById("devices-message"),
+  lemonStatus: document.getElementById("lemon-status"),
+  lemonUrls: document.getElementById("lemon-urls"),
+  lemonTestBtn: document.getElementById("lemon-test-btn"),
+  lemonMessage: document.getElementById("lemon-message"),
   devicesTableBody: document.querySelector("#devices-table tbody"),
 
   shutdownBtn: document.getElementById("shutdown-btn"),
@@ -516,7 +521,7 @@ async function loadNetworkInfo() {
         "Geen netwerkverbinding gevonden op deze pc. Controleer of de " +
           "netwerkkabel/wifi verbonden is en klik op Vernieuwen."
       );
-      return;
+      return info;
     }
     info.addresses.forEach((address, index) => {
       const row = document.createElement("div");
@@ -538,6 +543,7 @@ async function loadNetworkInfo() {
           "niet in de app, probeer dan het volgende."
       );
     }
+    return info;
   } catch (err) {
     if (err instanceof ApiError && err.status === 401) return handleUnauthorized();
     showNetworkNote(err instanceof ApiError ? err.message : "Kon het IP-adres niet ophalen.");
@@ -623,9 +629,71 @@ els.devicesTableBody.addEventListener("click", async (event) => {
   }
 });
 
-function loadSystemTab() {
-  loadNetworkInfo();
+const LEMON_VIA_LABELS = { post: "doorgestuurd door de kiosk (POST)", get: "opgehaald bij de kiosk (GET)", test: "testspeler" };
+
+function statusRow(label, value) {
+  const row = document.createElement("tr");
+  const th = document.createElement("th");
+  th.textContent = label;
+  const td = document.createElement("td");
+  td.textContent = value;
+  row.append(th, td);
+  return row;
+}
+
+async function loadLemonStatus(info) {
+  try {
+    const status = await api.lemonStatus();
+    els.lemonStatus.textContent = "";
+    els.lemonStatus.append(
+      statusRow(
+        "Kiosk",
+        status.kiosk_host ? `${status.kiosk_host}:${status.kiosk_port}` : "Niet ingesteld (lemon_kiosk_host)"
+      ),
+      statusRow(
+        "Ophalen (GET)",
+        status.poll_enabled ? (status.poll_error ? `Aan — ${status.poll_error}` : "Aan") : "Uit (enkel doorsturen)"
+      ),
+      statusRow(
+        "Laatste spelers",
+        status.last_session
+          ? `${formatTimestamp(status.last_session.received_at)}, ${status.last_session.players} ` +
+              `speler(s), ${LEMON_VIA_LABELS[status.last_session.via] ?? status.last_session.via}`
+          : "Nog geen"
+      )
+    );
+    els.lemonUrls.textContent = "";
+    const hint = document.createElement("div");
+    hint.className = "network-address-hint";
+    hint.textContent = "Adres om door te geven aan Lemon (doorsturen via POST):";
+    els.lemonUrls.append(hint);
+    for (const address of info?.addresses ?? []) {
+      const value = document.createElement("span");
+      value.className = "network-address lemon-url";
+      value.textContent = `https://${address}:${info.port}${status.post_path}`;
+      els.lemonUrls.append(value);
+    }
+  } catch (err) {
+    if (err instanceof ApiError && err.status === 401) return handleUnauthorized();
+    showMessage(els.lemonMessage, err instanceof ApiError ? err.message : "Kon de koppeling niet nakijken.", "error");
+  }
+}
+
+els.lemonTestBtn.addEventListener("click", async () => {
+  try {
+    await api.sendTestPlayer();
+    showMessage(els.lemonMessage, "Testspeler verstuurd: hij verschijnt nu op elk gekoppeld hostscherm.", "success");
+    loadLemonStatus(await api.networkInfo());
+  } catch (err) {
+    if (err instanceof ApiError && err.status === 401) return handleUnauthorized();
+    showMessage(els.lemonMessage, err instanceof ApiError ? err.message : "Versturen mislukt.", "error");
+  }
+});
+
+async function loadSystemTab() {
   loadDevices();
+  const info = await loadNetworkInfo();
+  loadLemonStatus(info);
 }
 
 document.querySelector('.tab-btn[data-tab="systeem"]').addEventListener("click", loadSystemTab);

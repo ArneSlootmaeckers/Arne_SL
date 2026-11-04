@@ -43,6 +43,22 @@ was): vraag dan een nieuwe code.
 Vijf keer een foute code na elkaar? Dan blokkeert het systeem de telefoon
 5 minuten. Wacht en probeer daarna opnieuw met een juiste code.
 
+## Spelers van de kiosk
+
+Staat de koppeling met de kiosk van Lemon aan, dan toont het scherm
+**"Wacht op de volgende speler"**. Zodra een speler aan de kiosk start,
+verschijnt hij vanzelf: voornaam, de eerste letter van de achternaam en
+de foto. Je hoeft dan niets te scannen: geef gewoon het oordeel zoals
+hieronder bij "Werking".
+
+- **Meerdere spelers tegelijk?** Dan verschijnt **"Wie springt er?"** met
+  een knop per speler. Tik op wie nu springt. Na het oordeel kies je de
+  volgende.
+- **Meerdere telefoons?** Een speler verschijnt op elke telefoon. Zodra
+  hij op één telefoon een oordeel kreeg, kan dat op de andere niet meer.
+- Namen worden nergens bewaard; ze staan enkel op het scherm zolang de
+  speler aan de beurt is.
+
 ## Een bandje scannen
 
 Houd het bandje tegen de **achterkant van de telefoon**, tot het scherm

@@ -94,6 +94,8 @@ export const api = {
   // server leidt daar zelf uit af welk toestel het is.
   pair: (code, name) => request("POST", "/api/host/pair", { code, name }),
   currentDevice: () => request("GET", "/api/host/device"),
+  // Spelers die net aan de Lemon-kiosk gestart zijn (namen enkel tijdelijk).
+  lemonSession: () => request("GET", "/api/host/lemon/session"),
   scan: (wristbandId) => request("POST", "/api/host/scan", { wristband_id: wristbandId }),
   verdict: (verdict) => request("POST", "/api/host/verdict", { verdict }),
   practiceAck: () => request("POST", "/api/host/practice-ack"),
@@ -121,6 +123,8 @@ export const api = {
   disableGroup: (role) => request("DELETE", `/api/admin/pincodes/${role}`),
 
   networkInfo: () => request("GET", "/api/admin/network"),
+  lemonStatus: () => request("GET", "/api/admin/lemon"),
+  sendTestPlayer: () => request("POST", "/api/admin/lemon/test-session"),
   createPairingCode: () => request("POST", "/api/admin/pairing-codes"),
   pairedDevices: () => request("GET", "/api/admin/devices"),
   unpairDevice: (deviceId) => request("DELETE", `/api/admin/devices/${encodeURIComponent(deviceId)}`),

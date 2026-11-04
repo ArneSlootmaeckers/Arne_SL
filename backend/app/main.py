@@ -13,6 +13,8 @@ import ipaddress
 import logging
 from pathlib import Path
 
+import httpx
+
 from fastapi import FastAPI, Request
 from fastapi.responses import FileResponse, JSONResponse, RedirectResponse
 from fastapi.staticfiles import StaticFiles
@@ -35,6 +37,7 @@ from app.services.errors import (
     WrongResolutionPathError,
 )
 from app.services.employee_service import anonymise_accounts
+from app.services.lemon_service import InvalidLemonDataError, LemonInbox, fetch_players
 from app.services.log_service import purge_old_events
 from app.services.maintenance_service import create_backup, purge_old_backups
 from app.services.network_service import is_local_client
@@ -53,6 +56,7 @@ _ERROR_STATUS_CODES: dict[type[DomainServiceError], int] = {
     WeakPincodeError: 400,
     TooManyAttemptsError: 429,
     DeviceNotPairedError: 401,
+    InvalidLemonDataError: 400,
     InvalidPairingCodeError: 400,
     DeviceNotFoundError: 404,
 }
@@ -114,6 +118,38 @@ async def _run_maintenance_periodically(app: FastAPI, settings: Settings) -> Non
         await asyncio.sleep(interval_seconds)
 
 
+async def _poll_lemon_kiosk_periodically(app: FastAPI, settings: Settings) -> None:
+    """GET-fallback: vraagt de spelers zelf op bij de kiosk. Een fout wordt
+    enkel kort gemeld (op Beheer -> Systeem), nooit met de inhoud van het
+    antwoord erbij."""
+    from app.api.routes_lemon import record_new_session
+
+    inbox: LemonInbox = app.state.lemon_inbox
+    with httpx.Client(timeout=2.0, trust_env=False) as client:
+        while True:
+            try:
+                payload = await asyncio.to_thread(
+                    fetch_players, client, host=settings.lemon_kiosk_host, port=settings.lemon_kiosk_port
+                )
+                session = inbox.receive(payload, via="get")
+                inbox.poll_error = None
+            except InvalidLemonDataError as exc:
+                inbox.poll_error = str(exc)
+                session = None
+            except Exception as exc:  # de lus mag nooit stilletjes stoppen
+                # Enkel het soort fout: een foutmelding kan ontvangen gegevens bevatten.
+                logger.warning("Ophalen bij de Lemon-kiosk mislukt (%s)", type(exc).__name__)
+                inbox.poll_error = "Onverwachte fout bij het ophalen."
+                session = None
+            if session is not None:
+                db = app.state.session_factory()
+                try:
+                    await asyncio.to_thread(record_new_session, db, session, source="lemon-kiosk")
+                finally:
+                    db.close()
+            await asyncio.sleep(settings.lemon_poll_interval_seconds)
+
+
 def create_app(settings: Settings | None = None) -> FastAPI:
     settings = settings or load_settings()
 
@@ -130,23 +166,28 @@ def create_app(settings: Settings | None = None) -> FastAPI:
         finally:
             db.close()
 
-        reaper_task = asyncio.create_task(_reap_expired_scans_periodically(app))
-        maintenance_task = asyncio.create_task(_run_maintenance_periodically(app, settings))
+        tasks = [
+            asyncio.create_task(_reap_expired_scans_periodically(app)),
+            asyncio.create_task(_run_maintenance_periodically(app, settings)),
+        ]
+        if settings.lemon_poll_enabled and settings.lemon_kiosk_host:
+            tasks.append(asyncio.create_task(_poll_lemon_kiosk_periodically(app, settings)))
         try:
             yield
         finally:
-            reaper_task.cancel()
-            maintenance_task.cancel()
-            with contextlib.suppress(asyncio.CancelledError):
-                await reaper_task
-            with contextlib.suppress(asyncio.CancelledError):
-                await maintenance_task
+            for task in tasks:
+                task.cancel()
+            for task in tasks:
+                with contextlib.suppress(asyncio.CancelledError):
+                    await task
 
     app = FastAPI(title="Toelatingssysteem veiligheidssprong", lifespan=lifespan)
     app.state.frontend_version = _frontend_version()
     # Na 5 foute pincodes of koppelcodes vanaf hetzelfde adres: 5 minuten geblokkeerd.
     app.state.login_limiter = AttemptLimiter()
     app.state.pairing_limiter = AttemptLimiter()
+    # Laatste sessie van de Lemon-kiosk: enkel in het geheugen (namen!).
+    app.state.lemon_inbox = LemonInbox()
 
     def _make_handler(status_code: int):
         async def _handler(request: Request, exc: DomainServiceError) -> JSONResponse:
@@ -185,12 +226,14 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     from app.api.routes_gate import router as gate_router
     from app.api.routes_health import router as health_router
     from app.api.routes_host import router as host_router
+    from app.api.routes_lemon import router as lemon_router
 
     app.include_router(health_router)
     app.include_router(host_router)
     app.include_router(gate_router)
     app.include_router(auth_router)
     app.include_router(admin_router)
+    app.include_router(lemon_router)
 
     # Each screen is a plain static site; mount whichever ones exist yet
     # plus the assets they share.

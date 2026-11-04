@@ -66,6 +66,36 @@ def pair(
     return PairResponse(device_id=paired.device_id, token=paired.token)
 
 
+@router.get("/lemon/session")
+def current_lemon_session(
+    request: Request,
+    settings: Settings = Depends(get_settings),
+    _: PairedDeviceModel = Depends(require_paired_device),
+) -> dict:
+    """De spelers die net aan de kiosk gestart zijn, om op het hostscherm te
+    tonen. Enkel voor gekoppelde toestellen: hier staan namen in (enkel de
+    voornaam en de eerste letter van de achternaam)."""
+    inbox = request.app.state.lemon_inbox
+    session = inbox.current()
+    return {
+        "enabled": bool(settings.lemon_kiosk_host),
+        "session": None if session is None else {
+            "key": session.key,
+            "age_seconds": round(inbox.age_seconds(session), 1),
+            "players": [
+                {
+                    "id": player.id,
+                    "first_name": player.first_name,
+                    "last_initial": player.last_initial,
+                    "avatar_url": player.avatar_url,
+                    "avatar_color": player.avatar_color,
+                }
+                for player in session.players
+            ],
+        },
+    }
+
+
 @router.get("/device")
 def current_device(
     db: Session = Depends(get_db), device: PairedDeviceModel = Depends(require_paired_device)

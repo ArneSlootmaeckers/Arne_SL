@@ -59,7 +59,7 @@
       <!-- Bandje -->
       <section id="tab-bandje" class="tab-panel">
         <form id="wristband-lookup-form" class="inline-form">
-          <input id="wristband-input" type="text" placeholder="Bandje-ID (scan of typ)" autocomplete="off" />
+          <input id="wristband-input" type="text" placeholder="Bandje-ID of speler-UUID" autocomplete="off" />
           <button type="submit">Bekijk</button>
         </form>
 
@@ -127,6 +127,7 @@
             <option value="TOESTEL_GEKOPPELD">Toestel gekoppeld</option>
             <option value="TOESTEL_ONTKOPPELD">Toestel ontkoppeld</option>
             <option value="KOPPELEN_MISLUKT">Koppelen mislukt</option>
+            <option value="LEMON_SESSIE">Spelers van de kiosk</option>
             <option value="SYSTEEM_AFSLUITEN">Systeem afgesloten</option>
           </select>
           <button type="submit">Zoek</button>
@@ -220,6 +221,26 @@
             die anders, dan praat de telefoon niet met deze pc: verwittig dan IT.
           </p>
           <button id="network-refresh-btn" class="btn-secondary">Vernieuwen</button>
+        </div>
+
+        <div class="card">
+          <div class="card-title">Koppeling met de Lemon-kiosk</div>
+          <p>
+            Zodra een experience start, stuurt de kiosk de spelers naar dit
+            systeem; ze verschijnen dan vanzelf op het hostscherm. Enkel de
+            unieke code (UUID) van een speler wordt bewaard. Naam en foto
+            worden enkel tijdens de sessie op het hostscherm getoond.
+          </p>
+          <table class="data-table lemon-status">
+            <tbody id="lemon-status"></tbody>
+          </table>
+          <div id="lemon-urls" class="network-addresses"></div>
+          <p class="network-note">
+            Instellen (IP-adres en poort van de kiosk, ophalen aan/uit) gebeurt
+            in <code>backend/config.yaml</code>; herstart daarna het systeem.
+          </p>
+          <button id="lemon-test-btn" class="btn-secondary">Testspeler sturen</button>
+          <p id="lemon-message" class="message hidden"></p>
         </div>
 
         <div class="card">

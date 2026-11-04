@@ -16,6 +16,10 @@ const TEST_WRISTBANDS = ["TEST-001", "TEST-002", "TEST-003", "TEST-004"];
 const CONFIRMATION_DISPLAY_MS = 3000;
 const FINAL_RESULT_DISPLAY_MS = 5000;
 const REJECTED_TOAST_MS = 2500;
+const LEMON_POLL_INTERVAL_MS = 1500;
+// Een sessie die al ouder is wanneer dit scherm (opnieuw) laadt, wordt niet
+// meer automatisch geopend: die speler is waarschijnlijk al gesprongen.
+const LEMON_FRESH_SECONDS = 20;
 
 const STATUS_INFO = {
   NOG_NIET_GESPRONGEN: { kleur: "groen", tekst: "1e poging" },
@@ -36,6 +40,13 @@ const els = {
   pairSubmit: document.getElementById("pair-submit"),
   pairError: document.getElementById("pair-error"),
   waitingView: document.getElementById("waiting-view"),
+  waitingTitle: document.getElementById("waiting-title"),
+  waitingHint: document.getElementById("waiting-hint"),
+  playerChooser: document.getElementById("player-chooser"),
+  playerChooserList: document.getElementById("player-chooser-list"),
+  playerCard: document.getElementById("player-card"),
+  playerAvatar: document.getElementById("player-avatar"),
+  playerName: document.getElementById("player-name"),
   resultView: document.getElementById("result-view"),
   wristbandId: document.getElementById("wristband-id"),
   statusBanner: document.getElementById("status-banner"),
@@ -74,6 +85,8 @@ function showWaiting() {
   els.pairView.classList.add("hidden");
   els.resultView.classList.add("hidden");
   els.waitingView.classList.remove("hidden");
+  // Nog spelers van dezelfde sessie over? Dan meteen weer laten kiezen.
+  renderChooser();
 }
 
 function isPaired() {
@@ -173,10 +186,116 @@ function startFinalResultCountdown(durationMs, onExpire) {
   countdownInterval = setInterval(tick, 100);
 }
 
-function renderScanResult(body) {
+// ---- Spelers van de Lemon-kiosk --------------------------------------------
+// Naam en foto staan enkel in het geheugen van deze pagina, zolang de speler
+// getoond wordt: nooit in localStorage, nooit in de console, en nooit terug
+// naar de server (die krijgt enkel de UUID van de speler).
+
+let lemonSessionKey = null;
+let lemonFirstPoll = true;
+let lemonPlayersLeft = [];
+
+function playerLabel(player) {
+  return player.last_initial ? `${player.first_name} ${player.last_initial}.` : player.first_name;
+}
+
+function fillAvatar(container, player) {
+  container.textContent = "";
+  container.style.background = player.avatar_color || "";
+  const initials = document.createElement("span");
+  initials.textContent = ((player.first_name || "?")[0] + (player.last_initial || "")).toUpperCase();
+  container.append(initials);
+  if (player.avatar_url) {
+    // Tijdelijke link van Lemon: rechtstreeks inladen, nergens bewaren.
+    const img = document.createElement("img");
+    img.alt = "";
+    img.referrerPolicy = "no-referrer";
+    img.addEventListener("error", () => img.remove());
+    img.src = player.avatar_url;
+    container.append(img);
+  }
+}
+
+function renderChooser() {
+  const show = lemonPlayersLeft.length > 0;
+  els.playerChooser.classList.toggle("hidden", !show);
+  els.playerChooserList.textContent = "";
+  for (const player of lemonPlayersLeft) {
+    const button = document.createElement("button");
+    button.type = "button";
+    button.className = "player-choice";
+    const avatar = document.createElement("div");
+    avatar.className = "player-avatar";
+    fillAvatar(avatar, player);
+    const name = document.createElement("span");
+    name.textContent = playerLabel(player);
+    button.append(avatar, name);
+    button.addEventListener("click", () => openPlayer(player));
+    els.playerChooserList.append(button);
+  }
+}
+
+function openPlayer(player) {
+  lemonPlayersLeft = lemonPlayersLeft.filter((p) => p.id !== player.id);
+  renderChooser();
+  handleScan(player.id, player);
+}
+
+function showLemonWaitingText(enabled) {
+  els.waitingTitle.textContent = enabled ? "Wacht op de volgende speler" : "Scan het bandje";
+  els.waitingHint.textContent = enabled
+    ? "Spelers komen vanzelf binnen via de kiosk, of scan een bandje."
+    : "Wacht op een scan…";
+}
+
+async function pollLemon() {
+  if (!isPaired()) return;
+  let body;
+  try {
+    body = await api.lemonSession();
+  } catch (err) {
+    handleUnpaired(err);
+    return;
+  }
+  showLemonWaitingText(body.enabled);
+  const session = body.session;
+  const firstPoll = lemonFirstPoll;
+  lemonFirstPoll = false;
+  if (!session) {
+    // Sessie verlopen: ook de nog niet gekozen spelers vergeten.
+    if (lemonPlayersLeft.length) {
+      lemonPlayersLeft = [];
+      renderChooser();
+    }
+    return;
+  }
+  if (session.key === lemonSessionKey) return;
+  lemonSessionKey = session.key;
+  if (firstPoll && session.age_seconds > LEMON_FRESH_SECONDS) return;
+
+  // Een nieuwe sessie vervangt de vorige, net als een nieuwe scan.
+  lemonPlayersLeft = session.players.slice();
+  if (lemonPlayersLeft.length === 1) {
+    openPlayer(lemonPlayersLeft[0]);
+  } else {
+    renderChooser();
+  }
+}
+
+function renderScanResult(body, player = null) {
   scanSeq += 1;
   clearTimers();
-  els.wristbandId.textContent = body.wristband_id;
+  // Speler van de kiosk: naam en foto i.p.v. de (voor de host betekenisloze) UUID.
+  els.wristbandId.textContent = player ? "" : body.wristband_id;
+  els.wristbandId.classList.toggle("hidden", Boolean(player));
+  els.playerCard.classList.toggle("hidden", !player);
+  if (player) {
+    els.playerName.textContent = playerLabel(player);
+    fillAvatar(els.playerAvatar, player);
+  } else {
+    els.playerName.textContent = "";
+    els.playerAvatar.textContent = "";
+  }
   applyStatusBanner(body.status);
 
   hasPendingScanToCancel = body.requires_verdict || body.requires_practice_ack;
@@ -199,11 +318,11 @@ function renderScanResult(body) {
   }
 }
 
-async function handleScan(wristbandId) {
+async function handleScan(wristbandId, player = null) {
   if (!isPaired()) return;
   try {
     const body = await api.scan(wristbandId);
-    renderScanResult(body);
+    renderScanResult(body, player);
   } catch (err) {
     if (handleUnpaired(err)) return;
     if (!(err instanceof ApiError)) console.error(err);
@@ -284,6 +403,9 @@ if (params.has("toestel")) setDeviceName(params.get("toestel"));
 
 if (getDeviceToken()) showWaiting();
 else showPairing();
+
+pollLemon();
+setInterval(pollLemon, LEMON_POLL_INTERVAL_MS);
 
 startHealthPolling(POLLING_INTERVAL_MS, (online) => {
   els.banner.classList.toggle("hidden", online);
