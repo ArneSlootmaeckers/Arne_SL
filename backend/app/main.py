@@ -118,12 +118,23 @@ async def _run_maintenance_periodically(app: FastAPI, settings: Settings) -> Non
         await asyncio.sleep(interval_seconds)
 
 
+def _record_lemon_session(app: FastAPI, session) -> None:
+    # Openen, schrijven en sluiten in dezelfde thread: wordt de lus bij het
+    # afsluiten geannuleerd, dan werkt deze thread nog netjes af in plaats
+    # van dat de verbinding onder hem gesloten wordt.
+    from app.api.routes_lemon import record_new_session
+
+    db = app.state.session_factory()
+    try:
+        record_new_session(db, session, source="lemon-kiosk")
+    finally:
+        db.close()
+
+
 async def _poll_lemon_kiosk_periodically(app: FastAPI, settings: Settings) -> None:
     """GET-fallback: vraagt de spelers zelf op bij de kiosk. Een fout wordt
     enkel kort gemeld (op Beheer -> Systeem), nooit met de inhoud van het
     antwoord erbij."""
-    from app.api.routes_lemon import record_new_session
-
     inbox: LemonInbox = app.state.lemon_inbox
     with httpx.Client(timeout=2.0, trust_env=False) as client:
         while True:
@@ -142,11 +153,7 @@ async def _poll_lemon_kiosk_periodically(app: FastAPI, settings: Settings) -> No
                 inbox.poll_error = "Onverwachte fout bij het ophalen."
                 session = None
             if session is not None:
-                db = app.state.session_factory()
-                try:
-                    await asyncio.to_thread(record_new_session, db, session, source="lemon-kiosk")
-                finally:
-                    db.close()
+                await asyncio.to_thread(_record_lemon_session, app, session)
             await asyncio.sleep(settings.lemon_poll_interval_seconds)
 
 
