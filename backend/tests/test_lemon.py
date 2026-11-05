@@ -243,3 +243,88 @@ def test_get_fallback_stays_off_by_default(lemon_settings, monkeypatch):
     monkeypatch.setattr(main, "fetch_players", lambda *a, **k: pytest.fail("GET mag niet draaien"))
     with TestClient(create_app(lemon_settings), client=("192.168.1.20", 50000)) as client:
         client.get("/api/health")
+
+
+# --- Stopbericht naar de kiosk na het oordeel (POST <kiosk>:4100/scores) ---
+
+@pytest.fixture
+def sent_scores(monkeypatch):
+    sent = []
+    monkeypatch.setattr(
+        lemon_service, "send_scores",
+        lambda client, *, host, port, payload: sent.append((host, port, payload)),
+    )
+    return sent
+
+
+@pytest.mark.parametrize("verdict", ["GROEN", "ROOD"])
+def test_verdict_stops_the_player_at_the_kiosk(lemon_client, sent_scores, verdict):
+    _kiosk(lemon_client).post("/api/lemon/session", json=_session())
+    host = paired(lemon_client, "host-1")
+    lemon_client.post("/api/host/scan", json={"wristband_id": PLAYER_ID}, headers=host)
+    assert lemon_client.post("/api/host/verdict", json={"verdict": verdict}, headers=host).status_code == 200
+
+    # Eén speler, geen score en geen resultaat (of iemand mag springen gaat nooit naar Lemon).
+    assert sent_scores == [(KIOSK_IP, 4100, {
+        "sessionId": "9a13cc83-d56d-4456-aaf6-821156e780af",
+        "gameModeCode": "10",
+        "players": [{"id": PLAYER_ID}],
+    })]
+
+
+def test_only_the_judged_player_is_sent_once(lemon_client, sent_scores):
+    other = "305b1224-f528-4704-a8a0-5adaefcdd397"
+    payload = _session()
+    payload["players"].append({**payload["players"][0], "id": other})
+    _kiosk(lemon_client).post("/api/lemon/session", json=payload)
+    host = paired(lemon_client, "host-1")
+
+    for _ in range(2):  # twee pogingen van dezelfde speler: maar één stopbericht
+        lemon_client.post("/api/host/scan", json={"wristband_id": PLAYER_ID}, headers=host)
+        lemon_client.post("/api/host/verdict", json={"verdict": "ROOD"}, headers=host)
+    assert [s[2]["players"] for s in sent_scores] == [[{"id": PLAYER_ID}]]
+
+    lemon_client.post("/api/host/scan", json={"wristband_id": other}, headers=host)
+    lemon_client.post("/api/host/verdict", json={"verdict": "GROEN"}, headers=host)
+    assert [s[2]["players"] for s in sent_scores] == [[{"id": PLAYER_ID}], [{"id": other}]]
+
+
+def test_no_stop_message_for_players_not_from_the_kiosk(lemon_admin, sent_scores):
+    client = lemon_admin
+    host = paired(client, "host-1")
+    client.post("/api/host/scan", json={"wristband_id": PLAYER_ID}, headers=host)  # gewoon NFC-bandje
+    client.post("/api/host/verdict", json={"verdict": "GROEN"}, headers=host)
+
+    client.post("/api/admin/lemon/test-session", headers=_admin(client))
+    test_id = client.get("/api/host/lemon/session", headers=host).json()["session"]["players"][0]["id"]
+    client.post("/api/host/scan", json={"wristband_id": test_id}, headers=host)
+    client.post("/api/host/verdict", json={"verdict": "GROEN"}, headers=host)
+    assert sent_scores == []
+
+
+def test_send_scores_posts_to_the_kiosk_and_hides_errors():
+    def handler(request: httpx.Request) -> httpx.Response:
+        assert request.method == "POST" and str(request.url) == f"http://{KIOSK_IP}:4100/scores"
+        return httpx.Response(200)
+
+    payload = lemon_service.scores_payload("s1", PLAYER_ID, game_mode_code="10")
+    with httpx.Client(transport=httpx.MockTransport(handler)) as client:
+        lemon_service.send_scores(client, host=KIOSK_IP, port=4100, payload=payload)
+
+    with httpx.Client(transport=httpx.MockTransport(lambda r: httpx.Response(500, text="Voornaam"))) as client:
+        with pytest.raises(InvalidLemonDataError) as error:
+            lemon_service.send_scores(client, host=KIOSK_IP, port=4100, payload=payload)
+    assert "Voornaam" not in str(error.value) and "s1" not in str(error.value)
+
+
+def test_failed_stop_message_shows_on_admin_status(lemon_admin, monkeypatch):
+    def fail(client, *, host, port, payload):
+        raise InvalidLemonDataError("Stopbericht naar de kiosk mislukt.")
+
+    monkeypatch.setattr(lemon_service, "send_scores", fail)
+    client = lemon_admin
+    _kiosk(client).post("/api/lemon/session", json=_session())
+    host = paired(client, "host-1")
+    client.post("/api/host/scan", json={"wristband_id": PLAYER_ID}, headers=host)
+    assert client.post("/api/host/verdict", json={"verdict": "GROEN"}, headers=host).status_code == 200
+    assert client.get("/api/admin/lemon", headers=_admin(client)).json()["scores_error"] == "Stopbericht naar de kiosk mislukt."

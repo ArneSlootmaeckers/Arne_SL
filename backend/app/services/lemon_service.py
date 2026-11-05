@@ -7,6 +7,10 @@ de kiosk de spelers van die sessie ter beschikking, op twee manieren:
 - of deze server vraagt ze op bij de kiosk (GET http://<kiosk>:<poort>/players),
   als fallback; aan of uit te zetten in config.yaml.
 
+Na het oordeel van de host (groen of rood) krijgt de kiosk een stopbericht
+(POST http://<kiosk>:<poort>/scores) met de sessionId, gameModeCode en die
+ene speler, zonder score en zonder resultaat (zie scores_payload).
+
 Gegevensafspraak met IT van Sparkx: enkel de UUID van een speler mag
 bewaard worden (als "bandje-ID" in de database en de logs). Naam en avatar
 worden enkel in het geheugen gehouden, zolang de sessie loopt, om op het
@@ -104,8 +108,13 @@ class LemonInbox:
         self._ttl_seconds = ttl_seconds
         self._clock = clock
         self._session: LemonSession | None = None
+        # Speler-UUID -> (sessionId, ontvangen), om na het oordeel het
+        # stopbericht naar de juiste sessie te sturen, ook als er intussen
+        # al een nieuwe sessie binnenkwam. Enkel in het geheugen.
+        self._player_sessions: dict[str, tuple[str, float]] = {}
         self._lock = threading.Lock()
         self.poll_error: str | None = None
+        self.scores_error: str | None = None
 
     def receive(self, payload: object, *, via: str) -> LemonSession | None:
         """Geeft de sessie terug als ze nieuw is, None als ze al gekend was
@@ -120,15 +129,31 @@ class LemonInbox:
             self._session = LemonSession(
                 key=key, players=players, received_at=now_utc(), via=via, received_monotonic=self._clock()
             )
+            if via != "test":  # een testspeler bestaat niet bij de kiosk
+                for player in players:
+                    self._player_sessions[player.id] = (key, self._session.received_monotonic)
             return self._session
 
     def current(self) -> LemonSession | None:
         with self._lock:
             return self._current_locked()
 
+    def take_session_id(self, player_id: str) -> str | None:
+        """De sessionId waarin deze speler van de kiosk kwam, of None als hij
+        niet (meer) van de kiosk komt. Eén keer op te vragen: daarna is de
+        speler afgehandeld."""
+        with self._lock:
+            self._current_locked()
+            entry = self._player_sessions.pop(player_id, None)
+            return None if entry is None else entry[0]
+
     def _current_locked(self) -> LemonSession | None:
         if self._session is not None and self._clock() - self._session.received_monotonic > self._ttl_seconds:
             self._session = None  # naam en avatar weg uit het geheugen
+        now = self._clock()
+        for player_id, (_, received) in list(self._player_sessions.items()):
+            if now - received > self._ttl_seconds:
+                del self._player_sessions[player_id]
         return self._session
 
     def age_seconds(self, session: LemonSession) -> float:
@@ -147,6 +172,23 @@ def fetch_players(client: httpx.Client, *, host: str, port: int) -> object:
         raise InvalidLemonDataError("Kiosk niet bereikbaar.") from None
     except ValueError:
         raise InvalidLemonDataError("Onverwacht antwoord van de kiosk.") from None
+
+
+def scores_payload(session_id: str, player_id: str, *, game_mode_code: str) -> dict:
+    """Stopbericht voor de kiosk na het oordeel (groen of rood): de sessie
+    en één speler. Bewust zonder score en zonder resultaat: of iemand mag
+    springen, gaat nooit naar Lemon. Lemon gebruikt dit enkel om het spel
+    van die speler te stoppen."""
+    return {"sessionId": session_id, "gameModeCode": game_mode_code, "players": [{"id": player_id}]}
+
+
+def send_scores(client: httpx.Client, *, host: str, port: int, payload: dict) -> None:
+    """POST http://<kiosk>:<poort>/scores. Gooit InvalidLemonDataError met
+    een algemene melding; de inhoud komt nooit in een foutmelding."""
+    try:
+        client.post(f"http://{host}:{port}/scores", json=payload).raise_for_status()
+    except httpx.HTTPError:
+        raise InvalidLemonDataError("Stopbericht naar de kiosk mislukt.") from None
 
 
 def test_session_payload() -> dict:

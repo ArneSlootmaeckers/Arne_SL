@@ -236,6 +236,7 @@ def lemon_status(
         "kiosk_port": settings.lemon_kiosk_port,
         "poll_enabled": settings.lemon_poll_enabled,
         "poll_error": inbox.poll_error if settings.lemon_poll_enabled else None,
+        "scores_error": inbox.scores_error,
         "last_session": None if session is None else {
             "received_at": session.received_at,
             "via": session.via,

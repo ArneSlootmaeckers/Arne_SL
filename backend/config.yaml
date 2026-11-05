@@ -20,6 +20,10 @@ extra_allowed_networks: []
 # koppeling uit.
 lemon_kiosk_host: ""
 lemon_kiosk_port: 4100
+# Na elk oordeel (groen of rood) stuurt de server een stopbericht naar
+# http://<kiosk>:<poort>/scores: sessionId, deze gameModeCode en de ene
+# speler (enkel de UUID, geen score en geen resultaat).
+lemon_game_mode_code: "10"
 # Fallback: zet op true als het doorsturen door de kiosk niet werkt; dan
 # vraagt de server de spelers zelf op via http://<kiosk>:<poort>/players.
 lemon_poll_enabled: false

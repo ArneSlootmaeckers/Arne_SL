@@ -41,6 +41,8 @@ class Settings:
     # Fallback: deze server vraagt de spelers zelf op bij de kiosk.
     lemon_poll_enabled: bool = False
     lemon_poll_interval_seconds: float = 2
+    # gameModeCode in het stopbericht naar de kiosk (POST /scores) na een oordeel.
+    lemon_game_mode_code: str = "10"
 
     @property
     def tz(self) -> ZoneInfo:

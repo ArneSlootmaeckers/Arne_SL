@@ -654,6 +654,7 @@ async function loadLemonStatus(info) {
         "Ophalen (GET)",
         status.poll_enabled ? (status.poll_error ? `Aan — ${status.poll_error}` : "Aan") : "Uit (enkel doorsturen)"
       ),
+      statusRow("Stopbericht na oordeel", status.scores_error ?? "In orde"),
       statusRow(
         "Laatste spelers",
         status.last_session

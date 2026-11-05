@@ -12,7 +12,10 @@ geslaagd laten markeren.
 """
 from __future__ import annotations
 
-from fastapi import APIRouter, Depends, Request
+import logging
+
+import httpx
+from fastapi import APIRouter, BackgroundTasks, Depends, Request
 from sqlalchemy.orm import Session
 
 from app.config import Settings
@@ -36,14 +39,31 @@ from app.schemas import (
     VerdictRequest,
     VerdictResponse,
 )
-from app.services import device_service, gate_service, pairing_service, scan_service
+from app.services import device_service, gate_service, lemon_service, pairing_service, scan_service
 from app.services.common import log_event
 from app.services.errors import InvalidPairingCodeError
 from app.services.rate_limit import AttemptLimiter
 
 router = APIRouter(prefix="/api/host", tags=["host"])
+logger = logging.getLogger(__name__)
 
 _FINAL_STATUSES = (Status.GESLAAGD, Status.NIET_GESLAAGD)
+
+
+def _stop_player_at_kiosk(inbox, settings: Settings, payload: dict) -> None:
+    """Na het antwoord aan het hostscherm: de host wacht hier niet op. Een
+    fout wordt enkel kort gemeld (Beheer -> Systeem), zonder inhoud."""
+    try:
+        with httpx.Client(timeout=2.0, trust_env=False) as client:
+            lemon_service.send_scores(
+                client, host=settings.lemon_kiosk_host, port=settings.lemon_kiosk_port, payload=payload
+            )
+        inbox.scores_error = None
+    except lemon_service.InvalidLemonDataError as exc:
+        inbox.scores_error = str(exc)
+    except Exception as exc:
+        logger.warning("Stopbericht naar de Lemon-kiosk mislukt (%s)", type(exc).__name__)
+        inbox.scores_error = "Onverwachte fout bij het stopbericht."
 
 
 @router.post("/pair", response_model=PairResponse)
@@ -145,6 +165,8 @@ def scan(
 @router.post("/verdict", response_model=VerdictResponse)
 def submit_verdict(
     payload: VerdictRequest,
+    request: Request,
+    background: BackgroundTasks,
     db: Session = Depends(get_db),
     settings: Settings = Depends(get_settings),
     gate_controller: GateController = Depends(get_gate_controller),
@@ -163,6 +185,18 @@ def submit_verdict(
             device_id=device.device_id,
             tz=settings.tz,
             gate_controller=gate_controller,
+        )
+
+    # Kwam deze speler van de kiosk, dan krijgt Lemon (bij groen én rood)
+    # een stopbericht: sessie + deze ene speler, geen score, geen resultaat.
+    inbox = request.app.state.lemon_inbox
+    session_id = inbox.take_session_id(outcome.wristband_id)
+    if session_id is not None and settings.lemon_kiosk_host:
+        background.add_task(
+            _stop_player_at_kiosk, inbox, settings,
+            lemon_service.scores_payload(
+                session_id, outcome.wristband_id, game_mode_code=settings.lemon_game_mode_code
+            ),
         )
 
     return VerdictResponse(
