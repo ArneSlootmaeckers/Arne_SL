@@ -2,8 +2,13 @@
 
 Het beheerscherm draait op de **pc**. Dubbelklik op de snelkoppeling
 "Toelatingssysteem" op het bureaublad: het systeem start en het
-beheerscherm opent meteen. De telefoons van de hosts tonen het hostscherm
-(zie `handleiding-host.md`).
+beheerscherm opent meteen, als één venster in de taakbalk. De telefoons
+van de hosts tonen het hostscherm (zie `handleiding-host.md`).
+
+**Venster per ongeluk gesloten?** Geen probleem: het systeem draait
+gewoon verder voor de telefoons. Dubbelklik opnieuw op de snelkoppeling om
+het venster terug te openen. Het systeem echt stoppen gaat enkel via
+**Systeem → Applicatie afsluiten**.
 
 Je kan het beheerscherm ook op een telefoon openen, via de knop
 **"Profiel"** rechtsboven op het hostscherm.

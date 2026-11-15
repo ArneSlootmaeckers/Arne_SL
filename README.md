@@ -95,18 +95,26 @@ De server luistert op twee poorten:
 
 ### Bureaubladsnelkoppeling (Windows)
 
-Voor gebruik op de tablet/pc zelf (niet als aparte server): dubbelklikken
-en meteen in de app zitten, zonder terminal. `setup.ps1` (zie
-"Installatie" hierboven) zet deze automatisch klaar — er is dus niets
-apart voor nodig.
+Voor gebruik op de pc zelf: dubbelklikken en meteen in de app zitten.
+De installer (of `setup.ps1`) zet de snelkoppeling automatisch klaar.
 
-Dubbelklik de snelkoppeling "Toelatingssysteem" op het bureaublad om de
-server te starten (in een apart, geminimaliseerd venster) en meteen het
-**beheerscherm** te openen (de pc is de beheerplek; het hostscherm draait
-op de telefoons) — in een gewoon, verplaatsbaar/herschaalbaar
-browservenster zonder adresbalk/tabbladen (via Chrome of Edge's
-`--app`-modus, als een van beide geïnstalleerd is; anders in een gewone
+Dubbelklik de snelkoppeling "Toelatingssysteem" op het bureaublad: de
+server start onzichtbaar op de achtergrond en het **beheerscherm** opent
+(de pc is de beheerplek; het hostscherm draait op de telefoons). In de
+taakbalk staat dan **één venster**: een gewoon, verplaatsbaar
+browservenster zonder adresbalk of tabbladen (Chrome of Edge in
+`--app`-modus; is geen van beide geïnstalleerd, dan een gewone
 browsertab).
+
+Achter de schermen start de snelkoppeling `backend\desktop.py` met
+`pythonw.exe`, Python zonder consolevenster. Wat de server meldt, komt in
+`data\logs\server.log` (enkel meldingen en fouten; het vorige logbestand
+blijft bewaard als `server.vorige.log`). Lukt het starten niet, dan
+toont Windows een foutmelding met de verwijzing naar dat bestand.
+
+**Venster gesloten?** Dan blijft de server gewoon draaien, zodat de
+telefoons blijven werken. Dubbelklik opnieuw op de snelkoppeling om het
+venster weer te openen.
 
 De telefoon-app zoekt de pc normaal zelf op het netwerk (zie
 `android/webview-app/README.md`). Lukt dat niet, dan staat het adres om in
@@ -121,15 +129,11 @@ telefoon-app" — geen `ipconfig` meer nodig.
 beheerscherm (enkel voor de beheerder). Dat sluit de server netjes af —
 geen `kill -9` of een venster gewoon wegklikken nodig.
 
-Via de bureaubladsnelkoppeling (`start-app.bat`/`start-app.ps1`) sluit het
-browservenster daarbij ook automatisch mee: het script onthoudt welk
-browserproces het gestart is (in een eigen, geïsoleerd profiel) en sluit
-dat proces actief af zodra de server stopt — dit hangt niet af van of de
-pagina zelf haar venster mag sluiten (browsers staan dat normaal niet toe
-voor een venster dat niet via een script geopend is). Werkt enkel als
-Chrome of Edge geïnstalleerd is; is geen van beide gevonden, dan opent de
-snelkoppeling een gewone browsertab die na het afsluiten handmatig
-gesloten moet worden.
+Via de bureaubladsnelkoppeling sluit het app-venster daarbij ook
+automatisch mee: het venster draait in een eigen browserprofiel, en
+`desktop.py` sluit elk browserproces met dat profiel zodra de server
+stopt. Werkt enkel met Chrome of Edge; was geen van beide gevonden, dan
+moet de gewone browsertab handmatig gesloten worden.
 
 ### Startscherm-icoon op Android/tablet
 
@@ -379,7 +383,8 @@ backend/
     hardware/       # hekje- en kussen-sensor-abstracties (dummy-implementaties)
     api/             # FastAPI-routes
   tests/             # unit- en integratietests
-  run.py             # serverlauncher: https op 8000 + lokale http op 8001 (start.sh/start-app.bat/systemd draaien dit)
+  run.py             # serverlauncher: https op 8000 + lokale http op 8001 (start.sh/systemd draaien dit)
+  desktop.py         # Windows: server zonder consolevenster + het app-venster (de snelkoppeling start dit)
   seed.py            # demo-seed (testbandjes + demo-pincodes per groep)
   create_admin.py    # pincode van de beheerder instellen
   config.yaml
@@ -399,8 +404,7 @@ install.sh                          # installatie (Linux/macOS/WSL)
 setup.ps1                           # installatie + bureaubladsnelkoppeling (Windows, alternatief script)
 firewall.ps1                        # Windows-firewall: poort 8000 enkel voor het eigen netwerk (installer voert dit uit)
 start.sh                            # server starten (Linux/macOS/WSL)
-start-app.bat                       # startpunt van de snelkoppeling, roept start-app.ps1 aan
-start-app.ps1                       # server + browser starten, browser mee afsluiten (Windows)
+start-app.bat                       # zelfde als de snelkoppeling, voor wie liever een .bat gebruikt (Windows)
 ```
 
 ## Uitbreidingspunten

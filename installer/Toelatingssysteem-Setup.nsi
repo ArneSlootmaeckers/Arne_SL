@@ -35,7 +35,9 @@ Var AdminPincodeConfirm
 !insertmacro MUI_PAGE_DIRECTORY
 Page custom AdminPageCreate AdminPageLeave
 !insertmacro MUI_PAGE_INSTFILES
-!define MUI_FINISHPAGE_RUN "$INSTDIR\start-app.bat"
+; Zelfde als de snelkoppeling: Python zonder consolevenster (zie backend\desktop.py).
+!define MUI_FINISHPAGE_RUN "$INSTDIR\backend\.venv\Scripts\pythonw.exe"
+!define MUI_FINISHPAGE_RUN_PARAMETERS "$\"$INSTDIR\backend\desktop.py$\""
 !define MUI_FINISHPAGE_RUN_TEXT "Toelatingssysteem nu starten"
 !insertmacro MUI_PAGE_FINISH
 
@@ -141,8 +143,13 @@ Section "Installeren"
     ${EndIf}
   ${EndIf}
 
+  ; Rechtstreeks pythonw.exe (Python zonder consolevenster): zo staat enkel
+  ; het app-venster in de taakbalk, geen console van de server of van een
+  ; opstartscript. SetOutPath = de map "Starten in" van de snelkoppeling.
   DetailPrint "Bureaubladsnelkoppeling aanmaken..."
-  CreateShortcut "$DESKTOP\Toelatingssysteem.lnk" "$INSTDIR\start-app.bat" "" "$INSTDIR\frontend\shared\icons\favicon.ico"
+  Delete "$INSTDIR\start-app.ps1"
+  SetOutPath "$INSTDIR\backend"
+  CreateShortcut "$DESKTOP\Toelatingssysteem.lnk" "$INSTDIR\backend\.venv\Scripts\pythonw.exe" '"$INSTDIR\backend\desktop.py"' "$INSTDIR\frontend\shared\icons\favicon.ico"
 
   WriteUninstaller "$INSTDIR\Uninstall.exe"
   DetailPrint "Installatie voltooid."

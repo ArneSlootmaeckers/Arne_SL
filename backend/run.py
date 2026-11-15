@@ -7,6 +7,9 @@
   vanop deze pc zelf, voor het beheerscherm op de server-pc (zonder
   certificaatwaarschuwing in de browser).
 
+Op de Windows-pc start de bureaubladsnelkoppeling dit niet rechtstreeks,
+maar via desktop.py (zonder consolevenster, met het app-venster erbij).
+
 Bewaart ook een verwijzing naar de hoofdserver op `app.state`, zodat het
 beheerscherm de server netjes kan laten stoppen (zelfde effect als Ctrl+C in
 het serverscherm) via `server.should_exit`. Dat is nodig omdat een OS-signaal
@@ -21,6 +24,7 @@ from __future__ import annotations
 import asyncio
 import contextlib
 import os
+from collections.abc import Callable
 from pathlib import Path
 
 import uvicorn
@@ -38,7 +42,7 @@ class _LocalServer(uvicorn.Server):
         yield
 
 
-async def _serve(main: uvicorn.Server, local: uvicorn.Server) -> None:
+async def _serve(main: uvicorn.Server, local: uvicorn.Server, on_started: Callable[[], object] | None) -> None:
     main_task = asyncio.create_task(main.serve())
     # Pas starten als de hoofdserver klaar is: die zet bij het opstarten
     # (lifespan) de database en instellingen klaar die beide nodig hebben.
@@ -46,6 +50,11 @@ async def _serve(main: uvicorn.Server, local: uvicorn.Server) -> None:
         await asyncio.sleep(0.05)
     local_task = asyncio.create_task(local.serve()) if main.started else None
     try:
+        if local_task is not None and on_started is not None:
+            while not local.started and not local_task.done():
+                await asyncio.sleep(0.05)
+            if local.started:
+                on_started()
         await main_task
     finally:
         if local_task is not None:
@@ -53,7 +62,9 @@ async def _serve(main: uvicorn.Server, local: uvicorn.Server) -> None:
             await local_task
 
 
-if __name__ == "__main__":
+def serve(*, access_log: bool = True, on_started: Callable[[], object] | None = None) -> None:
+    """Start beide servers en draait tot ze stoppen (Ctrl+C of "Applicatie
+    afsluiten"). `on_started` wordt opgeroepen zodra ze klaar zijn."""
     settings = load_settings()
     cert_path, key_path = ensure_certificate(Path(settings.tls_dir))
     host = os.environ.get("TOELATING_HOST", "0.0.0.0")
@@ -64,13 +75,20 @@ if __name__ == "__main__":
     main_server = uvicorn.Server(
         uvicorn.Config(
             app, host=host, port=settings.port, ssl_certfile=cert_path, ssl_keyfile=key_path,
-            proxy_headers=False,
+            proxy_headers=False, access_log=access_log,
         )
     )
     local_server = _LocalServer(
-        uvicorn.Config(app, host="127.0.0.1", port=settings.local_port, lifespan="off", proxy_headers=False)
+        uvicorn.Config(
+            app, host="127.0.0.1", port=settings.local_port, lifespan="off", proxy_headers=False,
+            access_log=access_log,
+        )
     )
     app.state.uvicorn_server = main_server
     # Ctrl+C: beide servers zijn dan al netjes gestopt; geen foutmelding tonen.
     with contextlib.suppress(KeyboardInterrupt):
-        asyncio.run(_serve(main_server, local_server))
+        asyncio.run(_serve(main_server, local_server, on_started))
+
+
+if __name__ == "__main__":
+    serve()

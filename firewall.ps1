@@ -28,6 +28,19 @@ $ErrorActionPreference = "Stop"
 $allowName = "Toelatingssysteem - telefoons (eigen netwerk)"
 $blockName = "Toelatingssysteem - geen toegang vanaf internet"
 
+# De Python-programma's die de server draaien (pythonw.exe: zonder
+# consolevenster, via de snelkoppeling). Zonder eigen regel vraagt Windows
+# bij de eerste start om toegang; wie daar "Annuleren" kiest, maakt een
+# blokkeerregel en de telefoons kunnen er dan niet meer bij. Deze regels
+# laten enkel het eigen netwerk toe; de blokkeerregel hierboven geldt ook
+# voor hen.
+$programs = @(
+    (Join-Path $PSScriptRoot "python\python.exe"),
+    (Join-Path $PSScriptRoot "python\pythonw.exe"),
+    (Join-Path $PSScriptRoot "backend\.venv\Scripts\python.exe"),
+    (Join-Path $PSScriptRoot "backend\.venv\Scripts\pythonw.exe")
+) | Where-Object { Test-Path $_ }
+
 # Eigen netwerk: dezelfde adressen die de server zelf toelaat.
 $localNetworks = @("10.0.0.0/8", "172.16.0.0/12", "192.168.0.0/16", "100.64.0.0/10", "169.254.0.0/16")
 # Alle andere IPv4-adressen, dus het internet (127.x, de pc zelf, laat
@@ -54,8 +67,8 @@ try {
         exit $elevated.ExitCode
     }
 
-    Get-NetFirewallRule -DisplayName $allowName -ErrorAction SilentlyContinue | Remove-NetFirewallRule
-    Get-NetFirewallRule -DisplayName $blockName -ErrorAction SilentlyContinue | Remove-NetFirewallRule
+    # Alle regels van dit programma (ook die van een vorige versie) weg.
+    Get-NetFirewallRule -DisplayName "Toelatingssysteem - *" -ErrorAction SilentlyContinue | Remove-NetFirewallRule
     if ($Remove) {
         Write-Host "Firewallregels van het Toelatingssysteem verwijderd."
         exit 0
@@ -65,6 +78,11 @@ try {
         -LocalPort $Port -RemoteAddress $localNetworks -Profile Any | Out-Null
     New-NetFirewallRule -DisplayName $blockName -Direction Inbound -Action Block -Protocol TCP `
         -LocalPort $Port -RemoteAddress $internetRanges -Profile Any | Out-Null
+    foreach ($program in $programs) {
+        New-NetFirewallRule -DisplayName "Toelatingssysteem - $(Split-Path $program -Leaf) ($program)" `
+            -Direction Inbound -Action Allow -Protocol TCP -LocalPort $Port -RemoteAddress $localNetworks `
+            -Program $program -Profile Any | Out-Null
+    }
     Write-Host "Firewall ingesteld: poort $Port enkel open voor het eigen netwerk, dicht voor internet."
     exit 0
 } catch {

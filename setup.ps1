@@ -81,7 +81,9 @@ try {
     # 4. Bureaubladsnelkoppeling
     Write-Host ""
     Write-Host "Bureaubladsnelkoppeling aanmaken..."
-    $target = Join-Path $scriptDir "start-app.bat"
+    # Python zonder consolevenster (zie backend\desktop.py): enkel het
+    # app-venster komt in de taakbalk.
+    $target = Join-Path $backendDir ".venv\Scripts\pythonw.exe"
     $icon = Join-Path $scriptDir "frontend\shared\icons\favicon.ico"
     $desktop = [Environment]::GetFolderPath("Desktop")
     $shortcutPath = Join-Path $desktop "Toelatingssysteem.lnk"
@@ -89,7 +91,8 @@ try {
     $shell = New-Object -ComObject WScript.Shell
     $shortcut = $shell.CreateShortcut($shortcutPath)
     $shortcut.TargetPath = $target
-    $shortcut.WorkingDirectory = $scriptDir
+    $shortcut.Arguments = "`"$(Join-Path $backendDir "desktop.py")`""
+    $shortcut.WorkingDirectory = $backendDir
     if (Test-Path $icon) {
         $shortcut.IconLocation = $icon
     } else {
