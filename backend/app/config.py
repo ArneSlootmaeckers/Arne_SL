@@ -43,6 +43,8 @@ class Settings:
     lemon_poll_interval_seconds: float = 2
     # gameModeCode in het stopbericht naar de kiosk (POST /scores) na een oordeel.
     lemon_game_mode_code: str = "10"
+    # GitHub-repo waarvan de releases als update gelden (zie update_service).
+    update_repo: str = "ArneSlootmaeckers/Arne_SL"
 
     @property
     def tz(self) -> ZoneInfo:

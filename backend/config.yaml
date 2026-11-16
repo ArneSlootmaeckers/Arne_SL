@@ -29,6 +29,12 @@ lemon_game_mode_code: "10"
 lemon_poll_enabled: false
 lemon_poll_interval_seconds: 2
 
+# --- Updates ---
+# GitHub-repo waarvan de releases als update gelden. Een gewone release is
+# een stabiele versie, een pre-release een beta (nooit automatisch). Of er
+# automatisch bijgewerkt wordt, stel je in op Beheer -> Systeem.
+update_repo: "ArneSlootmaeckers/Arne_SL"
+
 # Hoeveel seconden een oefensprong op bevestiging mag wachten voor die vervalt.
 # (Een scan die op een oordeel wacht, de 1e/2e poging, vervalt nooit.)
 scan_timeout_seconds: 60

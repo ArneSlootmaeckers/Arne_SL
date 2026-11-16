@@ -116,3 +116,41 @@ def test_window_opens_only_when_both_servers_are_ready():
     asyncio.run(asyncio.wait_for(run._serve(main, local, on_started), timeout=5))
     assert seen == [(True, True)]
     assert local.should_exit is True  # de lokale server stopt mee
+
+
+# --- Updates (zie app/services/update_service.py) --------------------------
+
+@pytest.fixture
+def started(monkeypatch):
+    """desktop.main() zonder echte server, browser of nieuw proces."""
+    import update
+
+    monkeypatch.chdir(Path(desktop.__file__).parent)
+    calls = []
+    monkeypatch.setattr(desktop, "server_running", lambda port: False)
+    monkeypatch.setattr(desktop, "open_window", lambda url: calls.append("venster"))
+    monkeypatch.setattr(desktop, "close_window", lambda: calls.append("venster dicht"))
+    monkeypatch.setattr(desktop, "start_fresh_process", lambda: calls.append("opnieuw"))
+    monkeypatch.setattr(update, "run_before_start", lambda: calls.append("updatecontrole") or False)
+    monkeypatch.setattr(run, "serve", lambda **kwargs: calls.append("server"))
+    monkeypatch.setattr(run, "restart_requested", lambda: False)
+    return calls
+
+
+def test_update_check_runs_before_the_server(started):
+    desktop.main()
+    assert started == ["updatecontrole", "server", "venster dicht"]
+
+
+def test_after_installing_an_update_a_fresh_process_starts(started, monkeypatch):
+    import update
+
+    monkeypatch.setattr(update, "run_before_start", lambda: started.append("updatecontrole") or True)
+    desktop.main()
+    assert started == ["updatecontrole", "opnieuw"]  # geen server met de oude code
+
+
+def test_update_button_restarts_the_app(started, monkeypatch):
+    monkeypatch.setattr(run, "restart_requested", lambda: True)
+    desktop.main()
+    assert started == ["updatecontrole", "server", "venster dicht", "opnieuw"]

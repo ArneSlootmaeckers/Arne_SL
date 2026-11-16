@@ -37,6 +37,7 @@ from app.services.errors import (
     WrongResolutionPathError,
 )
 from app.services.employee_service import anonymise_accounts
+from app.services import update_service
 from app.services.lemon_service import InvalidLemonDataError, LemonInbox, fetch_players
 from app.services.log_service import purge_old_events
 from app.services.maintenance_service import create_backup, purge_old_backups
@@ -195,6 +196,10 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     app.state.pairing_limiter = AttemptLimiter()
     # Laatste sessie van de Lemon-kiosk: enkel in het geheugen (namen!).
     app.state.lemon_inbox = LemonInbox()
+    # Updates via GitHub Releases (zie app/services/update_service.py).
+    app.state.install_root = update_service.INSTALL_ROOT
+    app.state.update_http_client = update_service.http_client
+    app.state.update_check = None  # laatste controle, enkel in het geheugen
 
     def _make_handler(status_code: int):
         async def _handler(request: Request, exc: DomainServiceError) -> JSONResponse:
@@ -234,6 +239,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     from app.api.routes_health import router as health_router
     from app.api.routes_host import router as host_router
     from app.api.routes_lemon import router as lemon_router
+    from app.api.routes_updates import router as updates_router
 
     app.include_router(health_router)
     app.include_router(host_router)
@@ -241,6 +247,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     app.include_router(auth_router)
     app.include_router(admin_router)
     app.include_router(lemon_router)
+    app.include_router(updates_router)
 
     # Each screen is a plain static site; mount whichever ones exist yet
     # plus the assets they share.

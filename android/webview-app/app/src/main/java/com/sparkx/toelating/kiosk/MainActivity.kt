@@ -43,8 +43,17 @@ import android.widget.ScrollView
 import android.widget.Switch
 import android.widget.TextView
 import android.widget.Toast
+import androidx.activity.result.ActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.appcompat.app.AlertDialog
 import androidx.appcompat.app.AppCompatActivity
+import androidx.core.content.pm.PackageInfoCompat
+import com.google.android.play.core.appupdate.AppUpdateInfo
+import com.google.android.play.core.appupdate.AppUpdateManager
+import com.google.android.play.core.appupdate.AppUpdateManagerFactory
+import com.google.android.play.core.appupdate.AppUpdateOptions
+import com.google.android.play.core.install.model.AppUpdateType
+import com.google.android.play.core.install.model.UpdateAvailability
 import org.json.JSONObject
 import java.net.URL
 import java.net.URLEncoder
@@ -78,6 +87,10 @@ private const val NFC_DEDUPE_WINDOW_MS = 2000L
 private const val HEALTH_CHECK_INTERVAL_MS = 2000L
 private const val HEALTH_CHECK_TIMEOUT_MS = 2500
 private const val HEALTH_CHECK_FAILURES_BEFORE_ERROR = 1
+
+// Hoe vaak de app hoogstens bij de Play Store navraagt of er een update is,
+// zolang de server een nieuwere app vereist (zie maybeOfferAppUpdate).
+private const val PLAY_UPDATE_CHECK_INTERVAL_MS = 10 * 60_000L
 
 // Zolang het "Geen verbinding"-venster open staat, wordt de server om de
 // zoveel tijd opnieuw op het netwerk gezocht -- bv. voor als de pc na een
@@ -187,6 +200,18 @@ class MainActivity : AppCompatActivity() {
     private var showingFallbackPage = false
     private var settingsDialogShowing = false
 
+    // ---- Verplichte app-update (zie maybeOfferAppUpdate) ----
+    // Minimale versionCode die de server vraagt, uit /api/health.
+    @Volatile
+    private var requiredVersionCode = 0L
+    private var lastPlayUpdateCheckAtMs = 0L
+    private var appUpdateDialog: AlertDialog? = null
+    private var appUpdateRunning = false
+    private val appUpdateManager: AppUpdateManager by lazy { AppUpdateManagerFactory.create(this) }
+    private val appUpdateLauncher = registerForActivityResult(
+        ActivityResultContracts.StartIntentSenderForResult(),
+    ) { result: ActivityResult -> onAppUpdateResult(result.resultCode) }
+
     private val discoveryExecutor: ExecutorService = Executors.newSingleThreadExecutor()
     private var discoveryRunning = false
     private var lastDiscoveryAtMs = 0L
@@ -294,6 +319,7 @@ class MainActivity : AppCompatActivity() {
         // als het venster nog niet volledig op de voorgrond staat.
         mainHandler.post { enterKioskIfEnabled() }
         startHealthChecks()
+        resumeAppUpdateIfInterrupted()
         val adapter = nfcAdapter ?: return
         if (!adapter.isEnabled) {
             Toast.makeText(
@@ -422,7 +448,12 @@ class MainActivity : AppCompatActivity() {
             connection.connectTimeout = HEALTH_CHECK_TIMEOUT_MS
             connection.readTimeout = HEALTH_CHECK_TIMEOUT_MS
             connection.requestMethod = "GET"
-            if (connection.responseCode in 200..299) HealthResult.OK else HealthResult.UNREACHABLE
+            if (connection.responseCode in 200..299) {
+                readRequiredVersion(connection)
+                HealthResult.OK
+            } else {
+                HealthResult.UNREACHABLE
+            }
         } catch (e: Exception) {
             if (generateSequence<Throwable>(e) { it.cause }.any { it is UntrustedCertificateException }) {
                 HealthResult.UNTRUSTED
@@ -443,6 +474,7 @@ class MainActivity : AppCompatActivity() {
             if (connectionErrorShowing) {
                 recoverFromConnectionError()
             }
+            maybeOfferAppUpdate()
             return
         }
         consecutiveHealthFailures++
@@ -1019,6 +1051,120 @@ class MainActivity : AppCompatActivity() {
         @JavascriptInterface
         fun clearDeviceToken() {
             if (fromServerPage()) prefs.edit().remove(KEY_DEVICE_TOKEN).apply()
+        }
+    }
+
+    // ---- Verplichte app-update via de Play Store --------------------------
+    //
+    // De server zegt in /api/health welke versie van deze app hij minstens
+    // nodig heeft (min_android_version_code, zie backend/app/version.py). Is
+    // deze app ouder, dan vraagt ze aan de Play Store of daar al een update
+    // klaarstaat die volstaat. Zo ja: een venster dat niet weg te tikken is,
+    // met een knop die de update uit de Play Store installeert. Zo nee (nog
+    // niet gepubliceerd, of de app komt niet uit de Play Store): niets tonen
+    // en later opnieuw navragen.
+
+    private fun ownVersionCode(): Long =
+        PackageInfoCompat.getLongVersionCode(packageManager.getPackageInfo(packageName, 0))
+
+    /** Draait op de achtergrondthread van de verbindingscontrole. */
+    private fun readRequiredVersion(connection: HttpsURLConnection) {
+        try {
+            val body = connection.inputStream.bufferedReader().use { it.readText() }
+            requiredVersionCode = JSONObject(body).optLong("min_android_version_code", 0L)
+        } catch (e: Exception) {
+            // Een oudere server stuurt dit veld niet: dan geldt geen minimum.
+        }
+    }
+
+    private fun maybeOfferAppUpdate() {
+        if (requiredVersionCode <= ownVersionCode()) {
+            appUpdateDialog?.dismiss()
+            appUpdateDialog = null
+            return
+        }
+        if (appUpdateDialog != null || appUpdateRunning) return
+        val now = System.currentTimeMillis()
+        if (now - lastPlayUpdateCheckAtMs < PLAY_UPDATE_CHECK_INTERVAL_MS) return
+        lastPlayUpdateCheckAtMs = now
+
+        val required = requiredVersionCode
+        appUpdateManager.appUpdateInfo
+            .addOnSuccessListener { info ->
+                if (isFinishing || isDestroyed || appUpdateDialog != null || appUpdateRunning) {
+                    return@addOnSuccessListener
+                }
+                val usable = info.updateAvailability() == UpdateAvailability.UPDATE_AVAILABLE &&
+                    info.isUpdateTypeAllowed(AppUpdateType.IMMEDIATE) &&
+                    info.availableVersionCode().toLong() >= required
+                if (usable) showAppUpdateDialog(info)
+            }
+            .addOnFailureListener {
+                // Geen Play Store, of de app komt er niet uit: negeren.
+            }
+    }
+
+    private fun showAppUpdateDialog(info: AppUpdateInfo) {
+        val panel = brandedPanel()
+        panel.addView(brandedTitle("Update nodig", 12))
+        panel.addView(
+            brandedText(
+                "Het systeem op de pc is bijgewerkt en heeft een nieuwere versie van " +
+                    "deze app nodig. Installeer de update uit de Play Store; dat duurt " +
+                    "ongeveer een minuut.",
+                20,
+            ),
+        )
+        val button = gradientButton("Nu bijwerken", 0)
+        panel.addView(button)
+        val dialog = showBrandedDialog(panel, cancelable = false)
+        appUpdateDialog = dialog
+        button.setOnClickListener {
+            dialog.dismiss()
+            appUpdateDialog = null
+            startAppUpdate(info)
+        }
+    }
+
+    private fun startAppUpdate(info: AppUpdateInfo) {
+        appUpdateRunning = true
+        // Een vastgezette app laat het Play Store-scherm niet toe.
+        if (isInLockTask()) {
+            try {
+                stopLockTask()
+            } catch (e: Exception) {
+                // Lukt het niet, dan probeert de Play Store het toch.
+            }
+        }
+        try {
+            appUpdateManager.startUpdateFlowForResult(
+                info,
+                appUpdateLauncher,
+                AppUpdateOptions.defaultOptions(AppUpdateType.IMMEDIATE),
+            )
+        } catch (e: Exception) {
+            onAppUpdateResult(RESULT_CANCELED)
+        }
+    }
+
+    private fun onAppUpdateResult(resultCode: Int) {
+        if (resultCode == RESULT_OK) return // de Play Store herstart de app zelf
+        // Geannuleerd of mislukt: opnieuw vastzetten, en bij de volgende
+        // geslaagde verbindingscontrole meteen opnieuw navragen.
+        appUpdateRunning = false
+        lastPlayUpdateCheckAtMs = 0L
+        enterKioskIfEnabled()
+    }
+
+    /** Ging de app tijdens een verplichte update naar de achtergrond, dan
+     * moet die volgens de Play Store-regels meteen verder gezet worden. */
+    private fun resumeAppUpdateIfInterrupted() {
+        appUpdateManager.appUpdateInfo.addOnSuccessListener { info ->
+            if (!appUpdateRunning &&
+                info.updateAvailability() == UpdateAvailability.DEVELOPER_TRIGGERED_UPDATE_IN_PROGRESS
+            ) {
+                startAppUpdate(info)
+            }
         }
     }
 

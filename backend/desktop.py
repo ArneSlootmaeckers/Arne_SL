@@ -128,10 +128,21 @@ def main() -> None:
 
     redirect_output_if_windowless(LOG_DIR)
 
+    # Een klaargezette update (of automatisch bijwerken) eerst installeren.
+    # Lukt dat, dan in een vers proces verder: hierboven werd al app-code
+    # geladen, en die moet de nieuwe versie zijn.
+    import update
+
+    if update.run_before_start():
+        start_fresh_process()
+        return
+
+    restart = False
     try:
         import run  # maakt de app al aan: ook een fout hierin hoort een melding te geven
 
         run.serve(access_log=False, on_started=lambda: open_window(url))
+        restart = run.restart_requested()
     except SystemExit as exc:
         if exc.code not in (0, None):
             show_error(
@@ -145,6 +156,18 @@ def main() -> None:
         raise
     finally:
         close_window()
+    if restart:
+        # Gestopt voor een update (Beheer -> Systeem -> Updates): het nieuwe
+        # proces installeert ze en opent het venster opnieuw.
+        start_fresh_process()
+
+
+def start_fresh_process() -> None:
+    """Start desktop.py opnieuw, los van dit proces (dat daarna stopt)."""
+    flags = 0
+    if os.name == "nt":
+        flags = subprocess.DETACHED_PROCESS | subprocess.CREATE_NEW_PROCESS_GROUP
+    subprocess.Popen([sys.executable, str(Path(__file__).resolve())], cwd=BACKEND_DIR, creationflags=flags, close_fds=True)
 
 
 if __name__ == "__main__":

@@ -39,6 +39,8 @@ const EVENT_LABELS = {
   KOPPELEN_GEBLOKKEERD: "Koppelen geblokkeerd (te veel foute codes)",
   LEMON_SESSIE: "Spelers van de kiosk",
   SYSTEEM_AFSLUITEN: "Systeem afgesloten",
+  UPDATE_GESTART: "Update gestart",
+  UPDATE_INSTELLING: "Automatisch bijwerken gewijzigd",
 };
 
 const VERDICT_LABELS = { GROEN: "geslaagd", ROOD: "gefaald" };
@@ -159,6 +161,12 @@ const els = {
   lemonUrls: document.getElementById("lemon-urls"),
   lemonTestBtn: document.getElementById("lemon-test-btn"),
   lemonMessage: document.getElementById("lemon-message"),
+  updateStatus: document.getElementById("update-status"),
+  updateAuto: document.getElementById("update-auto"),
+  updateCheckBtn: document.getElementById("update-check-btn"),
+  updateStableBtn: document.getElementById("update-stable-btn"),
+  updateBetaBtn: document.getElementById("update-beta-btn"),
+  updateMessage: document.getElementById("update-message"),
   devicesTableBody: document.querySelector("#devices-table tbody"),
 
   shutdownBtn: document.getElementById("shutdown-btn"),
@@ -691,10 +699,104 @@ els.lemonTestBtn.addEventListener("click", async () => {
   }
 });
 
+// ---- Updates (Systeem) ------------------------------------------------
+
+function releaseText(release) {
+  if (!release) return "Geen";
+  const date = release.published_at ? ` (${formatTimestamp(release.published_at)})` : "";
+  return `${release.version}${date}${release.newer ? " — nieuwer" : ""}`;
+}
+
+const offeredUpdates = { stable: null, beta: null };
+
+function renderUpdates(info) {
+  const check = info.check;
+  els.updateStatus.textContent = "";
+  els.updateStatus.append(
+    statusRow("Huidige versie", info.current_version),
+    statusRow("Laatste versie", check ? (check.error ?? releaseText(check.stable)) : "Nog niet gecontroleerd"),
+    statusRow("Beta", check && !check.error ? releaseText(check.beta) : "—"),
+    statusRow(
+      "Laatste update",
+      info.last_result ? `${formatTimestamp(info.last_result.at)}: ${info.last_result.message}` : "Nog geen"
+    )
+  );
+  els.updateAuto.checked = info.auto_install;
+
+  const blocked = info.dev_checkout
+    ? "Dit is een ontwikkelkopie (git): werk die bij met git pull."
+    : !info.can_restart
+      ? "De server is niet via de app gestart: installeren kan niet vanaf dit scherm."
+      : null;
+  const stable = check?.stable?.newer ? check.stable : null;
+  const beta = check?.beta?.newer ? check.beta : null;
+  offeredUpdates.stable = stable?.version ?? null;
+  offeredUpdates.beta = beta?.version ?? null;
+  els.updateStableBtn.textContent = stable ? `Bijwerken naar ${stable.version}` : "";
+  els.updateBetaBtn.textContent = beta ? `Beta ${beta.version} installeren` : "";
+  els.updateStableBtn.classList.toggle("hidden", !stable || !!blocked);
+  els.updateBetaBtn.classList.toggle("hidden", !beta || !!blocked);
+  if (blocked && (stable || beta)) showMessage(els.updateMessage, blocked, "error");
+}
+
+async function runUpdateAction(action, errorText) {
+  try {
+    renderUpdates(await action());
+  } catch (err) {
+    if (err instanceof ApiError && err.status === 401) return handleUnauthorized();
+    showMessage(els.updateMessage, err instanceof ApiError ? err.message : errorText, "error");
+  }
+}
+
+function loadUpdates() {
+  return runUpdateAction(() => api.updateStatus(), "Kon de updates niet laden.");
+}
+
+els.updateCheckBtn.addEventListener("click", async () => {
+  els.updateCheckBtn.disabled = true;
+  showMessage(els.updateMessage, "", "success");
+  await runUpdateAction(() => api.checkForUpdates(), "Controleren mislukt.");
+  els.updateCheckBtn.disabled = false;
+});
+
+els.updateAuto.addEventListener("change", () =>
+  runUpdateAction(() => api.setAutoUpdate(els.updateAuto.checked), "Opslaan mislukt.")
+);
+
+async function installUpdate(channel, version) {
+  const beta = channel === "beta" ? "beta-" : "";
+  const confirmed = confirm(
+    `Versie ${version} (${beta}update) installeren?
+
+Het systeem herstart: ongeveer een minuut ` +
+      "werken het host- en beheerscherm niet, ook niet op de telefoons. Mislukt de update, " +
+      "dan wordt de huidige versie teruggezet."
+  );
+  if (!confirmed) return;
+  for (const btn of [els.updateCheckBtn, els.updateStableBtn, els.updateBetaBtn]) btn.disabled = true;
+  showMessage(els.updateMessage, `Versie ${version} downloaden…`, "success");
+  try {
+    await api.installUpdate(channel);
+    showMessage(
+      els.updateMessage,
+      `Versie ${version} wordt geïnstalleerd. Het systeem herstart: dit venster sluit en opent vanzelf opnieuw met de nieuwe versie.`,
+      "success"
+    );
+  } catch (err) {
+    if (err instanceof ApiError && err.status === 401) return handleUnauthorized();
+    showMessage(els.updateMessage, err instanceof ApiError ? err.message : "Installeren mislukt.", "error");
+    for (const btn of [els.updateCheckBtn, els.updateStableBtn, els.updateBetaBtn]) btn.disabled = false;
+  }
+}
+
+els.updateStableBtn.addEventListener("click", () => installUpdate("stable", offeredUpdates.stable));
+els.updateBetaBtn.addEventListener("click", () => installUpdate("beta", offeredUpdates.beta));
+
 async function loadSystemTab() {
   loadDevices();
   const info = await loadNetworkInfo();
   loadLemonStatus(info);
+  loadUpdates();
 }
 
 document.querySelector('.tab-btn[data-tab="systeem"]').addEventListener("click", loadSystemTab);

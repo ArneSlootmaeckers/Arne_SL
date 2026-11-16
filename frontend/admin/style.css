@@ -504,3 +504,16 @@ button.picker-trigger {
 .hidden {
   display: none !important;
 }
+
+/* Updates (Systeem) */
+.update-auto {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 12px 0;
+}
+.update-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}

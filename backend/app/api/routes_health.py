@@ -2,6 +2,8 @@ from datetime import datetime, timezone
 
 from fastapi import APIRouter, Request
 
+from app.version import APP_VERSION, MIN_ANDROID_VERSION_CODE
+
 router = APIRouter(prefix="/api", tags=["health"])
 
 # De Android-app zoekt het lokale netwerk af naar deze waarde, om de server
@@ -16,5 +18,8 @@ def health(request: Request) -> dict:
         "status": "ok",
         "app": SERVER_APP_ID,
         "frontend_version": request.app.state.frontend_version,
+        "app_version": APP_VERSION,
+        # Een oudere Android-app toont dan een updatevenster (zie MainActivity.kt).
+        "min_android_version_code": MIN_ANDROID_VERSION_CODE,
         "server_time": datetime.now(timezone.utc).isoformat(),
     }

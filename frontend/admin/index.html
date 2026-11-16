@@ -129,6 +129,8 @@
             <option value="KOPPELEN_MISLUKT">Koppelen mislukt</option>
             <option value="LEMON_SESSIE">Spelers van de kiosk</option>
             <option value="SYSTEEM_AFSLUITEN">Systeem afgesloten</option>
+            <option value="UPDATE_GESTART">Update gestart</option>
+            <option value="UPDATE_INSTELLING">Automatisch bijwerken gewijzigd</option>
           </select>
           <button type="submit">Zoek</button>
           <button type="button" id="export-csv-btn" class="btn-secondary">Exporteer CSV</button>
@@ -221,6 +223,30 @@
             die anders, dan praat de telefoon niet met deze pc: verwittig dan IT.
           </p>
           <button id="network-refresh-btn" class="btn-secondary">Vernieuwen</button>
+        </div>
+
+        <div class="card">
+          <div class="card-title">Updates</div>
+          <p>
+            Nieuwe versies komen van GitHub. Een gewone versie kan automatisch
+            geïnstalleerd worden bij het opstarten van de app; een beta nooit
+            automatisch, enkel met de knop hieronder. Tijdens een update is het
+            systeem ongeveer een minuut weg, ook op de telefoons: doe het niet
+            midden in een sessie.
+          </p>
+          <table class="data-table update-status">
+            <tbody id="update-status"></tbody>
+          </table>
+          <label class="update-auto">
+            <input type="checkbox" id="update-auto" />
+            Automatisch bijwerken bij het opstarten (enkel gewone versies, geen beta)
+          </label>
+          <div class="update-actions">
+            <button id="update-check-btn" class="btn-secondary">Nu controleren</button>
+            <button id="update-stable-btn" class="hidden"></button>
+            <button id="update-beta-btn" class="btn-secondary hidden"></button>
+          </div>
+          <p id="update-message" class="message hidden"></p>
         </div>
 
         <div class="card">

@@ -24,12 +24,20 @@ from __future__ import annotations
 import asyncio
 import contextlib
 import os
+import sys
 from collections.abc import Callable
 from pathlib import Path
 
 import uvicorn
 
-from app.config import load_settings
+if __name__ == "__main__":
+    # Eerst een update installeren, vóór de app-code hieronder geladen wordt
+    # (desktop.py doet hetzelfde vóór `import run`).
+    import update
+
+    update.run_before_start()
+
+from app.config import load_settings  # noqa: E402
 from app.tls import ensure_certificate
 from asgi import app
 
@@ -90,5 +98,19 @@ def serve(*, access_log: bool = True, on_started: Callable[[], object] | None = 
         asyncio.run(_serve(main_server, local_server, on_started))
 
 
+# Moet gelijk zijn aan update_service.EXIT_CODE_RESTART.
+EXIT_CODE_RESTART = 3
+
+
+def restart_requested() -> bool:
+    """Gestopt om een update te installeren (Beheer -> Systeem -> Updates)?"""
+    return bool(getattr(app.state, "restart_for_update", False))
+
+
 if __name__ == "__main__":
     serve()
+    if restart_requested():
+        # systemd (Restart=on-failure) start de server opnieuw; dan
+        # installeert run_before_start de klaargezette update.
+        print("Update klaargezet; de server start opnieuw op om ze te installeren.")
+        sys.exit(EXIT_CODE_RESTART)

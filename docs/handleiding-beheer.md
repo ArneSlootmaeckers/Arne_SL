@@ -158,6 +158,49 @@ map `data` te bewaren. Oplossen, per telefoon:
    daarna **Opslaan**. Zijn ze verschillend, doe dan niets en verwittig
    IT: dan doet mogelijk een ander toestel zich voor als de pc.
 
+## Updates
+
+Op het tabblad **Systeem**, blok **Updates** (enkel voor de beheerder):
+
+- **Nu controleren**: kijkt op GitHub of er een nieuwere versie is.
+- **Bijwerken naar …**: installeert de nieuwste gewone versie met één klik.
+- **Beta … installeren**: installeert een beta (testversie) met één klik.
+  Een beta wordt nooit automatisch geïnstalleerd.
+- **Automatisch bijwerken bij het opstarten**: staat dit aan, dan
+  installeert de app bij elke start eerst de nieuwste gewone versie (geen
+  beta). Opstarten duurt dan wat langer.
+
+Tijdens een update herstart het systeem: ongeveer een minuut werken het
+host- en beheerscherm niet, ook niet op de telefoons. Doe het dus niet
+midden in een sessie. Het venster op de pc sluit en opent vanzelf opnieuw
+zodra de nieuwe versie draait. Lukt de update niet, dan wordt de vorige versie
+teruggezet; dat staat dan bij **Laatste update**. De database, back-ups,
+het certificaat en `backend/config.yaml` worden nooit aangeraakt.
+
+### Telefoons
+
+Heeft een nieuwe versie op de pc ook een nieuwere app nodig, dan toont de
+app op elke telefoon het venster **Update nodig**, met een knop die de
+update uit de Play Store installeert. Dat venster komt pas als die
+nieuwe app ook echt in de Play Store staat; tot dan werkt de oude app
+gewoon verder. Een vastgezette app wordt daarvoor even losgemaakt.
+
+### Een nieuwe versie uitbrengen (voor wie de code onderhoudt)
+
+1. Zet het nieuwe versienummer in `backend/app/version.py` (`APP_VERSION`),
+   bv. `1.3.0`, of `1.4.0-beta.1` voor een beta.
+2. Commit en push.
+3. Maak op GitHub een release met als tag hetzelfde nummer met een `v`
+   ervoor (`v1.3.0`). Voor een beta: vink **Set as a pre-release** aan.
+   De pc's weigeren een release waarvan de tag en `APP_VERSION` verschillen.
+
+Heeft deze versie een nieuwere telefoon-app nodig:
+
+1. Verhoog `versionCode` in `android/webview-app/app/build.gradle.kts` en
+   publiceer die app in de Play Store.
+2. Zet `MIN_ANDROID_VERSION_CODE` in `backend/app/version.py` op diezelfde
+   `versionCode`, en breng de serverversie uit zoals hierboven.
+
 ## Technisch onderhoud
 
 Voor installatie, opstarten, de pincode van de beheerder en back-ups: zie

@@ -129,6 +129,10 @@ export const api = {
   pairedDevices: () => request("GET", "/api/admin/devices"),
   unpairDevice: (deviceId) => request("DELETE", `/api/admin/devices/${encodeURIComponent(deviceId)}`),
   shutdown: () => request("POST", "/api/admin/shutdown"),
+  updateStatus: () => request("GET", "/api/admin/updates"),
+  checkForUpdates: () => request("POST", "/api/admin/updates/check"),
+  setAutoUpdate: (autoInstall) => request("PUT", "/api/admin/updates/settings", { auto_install: autoInstall }),
+  installUpdate: (channel) => request("POST", "/api/admin/updates/install", { channel }),
 };
 
 /** Polls /api/health and calls onStatusChange(true|false) whenever connectivity flips.
