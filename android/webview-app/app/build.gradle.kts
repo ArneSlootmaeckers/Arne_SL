@@ -14,8 +14,8 @@ android {
         // Verhogen bij elke Play Store-release. Heeft een nieuwe serverversie
         // deze app nodig, zet dan MIN_ANDROID_VERSION_CODE in
         // backend/app/version.py op dit getal.
-        versionCode = 3
-        versionName = "3.0"
+        versionCode = 4
+        versionName = "4.0"
     }
 
     buildTypes {

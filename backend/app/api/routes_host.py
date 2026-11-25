@@ -41,7 +41,7 @@ from app.schemas import (
 )
 from app.services import device_service, gate_service, lemon_service, pairing_service, scan_service
 from app.services.common import log_event
-from app.services.errors import InvalidPairingCodeError
+from app.services.errors import InvalidPairingCodeError, PermissionDeniedError
 from app.services.rate_limit import AttemptLimiter
 
 router = APIRouter(prefix="/api/host", tags=["host"])
@@ -127,11 +127,16 @@ def current_device(
 @router.post("/scan", response_model=ScanResponse)
 def scan(
     payload: ScanRequest,
+    request: Request,
     db: Session = Depends(get_db),
     settings: Settings = Depends(get_settings),
     gate_controller: GateController = Depends(get_gate_controller),
     device: PairedDeviceModel = Depends(require_paired_device),
 ) -> ScanResponse:
+    """Opent een speler die van de kiosk kwam. Enkel de kiosk levert nog
+    spelers aan: een ander bandje-ID (bv. van een NFC-scan) wordt geweigerd."""
+    if not request.app.state.lemon_inbox.is_kiosk_player(payload.wristband_id):
+        raise PermissionDeniedError("Spelers komen enkel binnen via de kiosk.")
     result = scan_service.register_scan(
         db,
         wristband_id=payload.wristband_id,

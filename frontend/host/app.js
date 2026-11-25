@@ -8,11 +8,9 @@ import {
   setDeviceToken,
   startHealthPolling,
 } from "../shared/api.js";
-import { KeyboardWedgeReader, NativeBridgeReader, SimulatedReader } from "../shared/reader.js";
 import { playFailureSound, playNeutralSound, playSuccessSound } from "../shared/sound.js";
 
 const POLLING_INTERVAL_MS = 3000;
-const TEST_WRISTBANDS = ["TEST-001", "TEST-002", "TEST-003", "TEST-004"];
 const CONFIRMATION_DISPLAY_MS = 3000;
 const FINAL_RESULT_DISPLAY_MS = 5000;
 const REJECTED_TOAST_MS = 2500;
@@ -58,7 +56,6 @@ const els = {
   btnGroen: document.getElementById("btn-groen"),
   btnRood: document.getElementById("btn-rood"),
   btnCancel: document.getElementById("btn-cancel"),
-  simPanel: document.getElementById("sim-panel"),
 };
 
 let countdownInterval = null;
@@ -241,11 +238,13 @@ function openPlayer(player) {
   handleScan(player.id, player);
 }
 
+// Spelers komen enkel nog binnen via de kiosk: bandjes scannen met de
+// telefoon (NFC) of met een losse lezer kan niet meer.
 function showLemonWaitingText(enabled) {
-  els.waitingTitle.textContent = enabled ? "Wacht op de volgende speler" : "Scan het bandje";
+  els.waitingTitle.textContent = enabled ? "Wacht op de volgende speler" : "Geen kiosk ingesteld";
   els.waitingHint.textContent = enabled
-    ? "Spelers komen vanzelf binnen via de kiosk, of scan een bandje."
-    : "Wacht op een scan…";
+    ? "Spelers komen vanzelf binnen via de kiosk."
+    : "Een beheerder stelt de kiosk in op Beheer → Systeem.";
 }
 
 async function pollLemon() {
@@ -387,14 +386,7 @@ els.btnRood.addEventListener("click", () => handleVerdict("ROOD"));
 els.btnCancel.addEventListener("click", handleCancel);
 els.pairForm.addEventListener("submit", handlePair);
 
-new KeyboardWedgeReader().start(handleScan);
-new NativeBridgeReader().start(handleScan);
-
 const params = new URLSearchParams(location.search);
-if (params.get("sim") === "1") {
-  document.body.classList.add("sim-mode");
-  new SimulatedReader(els.simPanel, TEST_WRISTBANDS).start(handleScan);
-}
 
 // De Android-app geeft de naam van dit toestel mee in het adres
 // (?toestel=Host%201). Onthouden, want via "Profiel" → "← Host" komt de

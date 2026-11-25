@@ -171,6 +171,21 @@ class LemonInbox:
         with self._lock:
             return self._current_locked()
 
+    def is_kiosk_player(self, player_id: str) -> bool:
+        """Mag deze speler op het hostscherm geopend worden? Enkel spelers die
+        van de kiosk kwamen (en nog geen oordeel kregen), of de testspeler van
+        Beheer -> Systeem. Een bandje zelf scannen (NFC of een lezer) kan
+        niet meer: spelers komen enkel nog binnen via de kiosk."""
+        with self._lock:
+            current = self._current_locked()
+            if player_id in self._player_sessions:
+                return True
+            return (
+                current is not None
+                and current.via == "test"
+                and any(player.id == player_id for player in current.players)
+            )
+
     def take_session_id(self, player_id: str) -> str | None:
         """De sessionId waarin deze speler van de kiosk kwam, of None als hij
         niet (meer) van de kiosk komt. Eén keer op te vragen: daarna is de

@@ -2,16 +2,16 @@
 
 Een dunne Android-app rond het bestaande, al volledig geteste hostscherm/
 beheerscherm (`backend/` + `frontend/`): eigen icoon op het startscherm,
-geen adresbalk, en scant bandjes met de NFC-chip van de telefoon zelf. De
-server blijft draaien op een pc op het lokale netwerk, precies zoals nu —
-deze app toont dezelfde pagina als een browser zou doen en geeft er enkel
-een NFC-scan aan door, verder verandert er niets.
+geen adresbalk. De server blijft draaien op een pc op het lokale netwerk,
+precies zoals nu — deze app toont dezelfde pagina als een browser zou doen.
+Bandjes scannen met de telefoon kan niet: spelers komen enkel binnen via de
+Lemon-kiosk (zie "Geen NFC" hieronder).
 
 Wat dit dus **niet** is: geen standalone app die zelf de server draait
 (dat zou de volledige native herbouw uit `android/domain/` zijn — zie
 `../README.md`, gepauzeerd op fase 1/5). Deze app is de snellere, kleinere
 stap: dezelfde functionaliteit en dezelfde server, gewoon met een beter
-uiterlijk en een ingebouwde scanner op een telefoon/tablet.
+uiterlijk op een telefoon/tablet.
 
 ## Status: gebouwd en werkend bevestigd
 
@@ -19,8 +19,7 @@ Deze omgeving heeft geen toegang tot het Android SDK (Google's
 downloadservers zijn geblokkeerd — zie `../README.md`), dus de code kon hier
 enkel met de hand nagekeken worden, niet gecompileerd. Ze is intussen wel
 echt gebouwd in Android Studio en op een fysiek toestel uitgeprobeerd:
-verbinding met de server, hostscherm en de NFC-scan met een echt bandje
-werken. Bij een nieuwe checkout/wijziging kan een eerste Gradle-sync nog
+verbinding met de server en het hostscherm werken. Bij een nieuwe checkout/wijziging kan een eerste Gradle-sync nog
 steeds een versie-update voorstellen (AGP/Kotlin) — gewoon accepteren, dat
 is normaal.
 
@@ -192,34 +191,16 @@ beheerd toestel. Daardoor:
 
 Nog niet getest op een echt toestel.
 
-## NFC scannen met de telefoon
+## Geen NFC: spelers komen via de kiosk
 
-Bandje tegen de achterkant van de telefoon houden is genoeg: de app leest
-de hardware-UID van het tagje (via Android's `NfcAdapter`, zie
-`MainActivity.kt`) en geeft die door aan de pagina, op dezelfde manier als
-een USB-lezer dat vandaag doet. Werkt op **beide** schermen: op het
-hostscherm start het een scan (zelfde flow als vandaag); op het
-beheerscherm (tab "Bandje") vult het automatisch het bandje-ID-veld in en
-toont meteen de status. Bandjes registreren zichzelf automatisch bij de
-eerste scan (zie `backend/app/services/common.py`), dus er is geen vooraf
-ingestelde lijst van geldige bandjes nodig — eender welk NFC-tagje werkt.
+Bandjes scannen met de telefoon kan niet meer (sinds versionCode 4):
+bezoekers scannen hun bandje enkel aan de Lemon-kiosk, en de spelers
+verschijnen vanzelf op het hostscherm. Zolang de app open is, vangt ze een
+bandje dat tegen de telefoon gehouden wordt wel op (Android's reader mode,
+zie `ignoreNfcTags` in `MainActivity.kt`), maar doet er niets mee: zo toont
+Android geen eigen melding, maakt het geen geluid en opent het geen andere
+app.
 
-Aandachtspunten:
-- **NFC moet aanstaan** in de Android-instellingen van het toestel. Staat
-  het uit, dan toont de app een korte melding. Heeft het toestel helemaal
-  geen NFC-chip, dan werkt deze functie niet, maar blijft de rest van de
-  app (en het beheerscherm) gewoon bruikbaar.
-- Zolang het bandje tegen het toestel blijft liggen, negeert de app
-  herhaalde detecties van hetzelfde tagje twee seconden lang, om geen
-  dubbele scans te sturen.
-- **Bevestigd werkend met een echt toestel en een echt NFC-bandje**
-  tijdens de eerste installatie.
-
-## Nog steeds ondersteund: externe NFC-lezer
-
-Een los USB/Bluetooth NFC-lezer die als toetsenbord werkt (typt het
-bandje-ID + Enter — zie `frontend/shared/reader.js`: `KeyboardWedgeReader`)
-blijft ook werken, aangesloten op de telefoon via USB-OTG of
-Bluetooth-koppeling: een WebView geeft toetsaanslagen van fysieke
-toetsenborden gewoon door aan de pagina, net als een browser op een pc.
-Ook dit pad is niet met echte hardware getest.
+Een oudere versie van de app (versionCode 3 of lager) leest bandjes nog
+wel, maar dat heeft geen effect meer: het hostscherm luistert er niet meer
+naar, en de server weigert elk ID dat niet van de kiosk kwam.

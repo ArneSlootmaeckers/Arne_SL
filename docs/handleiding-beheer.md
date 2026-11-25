@@ -119,10 +119,6 @@ mogen bandjes scannen en een oordeel geven.
 - **Ontkoppelen**: de telefoon kan meteen niets meer (bv. bij verlies of
   diefstal). Opnieuw gebruiken kan pas met een nieuwe koppelcode.
 
-**Simulatiemodus** opent het hostscherm met een paneel van testbandjes,
-om te oefenen of te demonstreren zonder een echt bandje. Ook dat scherm
-moet de eerste keer gekoppeld worden met een koppelcode.
-
 **Applicatie afsluiten** sluit het systeem netjes af: het host- en
 beheerscherm werken vanaf dan niet meer, ook niet op de telefoons. Vraagt
 eerst een bevestiging. Opnieuw opstarten kan **enkel via de pc zelf**

@@ -2,9 +2,7 @@ package com.sparkx.toelating.kiosk
 
 import android.annotation.SuppressLint
 import android.app.ActivityManager
-import android.app.PendingIntent
 import android.content.Context
-import android.content.Intent
 import android.content.SharedPreferences
 import android.content.res.ColorStateList
 import android.graphics.Bitmap
@@ -15,8 +13,6 @@ import android.net.ConnectivityManager
 import android.net.Uri
 import android.net.http.SslError
 import android.nfc.NfcAdapter
-import android.nfc.Tag
-import android.os.Build
 import android.os.Bundle
 import android.os.Handler
 import android.os.Looper
@@ -71,10 +67,6 @@ private const val KEY_DEVICE_NAME = "device_name"
 private const val KEY_DEVICE_TOKEN = "device_token"
 private const val SCREEN_HOST = "/"
 private const val SCREEN_ADMIN = "/admin/"
-
-// Zelfde tagje binnen dit venster genegeerd: Android's foreground dispatch kan
-// meerdere keren afvuren zolang het bandje tegen het toestel blijft liggen.
-private const val NFC_DEDUPE_WINDOW_MS = 2000L
 
 // Hoe vaak (en na hoeveel mislukkingen op rij) een verloren serververbinding
 // gedetecteerd wordt, los van de pagina's eigen (JS-only) verbindingsbanner --
@@ -132,21 +124,11 @@ private const val FALLBACK_PAGE_HTML =
  * instellingenscherm (serveradres, host-/beheerscherm) -- bewust lang, zodat
  * dit niet per ongeluk gebeurt tijdens normaal gebruik van de knoppen.
  *
- * Twee manieren om een bandje te scannen komen hier samen op dezelfde
- * pagina, via dezelfde reader-interface (zie frontend/shared/reader.js):
- * - Een USB/Bluetooth-lezer die als toetsenbord werkt (KeyboardWedgeReader)
- *   stuurt toetsaanslagen door naar de pagina in de WebView, net als in een
- *   gewone browser.
- * - De NFC-chip van de telefoon zelf (deze klasse, via Android's
- *   NfcAdapter + foreground dispatch): leest de hardware-UID van het
- *   tagje en geeft die door aan `window.ToelatingNativeBridge.onScan(id)`,
- *   die de reader.js-kant hier expliciet voor blootstelt (NativeBridgeReader).
- *   Bandjes registreren zichzelf automatisch bij de eerste scan (zie
- *   backend/app/services/common.py: get_or_create_wristband), dus de
- *   hardware-UID als ID gebruiken vergt geen vooraf ingestelde lijst.
- *
- * De NFC-chip-scan is bevestigd werkend met een echt toestel en een echt
- * tagje. Het externe USB/Bluetooth-lezerpad is niet apart getest.
+ * Bandjes scannen met de telefoon (NFC) kan niet meer: spelers komen enkel
+ * nog binnen via de Lemon-kiosk (zie backend/app/services/lemon_service.py).
+ * Zolang de app open is, vangt ze een bandje dat tegen de telefoon gehouden
+ * wordt wel op, maar doet er niets mee (ignoreNfcTags): zo toont Android geen
+ * eigen melding, maakt het geen geluid en opent het geen andere app.
  *
  * Verbindingsverlies: de pagina zelf toont al een banner via haar eigen
  * (JavaScript-only) polling (frontend/shared/api.js: startHealthPolling) --
@@ -183,8 +165,6 @@ class MainActivity : AppCompatActivity() {
     private lateinit var serverDiscovery: ServerDiscovery
     private lateinit var serverCertificate: ServerCertificate
     private var nfcAdapter: NfcAdapter? = null
-    private var lastNfcTagId: String? = null
-    private var lastNfcTagAtMs: Long = 0L
     private var settingsHoldRunnable: Runnable? = null
 
     private val mainHandler = Handler(Looper.getMainLooper())
@@ -320,29 +300,13 @@ class MainActivity : AppCompatActivity() {
         mainHandler.post { enterKioskIfEnabled() }
         startHealthChecks()
         resumeAppUpdateIfInterrupted()
-        val adapter = nfcAdapter ?: return
-        if (!adapter.isEnabled) {
-            Toast.makeText(
-                this,
-                "NFC staat uit — zet dit aan in de toestelinstellingen om bandjes te kunnen scannen.",
-                Toast.LENGTH_LONG,
-            ).show()
-            return
-        }
-        val intent = Intent(this, javaClass).addFlags(Intent.FLAG_ACTIVITY_SINGLE_TOP)
-        val piFlags = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
-            PendingIntent.FLAG_MUTABLE or PendingIntent.FLAG_UPDATE_CURRENT
-        } else {
-            PendingIntent.FLAG_UPDATE_CURRENT
-        }
-        val pendingIntent = PendingIntent.getActivity(this, 0, intent, piFlags)
-        adapter.enableForegroundDispatch(this, pendingIntent, null, null)
+        ignoreNfcTags(true)
     }
 
     override fun onPause() {
         super.onPause()
         stopHealthChecks()
-        nfcAdapter?.disableForegroundDispatch(this)
+        ignoreNfcTags(false)
     }
 
     override fun onDestroy() {
@@ -351,31 +315,29 @@ class MainActivity : AppCompatActivity() {
         discoveryExecutor.shutdownNow()
     }
 
-    override fun onNewIntent(intent: Intent) {
-        super.onNewIntent(intent)
-        val tag: Tag? = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
-            intent.getParcelableExtra(NfcAdapter.EXTRA_TAG, Tag::class.java)
-        } else {
-            @Suppress("DEPRECATION")
-            intent.getParcelableExtra(NfcAdapter.EXTRA_TAG)
+    /** Een bandje tegen de telefoon wordt opgevangen en genegeerd: er wordt
+     * niets gescand en niets doorgegeven (spelers komen enkel via de kiosk).
+     * Zonder dit zou Android zelf iets met het tagje doen (een melding, een
+     * geluid, of een andere app openen). */
+    private fun ignoreNfcTags(enabled: Boolean) {
+        val adapter = nfcAdapter ?: return
+        try {
+            if (enabled && adapter.isEnabled) {
+                adapter.enableReaderMode(
+                    this,
+                    { /* bewust niets */ },
+                    NfcAdapter.FLAG_READER_NFC_A or NfcAdapter.FLAG_READER_NFC_B or
+                        NfcAdapter.FLAG_READER_NFC_F or NfcAdapter.FLAG_READER_NFC_V or
+                        NfcAdapter.FLAG_READER_NFC_BARCODE or NfcAdapter.FLAG_READER_SKIP_NDEF_CHECK or
+                        NfcAdapter.FLAG_READER_NO_PLATFORM_SOUNDS,
+                    null,
+                )
+            } else if (!enabled) {
+                adapter.disableReaderMode(this)
+            }
+        } catch (e: Exception) {
+            // Sommige toestellen weigeren dit (bv. NFC net uitgezet): niet erg.
         }
-        handleNfcTag(tag)
-    }
-
-    private fun handleNfcTag(tag: Tag?) {
-        val tagId = tag?.id
-        if (tagId == null || tagId.isEmpty()) return
-
-        val hexId = tagId.joinToString("") { "%02X".format(it) }
-        val now = System.currentTimeMillis()
-        if (hexId == lastNfcTagId && now - lastNfcTagAtMs < NFC_DEDUPE_WINDOW_MS) return
-        lastNfcTagId = hexId
-        lastNfcTagAtMs = now
-
-        webView.evaluateJavascript(
-            "window.ToelatingNativeBridge && window.ToelatingNativeBridge.onScan(${JSONObject.quote(hexId)});",
-            null,
-        )
     }
 
     /** Opent de instellingen pas nadat het scherm SETTINGS_HOLD_DURATION_MS

@@ -3,9 +3,10 @@
 
     <uses-permission android:name="android.permission.INTERNET" />
     <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
+    <!-- NFC: enkel om een bandje dat tegen de telefoon gehouden wordt op te
+         vangen en te negeren (er wordt niets meer gescand; spelers komen via de
+         Lemon-kiosk). required="false": werkt ook op een toestel zonder NFC. -->
     <uses-permission android:name="android.permission.NFC" />
-    <!-- required="false": het beheerscherm en het bestaande USB/Bluetooth-lezerpad
-         blijven bruikbaar op een toestel zonder NFC-chip. -->
     <uses-feature android:name="android.hardware.nfc" android:required="false" />
 
     <application

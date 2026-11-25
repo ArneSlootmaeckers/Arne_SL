@@ -36,11 +36,20 @@ def test_settings(tmp_path: Path) -> Settings:
     )
 
 
+def allow_any_wristband(app) -> None:
+    """In productie opent het hostscherm enkel spelers die van de kiosk kwamen
+    (zie LemonInbox.is_kiosk_player). De meeste tests gaan over de statussen
+    en scannen daarom gewoon een vrij bandje-ID; die regel zelf wordt getest
+    in test_lemon.py (met een gewone TestClient, zonder deze uitzondering)."""
+    app.state.lemon_inbox.is_kiosk_player = lambda _player_id: True
+
+
 @pytest.fixture
 def client(test_settings: Settings):
     app = create_app(test_settings)
     # Een adres op het eigen netwerk: de server weigert internetadressen.
     with TestClient(app, client=("192.168.1.20", 50000)) as test_client:
+        allow_any_wristband(app)
         yield test_client
 
 

@@ -149,7 +149,7 @@ het zelfgemaakte certificaat niet vertrouwt, blijft de adresbalk zichtbaar
 bovenaan, en het toestel moet net als de app gekoppeld worden.
 
 Voor een echte, installeerbare Android-app (eigen icoon, geen adresbalk,
-volledig scherm, en scant bandjes met de NFC-chip van de telefoon zelf)
+volledig scherm)
 zonder die beperking, zie **[`android/webview-app/`](android/webview-app/README.md)**
 — toont hetzelfde host-/beheerscherm, gebouwd met Android Studio; de server
 blijft wel op een pc draaien. Er is daarnaast een gepauzeerde, veel grotere
@@ -268,17 +268,20 @@ Een speler verschijnt op elk gekoppeld hostscherm tegelijk. Krijgt hij op
 één toestel een oordeel, dan vervalt hij op de andere, zodat hij nooit
 twee keer beoordeeld wordt.
 
-## Simulatiemodus (ontwikkeling en demo)
+## Enkel via de kiosk
 
-Zonder een fysieke bandjeslezer kan elk scherm met `?sim=1` achter de URL
-geopend worden (bv. `http://127.0.0.1:8001/host/?sim=1`) — of, sneller,
-via de knop **"Open hostscherm in simulatiemodus"** op het tabblad
-**"Systeem"** van het beheerscherm. Ook dan moet de browser eerst
-gekoppeld worden (zie "Beveiliging"). Dat toont een paneel onderaan met een
-paar testbandjes om op te klikken, en een veld om een willekeurig
-bandje-ID in te typen. Een lezer die zich als toetsenbord gedraagt
-(bandje-ID + Enter) werkt op elk scherm sowieso al, ook zonder `?sim=1` —
-er hoeft geen tekstveld actief te zijn.
+Spelers komen **enkel binnen via de Lemon-kiosk**. Bandjes scannen met de
+telefoon (NFC), met een losse lezer of via een simulatiepaneel kan niet
+meer: het hostscherm heeft geen lezer meer, de Android-app vangt een
+bandje tegen de telefoon op en negeert het, en de server weigert op
+`/api/host/scan` elk ID dat niet van de kiosk kwam ("Spelers komen enkel
+binnen via de kiosk."). Zie `LemonInbox.is_kiosk_player` in
+`backend/app/services/lemon_service.py`. Een speler kan geopend worden
+zolang hij nog geen oordeel kreeg; voor een volgende poging scant hij
+opnieuw aan de kiosk.
+
+Testen zonder kiosk: **Testspeler sturen** op Beheer → Systeem stuurt een
+verzonnen speler naar elk gekoppeld hostscherm.
 
 Om meteen wat testbandjes en demo-pincodes te hebben:
 
@@ -421,9 +424,6 @@ start-app.bat                       # zelfde als de snelkoppeling, voor wie liev
 
 ## Uitbreidingspunten
 
-- **Andere bandjeslezer** (serieel, netwerk, …): een nieuwe implementatie
-  van de `ReaderSource`-interface in `frontend/shared/reader.js`, naast
-  `KeyboardWedgeReader` en `SimulatedReader`.
 - **Echt hekje**: een nieuwe implementatie van `GateController` in
   `backend/app/hardware/gate_controller.py`, geselecteerd via
   `gate_controller` in `config.yaml`.

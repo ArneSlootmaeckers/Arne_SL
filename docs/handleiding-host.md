@@ -2,8 +2,11 @@
 
 Het hostscherm draait op de **telefoon**, in de app "Toelatingssysteem".
 Dit ene scherm doet twee dingen: de testsprong beoordelen, én meteen ook
-tonen of de bezoeker naar de Ski Jump mag. Je hoeft dus nergens anders
-opnieuw te scannen.
+tonen of de bezoeker naar de Ski Jump mag.
+
+Bezoekers scannen hun bandje **enkel aan de kiosk** van de experience. Met
+de telefoon zelf wordt niets gescand: een bandje tegen de telefoon houden
+doet niets.
 
 De pc waar het systeem op draait, toont het beheerscherm (zie
 `handleiding-beheer.md`). De pc moet aan staan en het systeem moet draaien,
@@ -45,11 +48,13 @@ Vijf keer een foute code na elkaar? Dan blokkeert het systeem de telefoon
 
 ## Spelers van de kiosk
 
-Staat de koppeling met de kiosk van Lemon aan, dan toont het scherm
-**"Wacht op de volgende speler"**. Zodra een speler aan de kiosk start,
-verschijnt hij vanzelf: voornaam, de eerste letter van de achternaam en
-de foto. Je hoeft dan niets te scannen: geef gewoon het oordeel zoals
-hieronder bij "Werking".
+Het scherm toont **"Wacht op de volgende speler"**. Zodra een speler aan
+de kiosk start, verschijnt hij vanzelf: voornaam, de eerste letter van de
+achternaam en de foto. Geef dan het oordeel zoals hieronder bij "Werking".
+
+Staat er **"Geen kiosk ingesteld"**, dan komen er geen spelers binnen:
+vraag een beheerder om de kiosk in te stellen (beheerscherm, tabblad
+**Systeem**).
 
 - **Meerdere spelers tegelijk?** Dan verschijnt **"Wie springt er?"** met
   een knop per speler. Tik op wie nu springt. Na het oordeel kies je de
@@ -59,17 +64,11 @@ hieronder bij "Werking".
 - Namen worden nergens bewaard; ze staan enkel op het scherm zolang de
   speler aan de beurt is.
 
-## Een bandje scannen
-
-Houd het bandje tegen de **achterkant van de telefoon**, tot het scherm
-reageert. De NFC-functie van de telefoon moet aan staan; staat ze uit, dan
-toont de app een melding.
-
 ## Werking
 
-1. Het scherm toont **"Scan het bandje"** en wacht.
-2. De bezoeker scant het bandje. Je ziet meteen het bandjenummer en de
-   status van vandaag, met een duidelijke kleur:
+1. Het scherm toont **"Wacht op de volgende speler"**.
+2. De bezoeker scant zijn bandje aan de kiosk. Je ziet meteen de speler en
+   zijn status van vandaag, met een duidelijke kleur:
 
    | Kleur | Betekenis |
    |---|---|
@@ -91,7 +90,7 @@ toont de app een melding.
 4. **Bij "Geslaagd – oefensprong"**: er is geen oordeel nodig — de bezoeker
    mag door naar de Ski Jump. Je hoeft niets in te drukken: het scherm
    toont een leeglopende balk en sluit zichzelf na 5 seconden automatisch
-   af en is dan klaar voor de volgende scan. Ging de oefensprong toch niet
+   af en is dan klaar voor de volgende speler. Ging de oefensprong toch niet
    door? Druk dan op **"Geen sprong / annuleer"**.
 5. **Bij "Vandaag niet meer toegestaan"**: laat deze bezoeker niet meer
    springen. Het scherm sluit zichzelf na 5 seconden automatisch af, of
@@ -99,19 +98,22 @@ toont de app een melding.
 
 **Sprong toch niet doorgegaan?** (bezoeker bedenkt zich, wordt weggeroepen, …)
 Druk dan, tijdens het beoordelen, op de kleine link **"Geen sprong /
-annuleer"** onder de knoppen. Dit wist de openstaande scan meteen, zonder
-dat de status verandert — je hoeft niet te wachten en het bandje kan meteen
-opnieuw gescand worden.
+annuleer"** onder de knoppen. Dit wist de openstaande sprong meteen,
+zonder dat de status verandert. De speler kan later opnieuw starten aan de
+kiosk.
+
+**2e poging?** Na een afgekeurde 1e sprong scant de speler opnieuw aan de
+kiosk; hij verschijnt dan opnieuw, in het oranje.
 
 ## Belangrijk
 
-- **Een nieuw bandje scannen kan altijd**, ook als het vorige nog op een
-  oordeel wacht. Het scherm toont dan meteen het nieuwe bandje. Het vorige
-  bandje kreeg dan geen oordeel en behoudt gewoon zijn status (net alsof
-  je "Geen sprong / annuleer" had gedrukt) — het mag dus later opnieuw.
-  Let er dus op dat je het oordeel geeft vóór je het volgende bandje scant.
-- Scan je tijdens een oefensprong (de balk van 5 seconden) al het
-  volgende bandje, dan telt die oefensprong gewoon mee.
+- **Een nieuwe speler van de kiosk verschijnt altijd**, ook als de vorige
+  nog op een oordeel wacht. Het scherm toont dan meteen de nieuwe speler.
+  De vorige kreeg dan geen oordeel en behoudt gewoon zijn status (net
+  alsof je "Geen sprong / annuleer" had gedrukt) — hij mag dus later
+  opnieuw. Geef het oordeel dus vóór de volgende speler aan de kiosk start.
+- Komt tijdens een oefensprong (de balk van 5 seconden) al de volgende
+  speler binnen, dan telt die oefensprong gewoon mee.
 - **Je kan hier niets terugdraaien.** Als je per ongeluk de verkeerde knop
   indrukt, kan dat enkel gecorrigeerd worden door een vaste medewerker via
   de knop **"Profiel"** rechtsboven — die opent het beheerscherm, waar je
@@ -176,8 +178,8 @@ Zet op de telefoon ook **"Pincode vragen voor losmaken"** aan
 Probeert iemand dan de app los te maken met het gebaar dat Android toont,
 dan gaat de telefoon op slot en is de pincode van de telefoon nodig.
 
-## Testen zonder bandje (demo)
+## Testen zonder kiosk (demo)
 
-Op het beheerscherm, tabblad **Systeem**, opent **Simulatiemodus** het
-hostscherm met een paneel met testbandjes — handig om het scherm uit te
-proberen zonder een echt bandje.
+Op het beheerscherm, tabblad **Systeem**, stuurt **Testspeler sturen** een
+verzonnen speler naar elk gekoppeld hostscherm — handig om het scherm uit
+te proberen zonder de kiosk.

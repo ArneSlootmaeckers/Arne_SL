@@ -1,5 +1,4 @@
 import { ADMIN_TOKEN_KEY, ApiError, api, startHealthPolling } from "../shared/api.js";
-import { KeyboardWedgeReader, NativeBridgeReader } from "../shared/reader.js";
 import { enhanceSelect } from "./picker.js";
 
 const POLLING_INTERVAL_MS = 3000;
@@ -348,14 +347,6 @@ els.overrideForm.addEventListener("submit", async (event) => {
     els.overrideMessage.className = "message error";
     els.overrideMessage.classList.remove("hidden");
   }
-});
-
-// A real/simulated scan while on the "Bandje" tab looks the wristband up directly.
-new KeyboardWedgeReader().start((wristbandId) => {
-  if (activeTab === "bandje") lookupWristband(wristbandId);
-});
-new NativeBridgeReader().start((wristbandId) => {
-  if (activeTab === "bandje") lookupWristband(wristbandId);
 });
 
 // ---- Logs tab -----------------------------------------------------------

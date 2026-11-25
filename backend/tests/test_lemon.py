@@ -185,6 +185,7 @@ def test_get_fallback_errors_never_contain_the_answer():
 
 def test_verdict_on_one_phone_closes_the_player_on_the_other(lemon_client):
     # Een kioskspeler verschijnt op elk hostscherm: hij mag maar één keer beoordeeld worden.
+    _kiosk(lemon_client).post("/api/lemon/session", json=_session())
     host1, host2 = paired(lemon_client, "host-1"), paired(lemon_client, "host-2")
     for host in (host1, host2):
         lemon_client.post("/api/host/scan", json={"wristband_id": PLAYER_ID}, headers=host)
@@ -279,9 +280,10 @@ def test_only_the_judged_player_is_sent_once(lemon_client, sent_scores):
     _kiosk(lemon_client).post("/api/lemon/session", json=payload)
     host = paired(lemon_client, "host-1")
 
-    for _ in range(2):  # twee pogingen van dezelfde speler: maar één stopbericht
-        lemon_client.post("/api/host/scan", json={"wristband_id": PLAYER_ID}, headers=host)
-        lemon_client.post("/api/host/verdict", json={"verdict": "ROOD"}, headers=host)
+    lemon_client.post("/api/host/scan", json={"wristband_id": PLAYER_ID}, headers=host)
+    lemon_client.post("/api/host/verdict", json={"verdict": "ROOD"}, headers=host)
+    # Opnieuw openen zonder nieuwe kioskscan kan niet: maar één stopbericht.
+    assert lemon_client.post("/api/host/scan", json={"wristband_id": PLAYER_ID}, headers=host).status_code == 403
     assert [s[2]["players"] for s in sent_scores] == [[{"id": PLAYER_ID}]]
 
     lemon_client.post("/api/host/scan", json={"wristband_id": other}, headers=host)
@@ -289,12 +291,9 @@ def test_only_the_judged_player_is_sent_once(lemon_client, sent_scores):
     assert [s[2]["players"] for s in sent_scores] == [[{"id": PLAYER_ID}], [{"id": other}]]
 
 
-def test_no_stop_message_for_players_not_from_the_kiosk(lemon_admin, sent_scores):
+def test_no_stop_message_for_the_test_player(lemon_admin, sent_scores):
     client = lemon_admin
     host = paired(client, "host-1")
-    client.post("/api/host/scan", json={"wristband_id": PLAYER_ID}, headers=host)  # gewoon NFC-bandje
-    client.post("/api/host/verdict", json={"verdict": "GROEN"}, headers=host)
-
     client.post("/api/admin/lemon/test-session", headers=_admin(client))
     test_id = client.get("/api/host/lemon/session", headers=host).json()["session"]["players"][0]["id"]
     client.post("/api/host/scan", json={"wristband_id": test_id}, headers=host)
@@ -477,3 +476,43 @@ def test_switching_get_fallback_on_needs_no_restart(test_settings, monkeypatch):
         while not calls and time.monotonic() < deadline:
             time.sleep(0.05)
     assert calls and calls[0] == (KIOSK_IP, 4100)
+
+
+# --- Enkel via de kiosk: bandjes scannen (NFC of een lezer) kan niet meer ---
+
+def test_a_scanned_wristband_is_refused(lemon_client):
+    host = paired(lemon_client, "host-1")
+    for wristband_id in ("04A2B3C4D5E680", PLAYER_ID):  # NFC-UID, of een UUID die niet van de kiosk kwam
+        response = lemon_client.post("/api/host/scan", json={"wristband_id": wristband_id}, headers=host)
+        assert response.status_code == 403
+        assert response.json()["detail"] == "Spelers komen enkel binnen via de kiosk."
+
+
+def test_a_kiosk_player_opens_until_judged_and_again_after_a_new_kiosk_scan(lemon_client):
+    host = paired(lemon_client, "host-1")
+    _kiosk(lemon_client).post("/api/lemon/session", json=_session("sessie-1"))
+    assert lemon_client.post("/api/host/scan", json={"wristband_id": PLAYER_ID}, headers=host).status_code == 200
+    assert lemon_client.post("/api/host/verdict", json={"verdict": "ROOD"}, headers=host).status_code == 200
+
+    # Na het oordeel: pas opnieuw na een nieuwe scan aan de kiosk.
+    assert lemon_client.post("/api/host/scan", json={"wristband_id": PLAYER_ID}, headers=host).status_code == 403
+    _kiosk(lemon_client).post("/api/lemon/session", json=_session("sessie-2"))
+    response = lemon_client.post("/api/host/scan", json={"wristband_id": PLAYER_ID}, headers=host)
+    assert response.status_code == 200
+    assert response.json()["status"] == "HERKANSING"
+
+
+def test_the_test_player_can_be_opened(lemon_admin):
+    client = lemon_admin
+    host = paired(client, "host-1")
+    client.post("/api/admin/lemon/test-session", headers=_admin(client))
+    test_id = client.get("/api/host/lemon/session", headers=host).json()["session"]["players"][0]["id"]
+    assert client.post("/api/host/scan", json={"wristband_id": test_id}, headers=host).status_code == 200
+
+
+def test_host_and_admin_pages_no_longer_read_wristbands():
+    frontend = Path(__file__).resolve().parents[2] / "frontend"
+    assert not (frontend / "shared" / "reader.js").exists()
+    for page in ("host/app.js", "admin/app.js", "host/index.html", "admin/index.html"):
+        text = (frontend / page).read_text(encoding="utf-8")
+        assert "reader.js" not in text and "sim=1" not in text and "NativeBridge" not in text
