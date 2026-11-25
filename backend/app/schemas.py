@@ -39,6 +39,12 @@ class DeviceNameRequest(BaseModel):
     name: str = Field(max_length=40)
 
 
+class KioskSettingsRequest(BaseModel):
+    kiosk_host: str = Field(default="", max_length=64)
+    kiosk_port: int = 4100
+    poll_enabled: bool = False
+
+
 class PairRequest(BaseModel):
     code: str = Field(max_length=16)
     name: str = Field(default="", max_length=40)

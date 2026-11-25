@@ -125,6 +125,12 @@ export const api = {
   networkInfo: () => request("GET", "/api/admin/network"),
   lemonStatus: () => request("GET", "/api/admin/lemon"),
   sendTestPlayer: () => request("POST", "/api/admin/lemon/test-session"),
+  saveKioskSettings: (kioskHost, kioskPort, pollEnabled) =>
+    request("PUT", "/api/admin/lemon/settings", {
+      kiosk_host: kioskHost,
+      kiosk_port: kioskPort,
+      poll_enabled: pollEnabled,
+    }),
   createPairingCode: () => request("POST", "/api/admin/pairing-codes"),
   pairedDevices: () => request("GET", "/api/admin/devices"),
   unpairDevice: (deviceId) => request("DELETE", `/api/admin/devices/${encodeURIComponent(deviceId)}`),

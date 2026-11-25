@@ -15,9 +15,10 @@ tls_dir: "../data/tls"
 extra_allowed_networks: []
 
 # --- Koppeling met de Lemon-kiosk van de experience ---
+# Stel dit liever in op Beheer -> Systeem: dat geldt meteen en gaat voor op
+# wat hier staat. Deze waarden gelden enkel zolang daar niets opgeslagen is.
 # IP-adres van de kiosk. Enkel dit adres mag spelers doorsturen naar
-# https://<deze pc>:8000/api/lemon/session (zie Beheer -> Systeem). Leeg =
-# koppeling uit.
+# https://<deze pc>:8000/api/lemon/session. Leeg = koppeling uit.
 lemon_kiosk_host: ""
 lemon_kiosk_port: 4100
 # Na elk oordeel (groen of rood) stuurt de server een stopbericht naar

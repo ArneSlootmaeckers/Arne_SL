@@ -37,6 +37,7 @@ const EVENT_LABELS = {
   TOESTEL_ONTKOPPELD: "Toestel ontkoppeld",
   KOPPELEN_MISLUKT: "Koppelen mislukt",
   KOPPELEN_GEBLOKKEERD: "Koppelen geblokkeerd (te veel foute codes)",
+  KIOSK_INGESTELD: "Kiosk ingesteld",
   LEMON_SESSIE: "Spelers van de kiosk",
   SYSTEEM_AFSLUITEN: "Systeem afgesloten",
   UPDATE_GESTART: "Update gestart",
@@ -160,6 +161,11 @@ const els = {
   lemonStatus: document.getElementById("lemon-status"),
   lemonUrls: document.getElementById("lemon-urls"),
   lemonAttempts: document.getElementById("lemon-attempts"),
+  lemonSettingsForm: document.getElementById("lemon-settings-form"),
+  lemonKioskHost: document.getElementById("lemon-kiosk-host"),
+  lemonKioskPort: document.getElementById("lemon-kiosk-port"),
+  lemonPollEnabled: document.getElementById("lemon-poll-enabled"),
+  lemonSettingsMessage: document.getElementById("lemon-settings-message"),
   lemonAttemptsEmpty: document.getElementById("lemon-attempts-empty"),
   lemonTestBtn: document.getElementById("lemon-test-btn"),
   lemonMessage: document.getElementById("lemon-message"),
@@ -675,7 +681,7 @@ async function loadLemonStatus(info) {
     els.lemonStatus.append(
       statusRow(
         "Kiosk",
-        status.kiosk_host ? `${status.kiosk_host}:${status.kiosk_port}` : "Niet ingesteld (lemon_kiosk_host)"
+        status.kiosk_host ? `${status.kiosk_host}:${status.kiosk_port}` : "Niet ingesteld (vul hieronder het IP-adres in)"
       ),
       statusRow(
         "Ophalen (GET)",
@@ -691,6 +697,12 @@ async function loadLemonStatus(info) {
       )
     );
     renderLemonAttempts(status.attempts ?? []);
+    // Het formulier niet overschrijven terwijl de beheerder aan het typen is.
+    if (!els.lemonSettingsForm.contains(document.activeElement)) {
+      els.lemonKioskHost.value = status.kiosk_host ?? "";
+      els.lemonKioskPort.value = status.kiosk_port;
+      els.lemonPollEnabled.checked = status.poll_enabled;
+    }
     els.lemonUrls.textContent = "";
     const hint = document.createElement("div");
     hint.className = "network-address-hint";
@@ -707,6 +719,25 @@ async function loadLemonStatus(info) {
     showMessage(els.lemonMessage, err instanceof ApiError ? err.message : "Kon de koppeling niet nakijken.", "error");
   }
 }
+
+els.lemonSettingsForm.addEventListener("submit", async (event) => {
+  event.preventDefault();
+  const host = els.lemonKioskHost.value.trim();
+  const port = Number(els.lemonKioskPort.value) || 4100;
+  try {
+    await api.saveKioskSettings(host, port, els.lemonPollEnabled.checked);
+    showMessage(
+      els.lemonSettingsMessage,
+      host ? `Opgeslagen: de koppeling gebruikt nu ${host}:${port}.` : "Opgeslagen: de koppeling met de kiosk staat uit.",
+      "success"
+    );
+    els.lemonKioskHost.blur();
+    loadLemonStatus(await api.networkInfo());
+  } catch (err) {
+    if (err instanceof ApiError && err.status === 401) return handleUnauthorized();
+    showMessage(els.lemonSettingsMessage, err instanceof ApiError ? err.message : "Opslaan mislukt.", "error");
+  }
+});
 
 els.lemonTestBtn.addEventListener("click", async () => {
   try {

@@ -415,6 +415,37 @@ button.picker-trigger {
   font-size: clamp(0.9rem, 2.6vw, 1.15rem);
 }
 
+.lemon-settings {
+  align-items: flex-end;
+  margin: 1rem 0 0.5rem;
+}
+
+.lemon-field {
+  display: flex;
+  flex-direction: column;
+  gap: 0.3rem;
+  font-size: 0.9rem;
+  color: var(--kleur-tekst-gedempt);
+}
+
+.lemon-field-port input {
+  width: 6rem;
+}
+
+.lemon-check {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  flex-basis: 100%;
+}
+
+.inline-form .lemon-check input {
+  width: 1.25rem;
+  height: 1.25rem;
+  padding: 0;
+  accent-color: var(--sparkx-oranje);
+}
+
 .lemon-attempts-title {
   font-weight: 700;
   margin: 1rem 0 0.25rem;

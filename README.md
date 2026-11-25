@@ -232,12 +232,18 @@ De spelers komen op twee manieren binnen:
 1. **Doorsturen (POST), standaard.** De kiosk stuurt de sessie naar
    `https://<IP van de pc>:8000/api/lemon/session`. Het juiste adres staat
    op **Beheer → Systeem**, kaart "Koppeling met de Lemon-kiosk". Enkel het
-   IP-adres in `lemon_kiosk_host` mag dit; elk ander toestel wordt
+   ingestelde IP-adres van de kiosk mag dit; elk ander toestel wordt
    geweigerd. Let op: de server gebruikt een eigen certificaat; de kiosk
    moet dat aanvaarden.
-2. **Ophalen (GET), fallback.** Komt het doorsturen niet door, zet dan
-   `lemon_poll_enabled: true` in `config.yaml` en herstart: de server vraagt
-   de spelers dan zelf op via `http://<kiosk>:<poort>/players`.
+2. **Ophalen (GET), fallback.** Komt het doorsturen niet door, vink dan
+   "Spelers zelf ophalen" aan: de server vraagt de spelers dan zelf op via
+   `http://<kiosk>:<poort>/players`.
+
+**Instellen** (IP-adres en poort van de kiosk, ophalen aan/uit) doet de
+beheerder op dezelfde kaart. Opslaan geldt meteen, zonder herstart, en
+wordt bewaard in `data/lemon-kiosk.json`: het blijft dus staan bij een
+update of herinstallatie, en gaat voor op de waarden in `config.yaml`
+(die enkel gelden zolang er op het beheerscherm niets opgeslagen is).
 
 **Gegevens (afspraak met IT van Sparkx).** Enkel de UUID van een speler
 wordt bewaard: daarmee worden de pogingen en het resultaat bijgehouden, en
@@ -297,7 +303,7 @@ Alle instelbare waarden staan in één bestand, `backend/config.yaml`:
 | `port` | Poort voor de telefoons en het netwerk (https) | `8000` |
 | `local_port` | Poort voor het beheerscherm op de server-pc zelf (http, enkel `127.0.0.1`) | `8001` |
 | `tls_dir` | Map met het eigen https-certificaat (laten staan!) | `../data/tls` |
-| `lemon_kiosk_host` | IP-adres van de Lemon-kiosk; enkel dit adres mag spelers doorsturen (leeg = koppeling uit) | `""` |
+| `lemon_kiosk_host` | IP-adres van de Lemon-kiosk; enkel dit adres mag spelers doorsturen (leeg = koppeling uit). Liever op Beheer → Systeem instellen: dat gaat voor | `""` |
 | `lemon_kiosk_port` | Poort van de kiosk voor het ophalen (GET) | `4100` |
 | `lemon_poll_enabled` | Spelers zelf ophalen bij de kiosk (fallback als doorsturen niet werkt) | `false` |
 | `lemon_poll_interval_seconds` | Hoe vaak de spelers opgehaald worden | `2` |

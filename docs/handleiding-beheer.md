@@ -87,8 +87,13 @@ nakijken dat een telefoon echt met deze pc praat.
 het ingestelde adres van de kiosk, of het ophalen (fallback) aan staat, en
 wanneer de laatste spelers binnenkwamen. Het adres om aan Lemon door te
 geven staat er ook. Met **Testspeler sturen** verschijnt een verzonnen
-speler op elk gekoppeld hostscherm, om te testen zonder kiosk. Instellen
-gebeurt in `backend/config.yaml` (zie `README.md`).
+speler op elk gekoppeld hostscherm, om te testen zonder kiosk.
+
+**De kiosk instellen**: vul het **IP-adres** van de kiosk in (te krijgen van
+IT, bv. `10.12.0.170`) en de **poort** (normaal `4100`), en klik
+**Opslaan**. Dat geldt meteen, zonder herstart, en blijft staan bij updates.
+Vink **Spelers zelf ophalen** aan als het doorsturen door de kiosk niet
+lukt. Een leeg IP-adres zet de koppeling uit.
 
 Onder **Laatste contact met de kiosk** staat elke poging van de kiosk sinds
 het systeem startte, ook als die geweigerd werd: wanneer, van welk adres,
@@ -97,9 +102,9 @@ en wat er gebeurde. Zo zie je waar het misloopt:
   niet. Kijk na of Lemon het adres op deze kaart gebruikt, of zet het
   ophalen (GET) aan.
 - **"Geweigerd: komt van …"**: de kiosk stuurt vanaf een ander adres dan
-  ingesteld. Pas `lemon_kiosk_host` aan, of vraag IT waarom het adres
-  verandert.
-- **"Geweigerd: geen kiosk ingesteld"**: vul `lemon_kiosk_host` in.
+  ingesteld. Pas het IP-adres van de kiosk aan, of vraag IT waarom het
+  adres verandert.
+- **"Geweigerd: geen kiosk ingesteld"**: vul het IP-adres van de kiosk in.
 - **"Ongeldige gegevens (…)"**: de kiosk stuurt een ander formaat; tussen
   haakjes staat welk veld niet klopt (nooit de gegevens zelf).
 

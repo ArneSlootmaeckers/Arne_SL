@@ -20,19 +20,25 @@ velden worden bij het inlezen meteen weggelaten.
 """
 from __future__ import annotations
 
+import dataclasses
+import ipaddress
+import json
 import re
 import threading
 import time
 import uuid
 from collections import deque
 from dataclasses import dataclass
+from pathlib import Path
 from datetime import datetime
 
 import httpx
 from pydantic import BaseModel, ConfigDict, ValidationError
 
+from app.config import Settings
 from app.services.common import now_utc
 from app.services.errors import DomainServiceError
+from app.services.network_service import is_local_client
 
 # Na zoveel tijd zonder nieuwe sessie verdwijnen naam en avatar ook uit het geheugen.
 SESSION_TTL_SECONDS = 15 * 60
@@ -225,3 +231,64 @@ def test_session_payload() -> dict:
         "sessionId": f"test-{uuid.uuid4()}",
         "players": [{"id": str(uuid.uuid4()), "firstName": "Testspeler", "lastName": "", "avatarColor": "#facb0d"}],
     }
+
+
+# --- Instellingen van de kiosk (Beheer -> Systeem) -------------------------
+#
+# Het IP-adres en de poort van de kiosk, en of de server de spelers zelf
+# ophaalt, stelt de beheerder in op het beheerscherm. Dat wordt bewaard in
+# data/ (naast de database): zo blijft het staan bij een update of een
+# herinstallatie, en gaat het voor op wat in config.yaml staat.
+
+KIOSK_SETTINGS_FILE = "lemon-kiosk.json"
+
+
+class InvalidKioskSettingsError(DomainServiceError):
+    """Ongeldig IP-adres of ongeldige poort voor de kiosk."""
+
+
+def kiosk_settings_path(settings: Settings) -> Path:
+    return Path(settings.database_path).resolve().parent / KIOSK_SETTINGS_FILE
+
+
+def apply_saved_kiosk_settings(settings: Settings) -> Settings:
+    try:
+        data = json.loads(kiosk_settings_path(settings).read_text(encoding="utf-8"))
+        return dataclasses.replace(
+            settings,
+            lemon_kiosk_host=str(data["kiosk_host"]),
+            lemon_kiosk_port=int(data["kiosk_port"]),
+            lemon_poll_enabled=bool(data["poll_enabled"]),
+        )
+    except (OSError, ValueError, KeyError, TypeError):
+        # Niets bewaard (of onleesbaar): dan geldt config.yaml.
+        return settings
+
+
+def save_kiosk_settings(settings: Settings, *, host: str, port: int, poll_enabled: bool) -> Settings:
+    """Controleert en bewaart de instellingen; geeft de nieuwe instellingen
+    terug, die meteen gelden (zonder herstart)."""
+    host = host.strip()
+    if host:
+        try:
+            ipaddress.ip_address(host)
+        except ValueError:
+            raise InvalidKioskSettingsError("Vul een IP-adres in, bv. 10.12.0.170.") from None
+        if not is_local_client(host, settings.extra_allowed_networks):
+            raise InvalidKioskSettingsError("Dat is een internetadres: de kiosk moet in het eigen netwerk staan.")
+    elif poll_enabled:
+        raise InvalidKioskSettingsError("Vul eerst het IP-adres van de kiosk in.")
+    if not 1 <= port <= 65535:
+        raise InvalidKioskSettingsError("De poort moet tussen 1 en 65535 liggen.")
+
+    path = kiosk_settings_path(settings)
+    path.parent.mkdir(parents=True, exist_ok=True)
+    tmp = path.with_suffix(".tmp")
+    tmp.write_text(
+        json.dumps({"kiosk_host": host, "kiosk_port": port, "poll_enabled": poll_enabled}, indent=2),
+        encoding="utf-8",
+    )
+    tmp.replace(path)
+    return dataclasses.replace(
+        settings, lemon_kiosk_host=host, lemon_kiosk_port=port, lemon_poll_enabled=poll_enabled
+    )

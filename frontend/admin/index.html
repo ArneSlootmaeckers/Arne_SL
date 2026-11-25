@@ -128,6 +128,7 @@
             <option value="TOESTEL_ONTKOPPELD">Toestel ontkoppeld</option>
             <option value="KOPPELEN_MISLUKT">Koppelen mislukt</option>
             <option value="LEMON_SESSIE">Spelers van de kiosk</option>
+            <option value="KIOSK_INGESTELD">Kiosk ingesteld</option>
             <option value="SYSTEEM_AFSLUITEN">Systeem afgesloten</option>
             <option value="UPDATE_GESTART">Update gestart</option>
             <option value="UPDATE_INSTELLING">Automatisch bijwerken gewijzigd</option>
@@ -260,6 +261,23 @@
           <table class="data-table lemon-status">
             <tbody id="lemon-status"></tbody>
           </table>
+
+          <form id="lemon-settings-form" class="inline-form wrap lemon-settings" autocomplete="off">
+            <label class="lemon-field">
+              <span>IP-adres van de kiosk</span>
+              <input id="lemon-kiosk-host" type="text" inputmode="decimal" placeholder="bv. 10.12.0.170" />
+            </label>
+            <label class="lemon-field lemon-field-port">
+              <span>Poort</span>
+              <input id="lemon-kiosk-port" type="number" min="1" max="65535" value="4100" />
+            </label>
+            <label class="lemon-check">
+              <input id="lemon-poll-enabled" type="checkbox" />
+              <span>Spelers zelf ophalen bij de kiosk (GET), als het doorsturen niet lukt</span>
+            </label>
+            <button type="submit">Opslaan</button>
+          </form>
+          <p id="lemon-settings-message" class="message hidden"></p>
           <div class="lemon-attempts-title">Laatste contact met de kiosk</div>
           <div class="table-scroll">
             <table class="data-table lemon-attempts">
@@ -273,12 +291,12 @@
             Nog niets ontvangen van de kiosk sinds het systeem startte. Start er
             intussen een experience en komt er hier niets bij, dan bereikt de kiosk
             deze pc niet: kijk na of Lemon het adres hieronder gebruikt, of zet het
-            ophalen (GET) aan in <code>config.yaml</code>.
+            ophalen (GET) hierboven aan.
           </p>
           <div id="lemon-urls" class="network-addresses"></div>
           <p class="network-note">
-            Instellen (IP-adres en poort van de kiosk, ophalen aan/uit) gebeurt
-            in <code>backend/config.yaml</code>; herstart daarna het systeem.
+            Opslaan geldt meteen, zonder herstart, en blijft bewaard bij updates.
+            Laat het IP-adres leeg om de koppeling uit te zetten.
           </p>
           <button id="lemon-test-btn" class="btn-secondary">Testspeler sturen</button>
           <p id="lemon-message" class="message hidden"></p>

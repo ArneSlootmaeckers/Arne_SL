@@ -23,6 +23,7 @@ from app.schemas import (
     EventResponse,
     GroupPincodeRequest,
     GroupResponse,
+    KioskSettingsRequest,
     ManualStatusRequest,
     PairedDeviceResponse,
     PairingCodeResponse,
@@ -245,6 +246,32 @@ def lemon_status(
         # Ook geweigerde of ongeldige pogingen, om te zien waar het misloopt.
         "attempts": inbox.attempts(),
     }
+
+
+@router.put("/lemon/settings")
+def save_lemon_settings(
+    payload: KioskSettingsRequest,
+    request: Request,
+    db: Session = Depends(get_db),
+    employee: EmployeeModel = Depends(require_role("admin")),
+) -> dict:
+    """IP-adres, poort en ophalen aan/uit: gelden meteen, zonder herstart."""
+    new_settings = lemon_service.save_kiosk_settings(
+        request.app.state.settings,
+        host=payload.kiosk_host, port=payload.kiosk_port, poll_enabled=payload.poll_enabled,
+    )
+    request.app.state.settings = new_settings
+    request.app.state.lemon_inbox.poll_error = None
+    log_event(
+        db, event_type="KIOSK_INGESTELD", source="admin", employee_id=employee.id,
+        detail={
+            "kiosk": f"{new_settings.lemon_kiosk_host}:{new_settings.lemon_kiosk_port}"
+            if new_settings.lemon_kiosk_host else "uit",
+            "ophalen": new_settings.lemon_poll_enabled,
+        },
+    )
+    db.commit()
+    return {"ok": True}
 
 
 @router.post("/lemon/test-session")

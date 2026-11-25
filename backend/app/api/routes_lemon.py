@@ -1,7 +1,8 @@
 """Ontvangt de spelers van de Lemon-kiosk (zie app/services/lemon_service.py).
 
 De kiosk kan niet gekoppeld worden zoals een telefoon; enkel het IP-adres
-dat in config.yaml als lemon_kiosk_host staat, mag hier spelers doorsturen.
+van de kiosk (Beheer -> Systeem, of lemon_kiosk_host in config.yaml) mag
+hier spelers doorsturen.
 """
 from __future__ import annotations
 
@@ -49,8 +50,8 @@ async def receive_session(
 
     if not settings.lemon_kiosk_host:
         raise refuse(
-            "Geweigerd: geen kiosk ingesteld (lemon_kiosk_host in config.yaml)",
-            PermissionDeniedError("Geen Lemon-kiosk ingesteld (lemon_kiosk_host in config.yaml)."),
+            "Geweigerd: geen kiosk ingesteld (Beheer -> Systeem)",
+            PermissionDeniedError("Geen Lemon-kiosk ingesteld."),
         )
     if sender != settings.lemon_kiosk_host:
         raise refuse(

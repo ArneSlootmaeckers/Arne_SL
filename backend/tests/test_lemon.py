@@ -389,3 +389,91 @@ def test_get_fallback_errors_are_shown_once(lemon_settings, monkeypatch):
     assert len(attempts) == 1
     assert attempts[0]["via"] == "get" and attempts[0]["sender"] == f"{KIOSK_IP}:4100"
     assert attempts[0]["result"] == "Kiosk niet bereikbaar." and attempts[0]["ok"] is False
+
+
+# --- Kiosk instellen op Beheer -> Systeem ------------------------------------
+
+def _save_kiosk(client, headers=None, **fields):
+    body = {"kiosk_host": KIOSK_IP, "kiosk_port": 4100, "poll_enabled": False, **fields}
+    return client.put("/api/admin/lemon/settings", json=body, headers=headers or _admin(client))
+
+
+def test_kiosk_set_on_the_admin_screen_works_immediately(client, admin_employee):
+    # Niets in config.yaml (test_settings): eerst geweigerd, na opslaan meteen aanvaard.
+    kiosk = TestClient(client.app, client=(KIOSK_IP, 50000))
+    assert kiosk.post("/api/lemon/session", json=_session()).status_code == 403
+
+    assert _save_kiosk(client).status_code == 200
+    assert kiosk.post("/api/lemon/session", json=_session()).status_code == 200
+    status = client.get("/api/admin/lemon", headers=_admin(client)).json()
+    assert (status["kiosk_host"], status["kiosk_port"], status["poll_enabled"]) == (KIOSK_IP, 4100, False)
+    assert client.get("/api/host/lemon/session", headers=paired(client, "host-1")).json()["enabled"] is True
+
+
+def test_saved_kiosk_settings_survive_a_restart_and_beat_config_yaml(test_settings, client, admin_employee):
+    _save_kiosk(client, kiosk_host="10.12.0.170", kiosk_port=4200, poll_enabled=True)
+
+    # config.yaml zegt iets anders: wat op het beheerscherm bewaard werd, gaat voor.
+    other = dataclasses.replace(test_settings, lemon_kiosk_host="10.0.0.9")
+    with TestClient(create_app(other), client=("192.168.1.20", 50000)) as restarted:
+        settings = restarted.app.state.settings
+        assert (settings.lemon_kiosk_host, settings.lemon_kiosk_port, settings.lemon_poll_enabled) == (
+            "10.12.0.170", 4200, True,
+        )
+
+
+@pytest.mark.parametrize(
+    ("fields", "message"),
+    [
+        ({"kiosk_host": "kiosk.lokaal"}, "IP-adres"),
+        ({"kiosk_host": "8.8.8.8"}, "internetadres"),
+        ({"kiosk_port": 0}, "poort"),
+        ({"kiosk_port": 70000}, "poort"),
+        ({"kiosk_host": "", "poll_enabled": True}, "IP-adres van de kiosk"),
+    ],
+)
+def test_invalid_kiosk_settings_are_refused(client, admin_employee, fields, message):
+    response = _save_kiosk(client, **fields)
+    assert response.status_code == 400
+    assert message in response.json()["detail"]
+
+
+def test_kiosk_can_be_switched_off(client, admin_employee):
+    _save_kiosk(client)
+    assert _save_kiosk(client, kiosk_host="").status_code == 200
+    assert client.get("/api/admin/lemon", headers=_admin(client)).json()["kiosk_host"] is None
+    events = client.get("/api/admin/logs?event_type=KIOSK_INGESTELD", headers=_admin(client)).json()
+    assert [e["detail"]["kiosk"] for e in events] == ["uit", f"{KIOSK_IP}:4100"]
+
+
+def test_only_the_admin_sets_the_kiosk(client, supervisor_employee):
+    token = client.post("/api/auth/login", json={"pincode": "5678"}).json()["token"]
+    assert _save_kiosk(client, headers={"Authorization": f"Bearer {token}"}).status_code == 403
+
+
+def test_switching_get_fallback_on_needs_no_restart(test_settings, monkeypatch):
+    import time
+
+    import app.main as main
+
+    calls = []
+    monkeypatch.setattr(main, "fetch_players", lambda client, *, host, port: calls.append((host, port)) or _session())
+    with TestClient(create_app(test_settings), client=("192.168.1.20", 50000)) as client:
+        db = client.app.state.session_factory()
+        from app.models import EmployeeModel
+        from app.security import hash_pincode
+        from app.services.common import now_utc
+
+        db.add(EmployeeModel(name="Beheerder", pincode_hash=hash_pincode("123456"), role="admin",
+                             active=True, created_at=now_utc()))
+        db.commit()
+        db.close()
+        time.sleep(0.2)
+        assert calls == []  # ophalen staat uit
+
+        token = client.post("/api/auth/login", json={"pincode": "123456"}).json()["token"]
+        _save_kiosk(client, headers={"Authorization": f"Bearer {token}"}, poll_enabled=True)
+        deadline = time.monotonic() + 3
+        while not calls and time.monotonic() < deadline:
+            time.sleep(0.05)
+    assert calls and calls[0] == (KIOSK_IP, 4100)

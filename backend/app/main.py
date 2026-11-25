@@ -38,7 +38,13 @@ from app.services.errors import (
 )
 from app.services.employee_service import anonymise_accounts
 from app.services import update_service
-from app.services.lemon_service import InvalidLemonDataError, LemonInbox, fetch_players
+from app.services.lemon_service import (
+    InvalidKioskSettingsError,
+    InvalidLemonDataError,
+    LemonInbox,
+    apply_saved_kiosk_settings,
+    fetch_players,
+)
 from app.services.log_service import purge_old_events
 from app.services.maintenance_service import create_backup, purge_old_backups
 from app.services.network_service import is_local_client
@@ -58,6 +64,7 @@ _ERROR_STATUS_CODES: dict[type[DomainServiceError], int] = {
     TooManyAttemptsError: 429,
     DeviceNotPairedError: 401,
     InvalidLemonDataError: 400,
+    InvalidKioskSettingsError: 400,
     InvalidPairingCodeError: 400,
     DeviceNotFoundError: 404,
 }
@@ -132,14 +139,19 @@ def _record_lemon_session(app: FastAPI, session) -> None:
         db.close()
 
 
-async def _poll_lemon_kiosk_periodically(app: FastAPI, settings: Settings) -> None:
+async def _poll_lemon_kiosk_periodically(app: FastAPI) -> None:
     """GET-fallback: vraagt de spelers zelf op bij de kiosk. Een fout wordt
     enkel kort gemeld (op Beheer -> Systeem), nooit met de inhoud van het
     antwoord erbij."""
     inbox: LemonInbox = app.state.lemon_inbox
-    kiosk = f"{settings.lemon_kiosk_host}:{settings.lemon_kiosk_port}"
     with httpx.Client(timeout=2.0, trust_env=False) as client:
         while True:
+            # Elke ronde opnieuw: de beheerder kan dit aanpassen (Beheer -> Systeem).
+            settings: Settings = app.state.settings
+            if not (settings.lemon_poll_enabled and settings.lemon_kiosk_host):
+                await asyncio.sleep(1.0)
+                continue
+            kiosk = f"{settings.lemon_kiosk_host}:{settings.lemon_kiosk_port}"
             previous_error = inbox.poll_error
             try:
                 payload = await asyncio.to_thread(
@@ -173,7 +185,8 @@ def create_app(settings: Settings | None = None) -> FastAPI:
 
     @contextlib.asynccontextmanager
     async def lifespan(app: FastAPI):
-        app.state.settings = settings
+        # Wat de beheerder op het beheerscherm instelde (kiosk), gaat voor op config.yaml.
+        app.state.settings = apply_saved_kiosk_settings(settings)
         app.state.session_factory = create_session_factory(settings.database_url)
         app.state.gate_controller = create_gate_controller(settings.gate_controller)
         # Geen personeelsgegevens: namen van vroegere, persoonlijke accounts
@@ -187,9 +200,9 @@ def create_app(settings: Settings | None = None) -> FastAPI:
         tasks = [
             asyncio.create_task(_reap_expired_scans_periodically(app)),
             asyncio.create_task(_run_maintenance_periodically(app, settings)),
+            # Doet niets zolang het ophalen uit staat; kan aangezet worden zonder herstart.
+            asyncio.create_task(_poll_lemon_kiosk_periodically(app)),
         ]
-        if settings.lemon_poll_enabled and settings.lemon_kiosk_host:
-            tasks.append(asyncio.create_task(_poll_lemon_kiosk_periodically(app, settings)))
         try:
             yield
         finally:
