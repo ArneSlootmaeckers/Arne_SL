@@ -96,7 +96,20 @@ FunctionEnd
 Section "Installeren"
   DetailPrint "Bestanden uitpakken..."
   SetOutPath "$INSTDIR"
+  ; Een bestaande config.yaml (bv. met het IP-adres van de Lemon-kiosk) mag
+  ; een herinstallatie niet terugzetten naar de standaardinstellingen. Nieuwe
+  ; instellingen hebben in de code een standaardwaarde, dus een oudere
+  ; config.yaml blijft werken.
+  ${If} ${FileExists} "$INSTDIR\backend\config.yaml"
+    Delete "$INSTDIR\backend\config.yaml.eigen"
+    Rename "$INSTDIR\backend\config.yaml" "$INSTDIR\backend\config.yaml.eigen"
+  ${EndIf}
   File /r "build\payload\*.*"
+  ${If} ${FileExists} "$INSTDIR\backend\config.yaml.eigen"
+    DetailPrint "Eigen instellingen (config.yaml) behouden."
+    Delete "$INSTDIR\backend\config.yaml"
+    Rename "$INSTDIR\backend\config.yaml.eigen" "$INSTDIR\backend\config.yaml"
+  ${EndIf}
 
   DetailPrint "Python uitpakken..."
   SetOutPath "$INSTDIR\python"

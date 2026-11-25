@@ -328,3 +328,64 @@ def test_failed_stop_message_shows_on_admin_status(lemon_admin, monkeypatch):
     client.post("/api/host/scan", json={"wristband_id": PLAYER_ID}, headers=host)
     assert client.post("/api/host/verdict", json={"verdict": "GROEN"}, headers=host).status_code == 200
     assert client.get("/api/admin/lemon", headers=_admin(client)).json()["scores_error"] == "Stopbericht naar de kiosk mislukt."
+
+
+# --- Laatste contact met de kiosk (Beheer -> Systeem) -----------------------
+
+def _attempts(client) -> list[dict]:
+    return client.get("/api/admin/lemon", headers=_admin(client)).json()["attempts"]
+
+
+def test_refused_attempts_show_where_they_came_from(lemon_admin):
+    lemon_admin.post("/api/lemon/session", json=_session())  # van 192.168.1.20, niet de kiosk
+    [attempt] = _attempts(lemon_admin)
+    assert attempt["ok"] is False and attempt["via"] == "post" and attempt["sender"] == "192.168.1.20"
+    assert "192.168.1.20" in attempt["result"] and KIOSK_IP in attempt["result"]
+
+
+def test_missing_kiosk_setting_is_shown(client, admin_employee):
+    kiosk = TestClient(client.app, client=(KIOSK_IP, 50000))
+    assert kiosk.post("/api/lemon/session", json=_session()).status_code == 403
+    [attempt] = _attempts(client)
+    assert "geen kiosk ingesteld" in attempt["result"]
+
+
+def test_invalid_data_names_the_field_but_never_the_values(lemon_admin):
+    _kiosk(lemon_admin).post("/api/lemon/session", json=_session(id="Voornaam-geen-uuid"))
+    _kiosk(lemon_admin).post("/api/lemon/session", json={"players": []})
+    newest, oldest = _attempts(lemon_admin)
+    assert "players.0.id" in oldest["result"] and "Voornaam" not in oldest["result"]
+    assert "sessionId" in newest["result"]
+
+
+def test_accepted_duplicate_and_empty_sessions_are_shown(lemon_admin):
+    kiosk = _kiosk(lemon_admin)
+    kiosk.post("/api/lemon/session", json=_session())
+    kiosk.post("/api/lemon/session", json=_session())
+    kiosk.post("/api/lemon/session", json={"sessionId": "leeg", "players": []})
+    assert [a["result"] for a in _attempts(lemon_admin)] == [
+        "Ontvangen, maar zonder spelers",
+        "Al ontvangen (zelfde sessie)",
+        "Ontvangen: 1 speler(s)",
+    ]
+    assert all(a["sender"] == KIOSK_IP and a["ok"] for a in _attempts(lemon_admin))
+    assert "Voornaam" not in str(_attempts(lemon_admin))
+
+
+def test_get_fallback_errors_are_shown_once(lemon_settings, monkeypatch):
+    import time
+
+    import app.main as main
+
+    def unreachable(client, *, host, port):
+        raise InvalidLemonDataError("Kiosk niet bereikbaar.")
+
+    monkeypatch.setattr(main, "fetch_players", unreachable)
+    settings = dataclasses.replace(lemon_settings, lemon_poll_enabled=True, lemon_poll_interval_seconds=0.02)
+    with TestClient(create_app(settings), client=("192.168.1.20", 50000)) as client:
+        time.sleep(0.3)  # vele pogingen, telkens dezelfde fout
+        attempts = client.app.state.lemon_inbox.attempts()
+
+    assert len(attempts) == 1
+    assert attempts[0]["via"] == "get" and attempts[0]["sender"] == f"{KIOSK_IP}:4100"
+    assert attempts[0]["result"] == "Kiosk niet bereikbaar." and attempts[0]["ok"] is False

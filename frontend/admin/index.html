@@ -260,6 +260,21 @@
           <table class="data-table lemon-status">
             <tbody id="lemon-status"></tbody>
           </table>
+          <div class="lemon-attempts-title">Laatste contact met de kiosk</div>
+          <div class="table-scroll">
+            <table class="data-table lemon-attempts">
+              <thead>
+                <tr><th>Tijdstip</th><th>Hoe</th><th>Van</th><th>Resultaat</th></tr>
+              </thead>
+              <tbody id="lemon-attempts"></tbody>
+            </table>
+          </div>
+          <p id="lemon-attempts-empty" class="network-note hidden">
+            Nog niets ontvangen van de kiosk sinds het systeem startte. Start er
+            intussen een experience en komt er hier niets bij, dan bereikt de kiosk
+            deze pc niet: kijk na of Lemon het adres hieronder gebruikt, of zet het
+            ophalen (GET) aan in <code>config.yaml</code>.
+          </p>
           <div id="lemon-urls" class="network-addresses"></div>
           <p class="network-note">
             Instellen (IP-adres en poort van de kiosk, ophalen aan/uit) gebeurt

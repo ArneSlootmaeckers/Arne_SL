@@ -252,6 +252,12 @@ de database, de logs en de console.
 Testen zonder kiosk: **Beheer → Systeem → Testspeler sturen** stuurt een
 verzonnen speler naar elk gekoppeld hostscherm.
 
+Komt er niets door? Onder **Laatste contact met de kiosk** op dezelfde
+kaart staat elke poging van de kiosk, ook een geweigerde (verkeerd adres,
+geen kiosk ingesteld, ongeldige gegevens met het veld dat niet klopt),
+zonder namen of andere ontvangen gegevens. Dezelfde meldingen staan in
+`data/logs/server.log`.
+
 Een speler verschijnt op elk gekoppeld hostscherm tegelijk. Krijgt hij op
 één toestel een oordeel, dan vervalt hij op de andere, zodat hij nooit
 twee keer beoordeeld wordt.

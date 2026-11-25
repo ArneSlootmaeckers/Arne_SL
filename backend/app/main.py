@@ -137,8 +137,10 @@ async def _poll_lemon_kiosk_periodically(app: FastAPI, settings: Settings) -> No
     enkel kort gemeld (op Beheer -> Systeem), nooit met de inhoud van het
     antwoord erbij."""
     inbox: LemonInbox = app.state.lemon_inbox
+    kiosk = f"{settings.lemon_kiosk_host}:{settings.lemon_kiosk_port}"
     with httpx.Client(timeout=2.0, trust_env=False) as client:
         while True:
+            previous_error = inbox.poll_error
             try:
                 payload = await asyncio.to_thread(
                     fetch_players, client, host=settings.lemon_kiosk_host, port=settings.lemon_kiosk_port
@@ -146,7 +148,8 @@ async def _poll_lemon_kiosk_periodically(app: FastAPI, settings: Settings) -> No
                 session = inbox.receive(payload, via="get")
                 inbox.poll_error = None
             except InvalidLemonDataError as exc:
-                inbox.poll_error = str(exc)
+                hint = getattr(exc, "hint", "")
+                inbox.poll_error = f"{exc} ({hint})" if hint else str(exc)
                 session = None
             except Exception as exc:  # de lus mag nooit stilletjes stoppen
                 # Enkel het soort fout: een foutmelding kan ontvangen gegevens bevatten.
@@ -154,7 +157,14 @@ async def _poll_lemon_kiosk_periodically(app: FastAPI, settings: Settings) -> No
                 inbox.poll_error = "Onverwachte fout bij het ophalen."
                 session = None
             if session is not None:
+                inbox.record_attempt(
+                    via="get", sender=kiosk, result=f"Ontvangen: {len(session.players)} speler(s)", ok=True
+                )
                 await asyncio.to_thread(_record_lemon_session, app, session)
+            elif inbox.poll_error and inbox.poll_error != previous_error:
+                # Enkel als de fout verandert: niet elke 2 seconden dezelfde regel.
+                inbox.record_attempt(via="get", sender=kiosk, result=inbox.poll_error, ok=False)
+                logger.warning("Lemon-kiosk: ophalen bij %s mislukt: %s", kiosk, inbox.poll_error)
             await asyncio.sleep(settings.lemon_poll_interval_seconds)
 
 

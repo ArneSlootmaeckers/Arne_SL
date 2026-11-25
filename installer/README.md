@@ -15,6 +15,10 @@
    één keer om bevestiging; bij het verwijderen gaan de regels mee weg),
 5. en een bureaubladsnelkoppeling plaatst.
 
+Bij een herinstallatie blijven de map `data\` (database, certificaat,
+logs) en een bestaande `backend\config.yaml` (eigen instellingen, zoals het
+adres van de Lemon-kiosk) behouden.
+
 Omdat het een gecompileerd programma is — geen `.ps1`-script — heeft hij
 geen last van PowerShell's execution policy. Dat blokkeerde eerder wel
 eens stilzwijgend het losse `setup.ps1`-script, omdat Windows bestanden na

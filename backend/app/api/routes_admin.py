@@ -242,6 +242,8 @@ def lemon_status(
             "via": session.via,
             "players": len(session.players),
         },
+        # Ook geweigerde of ongeldige pogingen, om te zien waar het misloopt.
+        "attempts": inbox.attempts(),
     }
 
 

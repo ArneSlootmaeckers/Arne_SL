@@ -10,5 +10,5 @@ Bij een nieuwe release (zie docs/handleiding-beheer.md, "Updates"):
   echt in de Play Store staat.
 """
 
-APP_VERSION = "1.0.0"
+APP_VERSION = "1.0.1"
 MIN_ANDROID_VERSION_CODE = 2

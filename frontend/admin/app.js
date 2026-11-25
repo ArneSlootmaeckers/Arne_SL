@@ -159,6 +159,8 @@ const els = {
   devicesMessage: document.getElementById("devices-message"),
   lemonStatus: document.getElementById("lemon-status"),
   lemonUrls: document.getElementById("lemon-urls"),
+  lemonAttempts: document.getElementById("lemon-attempts"),
+  lemonAttemptsEmpty: document.getElementById("lemon-attempts-empty"),
   lemonTestBtn: document.getElementById("lemon-test-btn"),
   lemonMessage: document.getElementById("lemon-message"),
   updateStatus: document.getElementById("update-status"),
@@ -638,6 +640,23 @@ els.devicesTableBody.addEventListener("click", async (event) => {
 });
 
 const LEMON_VIA_LABELS = { post: "doorgestuurd door de kiosk (POST)", get: "opgehaald bij de kiosk (GET)", test: "testspeler" };
+const LEMON_ATTEMPT_VIA = { post: "Doorgestuurd (POST)", get: "Opgehaald (GET)" };
+
+/** Ook geweigerde pogingen, met de reden: zo zie je waar het misloopt. */
+function renderLemonAttempts(attempts) {
+  els.lemonAttempts.textContent = "";
+  els.lemonAttemptsEmpty.classList.toggle("hidden", attempts.length > 0);
+  for (const attempt of attempts) {
+    const row = tableRow([
+      formatTimestamp(attempt.at),
+      LEMON_ATTEMPT_VIA[attempt.via] ?? attempt.via,
+      attempt.sender ?? "",
+      attempt.result,
+    ]);
+    if (!attempt.ok) row.lastElementChild.classList.add("lemon-attempt-error");
+    els.lemonAttempts.append(row);
+  }
+}
 
 function statusRow(label, value) {
   const row = document.createElement("tr");
@@ -671,6 +690,7 @@ async function loadLemonStatus(info) {
           : "Nog geen"
       )
     );
+    renderLemonAttempts(status.attempts ?? []);
     els.lemonUrls.textContent = "";
     const hint = document.createElement("div");
     hint.className = "network-address-hint";

@@ -24,6 +24,7 @@ import re
 import threading
 import time
 import uuid
+from collections import deque
 from dataclasses import dataclass
 from datetime import datetime
 
@@ -78,13 +79,26 @@ class _SessionIn(BaseModel):
     players: list[_PlayerIn] = []
 
 
+def _describe_invalid(exc: ValidationError) -> str:
+    """Welk veld niet klopt (bv. "players.0.id: uuid_parsing"), om te zien of
+    de kiosk een ander formaat stuurt. Enkel veldnamen en het soort fout,
+    nooit de ontvangen waarden."""
+    parts = [
+        f"{'.'.join(str(p) for p in error['loc']) or 'geheel'}: {error['type']}"
+        for error in exc.errors(include_input=False, include_url=False)[:3]
+    ]
+    return ", ".join(parts)
+
+
 def parse_session(payload: object) -> tuple[str, tuple[LemonPlayer, ...]]:
     """Leest een sessie van de kiosk in en houdt enkel over wat nodig is.
     De foutmelding herhaalt nooit de ontvangen gegevens."""
     try:
         session = _SessionIn.model_validate(payload)
-    except ValidationError:
-        raise InvalidLemonDataError("Ongeldige sessie van de kiosk.") from None
+    except ValidationError as exc:
+        error = InvalidLemonDataError("Ongeldige sessie van de kiosk.")
+        error.hint = _describe_invalid(exc)
+        raise error from None
 
     players = tuple(
         LemonPlayer(
@@ -115,6 +129,19 @@ class LemonInbox:
         self._lock = threading.Lock()
         self.poll_error: str | None = None
         self.scores_error: str | None = None
+        # Het laatste contact met de kiosk (ook geweigerd of ongeldig), voor
+        # Beheer -> Systeem. Zonder namen of andere ontvangen gegevens.
+        self._attempts: deque[dict] = deque(maxlen=10)
+
+    def record_attempt(self, *, via: str, sender: str | None, result: str, ok: bool) -> None:
+        with self._lock:
+            self._attempts.appendleft(
+                {"at": now_utc(), "via": via, "sender": sender, "result": result, "ok": ok}
+            )
+
+    def attempts(self) -> list[dict]:
+        with self._lock:
+            return list(self._attempts)
 
     def receive(self, payload: object, *, via: str) -> LemonSession | None:
         """Geeft de sessie terug als ze nieuw is, None als ze al gekend was
